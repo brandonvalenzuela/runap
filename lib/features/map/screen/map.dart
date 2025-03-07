@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:runap/features/map/controller/map_controller.dart';
+import 'package:runap/features/map/dialogs/location_dialogs.dart';
 import 'package:runap/features/map/screen/widget/draggable_info_sheet.dart';
-import '../dialogs/location_dialogs.dart';
-import '../utils/location_permission_helper.dart';
+import 'package:runap/features/map/utils/location_permission_helper.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});

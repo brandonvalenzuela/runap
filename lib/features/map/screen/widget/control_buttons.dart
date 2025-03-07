@@ -6,11 +6,11 @@ class ControlButtons extends StatelessWidget {
   final VoidCallback onStopWorkout;
 
   const ControlButtons({
-    Key? key,
+    super.key,
     required this.isWorkoutActive,
     required this.onStartWorkout,
     required this.onStopWorkout,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../models/workout_data.dart';
+import 'package:runap/features/map/models/workout_data.dart';
 import 'workout_metrics_panel.dart';
 import 'control_buttons.dart';
 
@@ -9,11 +9,11 @@ class DraggableInfoSheet extends StatelessWidget {
   final VoidCallback onStopWorkout;
 
   const DraggableInfoSheet({
-    Key? key,
+    super.key,
     required this.workoutData,
     required this.onStartWorkout,
     required this.onStopWorkout,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

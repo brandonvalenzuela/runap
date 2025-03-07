@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import '../../../../utils/constants/sizes.dart';
-import '../../models/workout_data.dart';
+import 'package:runap/features/map/models/workout_data.dart';
+import 'package:runap/utils/constants/sizes.dart';
 
 class WorkoutMetricsPanel extends StatelessWidget {
   final WorkoutData workoutData;
 
   const WorkoutMetricsPanel({
-    Key? key,
+    super.key,
     required this.workoutData,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

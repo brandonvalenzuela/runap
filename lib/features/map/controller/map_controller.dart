@@ -1,8 +1,8 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
-import '../models/workout_data.dart';
-import '../services/location_service.dart';
-import '../utils/location_permission_helper.dart';
+import 'package:runap/features/map/models/workout_data.dart';
+import 'package:runap/features/map/services/location_service.dart';
+import 'package:runap/features/map/utils/location_permission_helper.dart';
 
 class MapWorkoutController {
   final WorkoutData workoutData = WorkoutData();
