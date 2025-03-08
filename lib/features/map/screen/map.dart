@@ -4,6 +4,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:runap/features/map/controller/map_controller.dart';
 import 'package:runap/features/map/dialogs/location_dialogs.dart';
 import 'package:runap/features/map/screen/widget/draggable_info_sheet.dart';
+import 'package:runap/features/map/screen/widget/workout_goal_selection_dialog.dart';
 import 'package:runap/features/map/utils/location_permission_helper.dart';
 
 class MapScreen extends StatefulWidget {
@@ -18,13 +19,18 @@ class MapScreenState extends State<MapScreen> {
   late LocationDialogs _locationDialogs;
   late LocationPermissionHelper _permissionHelper;
   final LatLng _center = const LatLng(0, 0);
+  String _elapsedTime = "0:00";
 
   @override
   void initState() {
     super.initState();
     _permissionHelper = LocationPermissionHelper();
     _mapController = MapWorkoutController(
-      onWorkoutDataChanged: (_) => setState(() {}),
+      onWorkoutDataChanged: (_) {
+        setState(() {
+          _elapsedTime = _mapController.getFormattedElapsedTime();
+        });
+      },
     );
     _locationDialogs = LocationDialogs(
       context: context,
@@ -54,6 +60,7 @@ class MapScreenState extends State<MapScreen> {
     }
 
     _getCurrentLocationAndAnimateCamera();
+    _mapController.initialize();
   }
 
   Future<void> _getCurrentLocationAndAnimateCamera() async {
@@ -80,6 +87,22 @@ class MapScreenState extends State<MapScreen> {
     _mapController.stopWorkout();
   }
 
+  void _showGoalSelectionDialog() async {
+    final goals = await _mapController.getAvailableGoals();
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => WorkoutGoalSelectionDialog(
+        availableGoals: goals,
+        onGoalSelected: (goal) {
+          _mapController.setWorkoutGoal(goal);
+        },
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _mapController.dispose();
@@ -103,8 +126,19 @@ class MapScreenState extends State<MapScreen> {
             workoutData: _mapController.workoutData,
             onStartWorkout: _startWorkout,
             onStopWorkout: _stopWorkout,
+            elapsedTime: _elapsedTime,
+            onSelectGoal: _showGoalSelectionDialog,
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _mapController.workoutData.isWorkoutActive
+            ? null
+            : _showGoalSelectionDialog,
+        backgroundColor: _mapController.workoutData.isWorkoutActive
+            ? Colors.grey
+            : Colors.blue,
+        child: const Icon(Icons.flag, color: Colors.white),
       ),
     );
   }

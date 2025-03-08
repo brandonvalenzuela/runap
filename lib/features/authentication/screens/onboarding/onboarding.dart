@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:runap/features/authentication/controllers.onboarding/onboarding_controller.dart';
+import 'package:runap/features/authentication/controllers/onboarding/onboarding_controller.dart';
 import 'package:runap/features/authentication/screens/onboarding/widgets/on_boarding_dot_navigation.dart';
 import 'package:runap/features/authentication/screens/onboarding/widgets/on_boarding_next_button.dart';
 import 'package:runap/features/authentication/screens/onboarding/widgets/onboarding_page.dart';

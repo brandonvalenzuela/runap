@@ -21,7 +21,7 @@ class LocationService {
 
   void startLocationUpdates() {
     const locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.high,
+      accuracy: LocationAccuracy.bestForNavigation,
       distanceFilter: 10,
     );
 
