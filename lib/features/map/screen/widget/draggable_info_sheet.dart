@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:runap/features/map/models/workout_data.dart';
+import 'package:runap/utils/constants/sizes.dart';
 import 'workout_metrics_panel.dart';
 import 'workout_goal_panel.dart';
 import 'control_buttons.dart';
@@ -24,8 +25,8 @@ class DraggableInfoSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
       initialChildSize:
-          0.35, // Incrementado para acomodar el panel de objetivos
-      minChildSize: 0.35,
+          0.31, // Incrementado para acomodar el panel de objetivos
+      minChildSize: 0.31,
       maxChildSize: 0.9,
       builder: (context, controller) {
         return Container(
@@ -62,7 +63,7 @@ class DraggableInfoSheet extends StatelessWidget {
               Expanded(
                 child: ListView(
                   controller: controller,
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(TSizes.spaceBtwItems),
                   children: [
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
@@ -83,7 +84,8 @@ class DraggableInfoSheet extends StatelessWidget {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 24, vertical: 12),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
+                                borderRadius: BorderRadius.circular(
+                                    TSizes.borderRadiusSm),
                               ),
                             ),
                             child: const Text(
@@ -92,12 +94,12 @@ class DraggableInfoSheet extends StatelessWidget {
                             ),
                           ),
 
-                        const SizedBox(height: 20),
+                        const SizedBox(height: TSizes.spaceBtwItems),
 
                         // Métricas
                         WorkoutMetricsPanel(workoutData: workoutData),
 
-                        const SizedBox(height: 20),
+                        const SizedBox(height: TSizes.spaceBtwItems),
 
                         // Botones de control
                         ControlButtons(

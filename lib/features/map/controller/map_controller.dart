@@ -4,7 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:runap/features/map/models/workout_data.dart';
 import 'package:runap/features/map/models/workout_goal.dart';
 import 'package:runap/features/map/services/location_service.dart';
-import 'package:runap/features/map/services/workout_database_service.dart';
+import 'package:runap/features/map/services/workout_data_service.dart';
 import 'package:runap/features/map/utils/location_permission_helper.dart';
 
 class MapWorkoutController {

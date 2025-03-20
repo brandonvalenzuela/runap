@@ -21,11 +21,11 @@ class WorkoutMetricsPanel extends StatelessWidget {
       child: Column(
         children: [
           Text('Velocidad: ${workoutData.getSpeedFormatted()} km/h',
-              style: const TextStyle(fontSize: 16)),
+              style: const TextStyle(fontSize: TSizes.fontSizeMd)),
           Text('Distancia: ${workoutData.getDistanceFormatted()} km',
-              style: const TextStyle(fontSize: 16)),
+              style: const TextStyle(fontSize: TSizes.fontSizeMd)),
           Text('Cadencia: ${workoutData.cadenceStepsPerMinute} pasos/min',
-              style: const TextStyle(fontSize: 16)),
+              style: const TextStyle(fontSize: TSizes.fontSizeMd)),
         ],
       ),
     );

@@ -16,15 +16,17 @@ dependencies:
   intl: ^0.20.2
   logger: ^2.0.1
   url_launcher: ^6.1.12
-  #flutter_native_splash: ^2.4.4
+  flutter_native_splash: ^2.4.4
   smooth_page_indicator: ^1.1.0
-  carousel_slider: ^5.0.0
   fl_chart: ^0.70.2
   # Maps
   google_maps_flutter: ^2.10.1
   geolocator: ^13.0.2
   latlong2: ^0.9.1
   flutter_map: ^8.1.0
+  lottie: ^3.3.1
+  connectivity_plus: ^5.0.1
+  provider: ^6.1.2
 
 
   # Icons
@@ -36,8 +38,15 @@ dependencies:
   get: ^4.6.5
   get_storage: ^2.1.1
 
-  # Product Specific
 
+  # Product Specific
+  carousel_slider: ^5.0.0
+
+  
+  # Firebase
+  firebase_core: ^3.12.1
+  firebase_auth: ^5.5.1
+  cloud_firestore: ^5.6.5
 
   #----------------- ./ PACKAGES END ---------------------#
   
@@ -59,6 +68,7 @@ flutter:
     - assets/images/banners/
     - assets/images/
     - assets/images/workouts/
+    - assets/images/animations/
     - assets/icons/categories/
 
  #------------- LOCAL FONTS -------------------#

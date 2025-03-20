@@ -31,7 +31,6 @@ class NavigationMenu extends StatelessWidget {
           destinations: const [
             NavigationDestination(icon: Icon(Iconsax.home), label: 'Home'),
             NavigationDestination(icon: Icon(Iconsax.shop), label: 'Store'),
-            NavigationDestination(icon: Icon(Iconsax.routing), label: 'Map'),
             NavigationDestination(
                 icon: Icon(Iconsax.weight_1), label: 'Exercices'),
             NavigationDestination(icon: Icon(Iconsax.user), label: 'Profile'),
