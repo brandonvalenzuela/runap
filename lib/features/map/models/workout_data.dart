@@ -15,10 +15,18 @@ class WorkoutData {
   LatLng? currentPosition;
   WorkoutGoal? goal;
 
+  get currentSpeed => null;
+
+  get distance => null;
+
+  get calories => null;
+
+  get heartRate => null;
+
   void updatePolyline() {
     polylines.add(
       Polyline(
-        polylineId: const PolylineId('workout_route'),
+        polylineId: const PolylineId('running_route'),
         points: polylineCoordinates,
         color: Colors.blue,
         width: 5,

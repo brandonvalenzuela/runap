@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:runap/features/map/models/workout_goal.dart';
+import 'package:runap/utils/constants/sizes.dart';
 
 class WorkoutGoalSelectionDialog extends StatelessWidget {
   final List<WorkoutGoal> availableGoals;
@@ -16,7 +17,7 @@ class WorkoutGoalSelectionDialog extends StatelessWidget {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(TSizes.spaceBtwItems),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -27,10 +28,8 @@ class WorkoutGoalSelectionDialog extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 16),
-            ...availableGoals
-                .map((goal) => _buildGoalItem(context, goal))
-                .toList(),
+            const SizedBox(height: TSizes.spaceBtwItems),
+            ...availableGoals.map((goal) => _buildGoalItem(context, goal)),
             const SizedBox(height: 8),
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -53,7 +52,7 @@ class WorkoutGoalSelectionDialog extends StatelessWidget {
         },
         borderRadius: BorderRadius.circular(8),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(TSizes.spaceBtwItems),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [

@@ -6,6 +6,7 @@ import 'package:runap/features/map/dialogs/location_dialogs.dart';
 import 'package:runap/features/map/screen/widget/draggable_info_sheet.dart';
 import 'package:runap/features/map/screen/widget/workout_goal_selection_dialog.dart';
 import 'package:runap/features/map/utils/location_permission_helper.dart';
+import 'dart:ui';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -111,9 +112,13 @@ class MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final statusBarHeight = MediaQuery.of(context).padding.top;
+    final headerHeight = statusBarHeight + 60; // Altura total del encabezado
+
     return Scaffold(
       body: Stack(
         children: [
+          // Mapa de Google como fondo
           GoogleMap(
             onMapCreated: _onMapCreated,
             initialCameraPosition: CameraPosition(target: _center, zoom: 15),
@@ -122,6 +127,61 @@ class MapScreenState extends State<MapScreen> {
             myLocationButtonEnabled: false,
             zoomControlsEnabled: false,
           ),
+
+          // Gradiente con blur en la parte superior
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: headerHeight + 30, // Altura adicional para el degradado
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.4),
+                    Colors.black.withOpacity(0.3),
+                    Colors.black.withOpacity(0.1),
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 0.5, 0.8, 1.0],
+                ),
+              ),
+              child: ClipRect(
+                child: BackdropFilter(
+                  filter:
+                      ImageFilter.blur(sigmaX: 5, sigmaY: 5), // Blur más sutil
+                  child: Container(
+                    color: Colors.transparent, // Sin color adicional
+                    padding: EdgeInsets.only(
+                      top: statusBarHeight + 16,
+                      bottom: 16,
+                    ),
+                    child: const Center(
+                      child: Text(
+                        "Mapa",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          shadows: [
+                            Shadow(
+                              blurRadius: 4,
+                              color: Colors.black54,
+                              offset: Offset(1, 1),
+                            )
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Panel deslizable de información
           DraggableInfoSheet(
             workoutData: _mapController.workoutData,
             onStartWorkout: _startWorkout,

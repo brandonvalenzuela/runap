@@ -17,8 +17,6 @@ class TImages {
 
   static const String email = 'assets/images/send-email.gif';
   static const String emailSuccess = 'assets/images/email-success.png';
-  static const String deliveredEmailIllustration =
-      'assets/images/delivered_email_illustration.png';
 
   static const String fitnessIllustration =
       'assets/images/fitness-illustration.png';
@@ -38,6 +36,20 @@ class TImages {
   static const String userIcon = 'assets/icons/user.png';
 
   static const String shoes = 'assets/images/zapatos.png';
+
+  // -- Animations
+  static const String productsIllustration =
+      "assets/images/animations/sammy-line-workout.gif";
+  static const String productsSaleIllustration =
+      "assets/images/animations/sammy-line-sale.png";
+  static const String staticSuccessIllustration =
+      "assets/images/animations/sammy-line-success.png";
+  static const String deliveredInPlaneIllustration =
+      "assets/images/animations/sammy-line-come-back-later.png";
+  static const String deliveredEmailIllustration =
+      "assets/images/animations/sammy-line-man-receives-a-mail.png";
+  static const String verifyIllustration =
+      "assets/images/animations/sammy-line-travel-backpack-with-passport-and-air-ticket.gif";
 
   TImages(userIcon);
 }

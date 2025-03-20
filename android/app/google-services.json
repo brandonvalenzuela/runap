@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "524353907461",
+    "project_id": "runap-2891c",
+    "storage_bucket": "runap-2891c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:524353907461:android:6d0e0fddc9e6ea3890a56c",
+        "android_client_info": {
+          "package_name": "com.example.runap"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "524353907461-rum5p5jf3fbtv9m0eidjkpb7jdt3tbb6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.runap",
+            "certificate_hash": "c875b41290f8bcd4df24aabc8b08fa11449f6e49"
+          }
+        },
+        {
+          "client_id": "524353907461-mjl9u84242gt2pie8un6fuje31ot9nrt.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBuQvwvzhSnFBfHEE3Ds8uX5jQgtJM_G1I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "524353907461-mjl9u84242gt2pie8un6fuje31ot9nrt.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "524353907461-q4upq504gdsotj0gni7md467aolfcmdi.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.runap"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
