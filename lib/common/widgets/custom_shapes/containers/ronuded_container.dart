@@ -12,7 +12,7 @@ class TRonudedContainer extends StatelessWidget {
     this.padding,
     this.showBorder = false,
     this.radius = TSizes.cardRadiusLg,
-    this.backgroundColor = TColors.white,
+    this.backgroundColor = Colors.transparent,
     this.borderColor = TColors.borderPrimary,
   });
 

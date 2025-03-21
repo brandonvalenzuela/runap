@@ -51,5 +51,12 @@ class TImages {
   static const String verifyIllustration =
       "assets/images/animations/sammy-line-travel-backpack-with-passport-and-air-ticket.gif";
 
+  // -- Workouts icons
+  static const String runningIcon = 'assets/icons/workout/running.png';
+  static const String strengthIcon = 'assets/icons/workout/strength.png';
+  static const String speedIcon = 'assets/icons/workout/speed.png';
+  static const String restIcon = 'assets/icons/workout/rest.png';
+  static const String workoutIcon = 'assets/icons/workout/workout.png';
+
   TImages(userIcon);
 }

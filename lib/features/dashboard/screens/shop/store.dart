@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:runap/common/widgets/appbar/appbar.dart';
 import 'package:runap/common/widgets/appbar/tabbar.dart';
-import 'package:runap/common/widgets/brands/brand_card.dart';
 import 'package:runap/common/widgets/custom_shapes/containers/search_container.dart';
 import 'package:runap/common/widgets/layouts/grid_layout.dart';
 import 'package:runap/common/widgets/texts/sections_heading.dart';
+import 'package:runap/common/widgets/training/training_card.dart';
 import 'package:runap/common/widgets/workouts/menu/workout_menu_icon.dart';
-import 'package:runap/features/workout/screens/shop/widget/category_tab.dart';
+import 'package:runap/features/dashboard/models/dashboard_model.dart';
+import 'package:runap/features/dashboard/screens/shop/widget/category_tab.dart';
 import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/constants/sizes.dart';
 import 'package:runap/utils/helpers/helper_functions.dart';
@@ -64,7 +65,14 @@ class Store extends StatelessWidget {
                           itemCount: 4,
                           mainAxisExtent: 80,
                           itemBuilder: (_, index) {
-                            return TBrandCard(showBorder: false);
+                            return TrainingCard(
+                              showBorder: false,
+                              session: Session(
+                                sessionDate: DateTime.now(),
+                                workoutName: 'Brand ${index + 1}',
+                                description: 'Description ${index + 1}',
+                              ),
+                            );
                           },
                         ),
                       ],

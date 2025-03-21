@@ -2,8 +2,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:get/get.dart';
-import 'package:get/state_manager.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:runap/Core/service_locator.dart';
 import 'package:runap/data/repositories/authentication/authentication_repository.dart';
 import 'package:runap/firebase_options.dart';
 
@@ -29,6 +29,9 @@ Future<void> main() async {
   );
 
   // Todo: Inizialize Authentication
+
+  // Todo: Inizialize Service Locator
+  setupServiceLocator();
 
   // Load all the Material Design / Theme / Localizations / Bindings
   runApp(const App());
