@@ -14,25 +14,36 @@ class NavigationMenu extends StatelessWidget {
     final controller = Get.put(NavigationController());
     final darkMode = THelperFunctions.isDarkMode(context);
 
-    ///NO ESTA FUNCIONAND EL DARKMODE EN EL NAVMENU
     return Scaffold(
-      bottomNavigationBar: Obx(
-        () => NavigationBar(
-          height: 60,
-          elevation: 0,
-          selectedIndex: controller.selectedIndex.value,
-          onDestinationSelected: (index) =>
-              controller.selectedIndex.value = index,
-          backgroundColor: darkMode ? TColors.black : Colors.white,
-          indicatorColor: darkMode
-              ? TColors.white.withAlpha(25)
-              : TColors.black.withAlpha(25),
-          destinations: const [
-            NavigationDestination(icon: Icon(Iconsax.home), label: 'Home'),
-            NavigationDestination(
-                icon: Icon(Iconsax.weight_1), label: 'Exercices'),
-            NavigationDestination(icon: Icon(Iconsax.user), label: 'Profile'),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: darkMode ? Colors.black38 : Colors.grey.withAlpha(51),
+              spreadRadius: 0.5,
+              blurRadius: 4,
+              offset: const Offset(0, -2),
+            ),
           ],
+        ),
+        child: Obx(
+          () => NavigationBar(
+            height: 60,
+            elevation: 0,
+            selectedIndex: controller.selectedIndex.value,
+            onDestinationSelected: (index) =>
+                controller.selectedIndex.value = index,
+            backgroundColor: darkMode ? TColors.black : Colors.white,
+            indicatorColor: darkMode
+                ? TColors.white.withAlpha(25)
+                : TColors.black.withAlpha(25),
+            destinations: const [
+              NavigationDestination(icon: Icon(Iconsax.home), label: 'Home'),
+              NavigationDestination(
+                  icon: Icon(Iconsax.weight_1), label: 'Exercices'),
+              NavigationDestination(icon: Icon(Iconsax.user), label: 'Profile'),
+            ],
+          ),
         ),
       ),
       body: Obx(() => controller.screens[controller.selectedIndex.value]),

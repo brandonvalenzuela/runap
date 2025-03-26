@@ -18,7 +18,7 @@ class TrainingShowcase extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TRonudedContainer(
-      showBorder: true,
+      showBorder: false,
       borderColor: Colors.transparent,
       backgroundColor: TColors.grey,
       padding: const EdgeInsets.all(TSizes.md),

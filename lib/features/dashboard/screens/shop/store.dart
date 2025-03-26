@@ -50,7 +50,7 @@ class Store extends StatelessWidget {
                         SizedBox(height: TSizes.spaceBtwItems),
                         TSearchContainer(
                             text: 'Search in Store',
-                            showBorder: true,
+                            showBorder: false,
                             showBackground: false,
                             padding: EdgeInsets.zero),
                         SizedBox(height: TSizes.spaceBtwSections),

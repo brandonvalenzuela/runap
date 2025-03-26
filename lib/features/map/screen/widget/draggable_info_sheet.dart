@@ -10,7 +10,6 @@ class DraggableInfoSheet extends StatelessWidget {
   final VoidCallback onStartWorkout;
   final VoidCallback onStopWorkout;
   final String elapsedTime;
-  final Function() onSelectGoal;
 
   const DraggableInfoSheet({
     super.key,
@@ -18,7 +17,6 @@ class DraggableInfoSheet extends StatelessWidget {
     required this.onStartWorkout,
     required this.onStopWorkout,
     required this.elapsedTime,
-    required this.onSelectGoal,
   });
 
   @override
@@ -75,24 +73,24 @@ class DraggableInfoSheet extends StatelessWidget {
                             elapsedTime: elapsedTime,
                           ),
 
-                        if (workoutData.goal == null &&
-                            !workoutData.isWorkoutActive)
-                          ElevatedButton(
-                            onPressed: onSelectGoal,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 24, vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(
-                                    TSizes.borderRadiusSm),
-                              ),
-                            ),
-                            child: const Text(
-                              'Seleccionar objetivo',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                          ),
+                        // if (workoutData.goal == null &&
+                        //     !workoutData.isWorkoutActive)
+                        //   ElevatedButton(
+                        //     onPressed: onSelectGoal,
+                        //     style: ElevatedButton.styleFrom(
+                        //       backgroundColor: Colors.blue,
+                        //       padding: const EdgeInsets.symmetric(
+                        //           horizontal: 24, vertical: 12),
+                        //       shape: RoundedRectangleBorder(
+                        //         borderRadius: BorderRadius.circular(
+                        //             TSizes.borderRadiusSm),
+                        //       ),
+                        //     ),
+                        //     child: const Text(
+                        //       'Seleccionar objetivo',
+                        //       style: TextStyle(color: Colors.white),
+                        //     ),
+                        //   ),
 
                         const SizedBox(height: TSizes.spaceBtwItems),
 

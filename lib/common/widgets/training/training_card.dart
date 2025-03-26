@@ -73,9 +73,9 @@ class TrainingCard extends StatelessWidget {
         child: TRonudedContainer(
           showBorder: showBorder,
           backgroundColor: isPast && !session.completed
-              ? Colors.grey.withOpacity(
-                  0.1) // Fondo gris para sesiones pasadas no completadas
-              : Colors.transparent,
+              ? Colors.grey.withAlpha(
+                  25) // Fondo gris para sesiones pasadas no completadas
+              : const Color.fromARGB(0, 34, 31, 31),
           borderColor: isPast && !session.completed
               ? Colors.grey // Borde gris para sesiones pasadas no completadas
               : Colors.transparent,
@@ -131,7 +131,7 @@ class TrainingCard extends StatelessWidget {
                               Theme.of(context).textTheme.labelMedium?.copyWith(
                                     color: isPast && !session.completed
                                         ? Colors.grey
-                                        : TColors.accent,
+                                        : TColors.buttonPrimary,
                                   ),
                         ),
                       ],
@@ -207,11 +207,11 @@ class TrainingCard extends StatelessWidget {
   // Método para obtener el color de fondo del chip de estado
   Color _getStatusChipColor(bool isPast, bool completed) {
     if (completed) {
-      return TColors.success.withOpacity(0.2);
+      return TColors.success.withAlpha(51);
     } else if (isPast) {
-      return Colors.red.withOpacity(0.2);
+      return TColors.error.withAlpha(51);
     } else {
-      return TColors.primaryColor.withOpacity(0.2);
+      return TColors.primaryColor.withAlpha(51);
     }
   }
 
@@ -220,7 +220,7 @@ class TrainingCard extends StatelessWidget {
     if (completed) {
       return TColors.success;
     } else if (isPast) {
-      return Colors.red;
+      return TColors.error;
     } else {
       return TColors.primaryColor;
     }

@@ -4,7 +4,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:runap/features/map/controller/map_controller.dart';
 import 'package:runap/features/map/dialogs/location_dialogs.dart';
 import 'package:runap/features/map/screen/widget/draggable_info_sheet.dart';
-import 'package:runap/features/map/screen/widget/workout_goal_selection_dialog.dart';
 import 'package:runap/features/map/utils/location_permission_helper.dart';
 import 'dart:ui';
 
@@ -88,22 +87,6 @@ class MapScreenState extends State<MapScreen> {
     _mapController.stopWorkout();
   }
 
-  void _showGoalSelectionDialog() async {
-    final goals = await _mapController.getAvailableGoals();
-
-    if (!mounted) return;
-
-    showDialog(
-      context: context,
-      builder: (context) => WorkoutGoalSelectionDialog(
-        availableGoals: goals,
-        onGoalSelected: (goal) {
-          _mapController.setWorkoutGoal(goal);
-        },
-      ),
-    );
-  }
-
   @override
   void dispose() {
     _mapController.dispose();
@@ -140,9 +123,9 @@ class MapScreenState extends State<MapScreen> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withOpacity(0.4),
-                    Colors.black.withOpacity(0.3),
-                    Colors.black.withOpacity(0.1),
+                    Colors.black.withAlpha(102),
+                    Colors.black.withAlpha(76),
+                    Colors.black.withAlpha(26),
                     Colors.transparent,
                   ],
                   stops: const [0.0, 0.5, 0.8, 1.0],
@@ -187,18 +170,8 @@ class MapScreenState extends State<MapScreen> {
             onStartWorkout: _startWorkout,
             onStopWorkout: _stopWorkout,
             elapsedTime: _elapsedTime,
-            onSelectGoal: _showGoalSelectionDialog,
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _mapController.workoutData.isWorkoutActive
-            ? null
-            : _showGoalSelectionDialog,
-        backgroundColor: _mapController.workoutData.isWorkoutActive
-            ? Colors.grey
-            : Colors.blue,
-        child: const Icon(Icons.flag, color: Colors.white),
       ),
     );
   }

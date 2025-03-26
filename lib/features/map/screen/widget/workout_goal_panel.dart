@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:runap/features/map/models/workout_data.dart';
+import 'package:runap/utils/constants/colors.dart';
 
 class WorkoutGoalPanel extends StatelessWidget {
   final WorkoutData workoutData;
@@ -20,9 +21,8 @@ class WorkoutGoalPanel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: TColors.white,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.blue.shade100),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

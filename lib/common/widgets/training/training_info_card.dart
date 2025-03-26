@@ -16,9 +16,9 @@ class TrainingInfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TRonudedContainer(
-      showBorder: true,
+      showBorder: false,
       borderColor: Colors.transparent,
-      backgroundColor: TColors.primaryColor.withOpacity(0.1),
+      backgroundColor: TColors.primaryColor.withAlpha(25),
       padding: const EdgeInsets.all(TSizes.md),
       margin: const EdgeInsets.only(bottom: TSizes.spaceBtwItems),
       child: Column(

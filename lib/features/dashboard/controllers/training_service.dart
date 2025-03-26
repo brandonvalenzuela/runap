@@ -28,8 +28,10 @@ class TrainingService {
   Stream<TrainingData> get trainingDataStream => _trainingDataController.stream;
 
   // Método para obtener los datos del dashboard
-  Future<TrainingData> getDashboardData(
-      {bool forceRefresh = false, int userId = 1}) async {
+  Future<TrainingData> getDashboardData({
+    bool forceRefresh = false,
+    int userId = 1,
+  }) async {
     // Si tenemos datos en caché y no se fuerza la actualización
     // y los datos tienen menos de 5 minutos, devolvemos el caché
     if (!forceRefresh &&
