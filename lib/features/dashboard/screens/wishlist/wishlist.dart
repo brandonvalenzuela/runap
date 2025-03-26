@@ -5,7 +5,7 @@ import 'package:runap/common/widgets/appbar/appbar.dart';
 import 'package:runap/common/widgets/icons/t_circular_icon.dart';
 import 'package:runap/common/widgets/layouts/grid_layout.dart';
 import 'package:runap/common/widgets/workouts/workout_cards/workout_card_vertical.dart';
-import 'package:runap/features/workout/screens/home.dart';
+import 'package:runap/features/dashboard/screens/home.dart';
 import 'package:runap/utils/constants/sizes.dart';
 
 class FavouriteScreen extends StatelessWidget {

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:runap/data/repositories/authentication/authentication_repository.dart';
 import 'package:runap/features/authentication/controllers/signup/verify_email_controller.dart';
-import 'package:runap/features/authentication/screens/login/login.dart';
 import 'package:runap/utils/constants/image_strings.dart';
 import 'package:runap/utils/constants/sizes.dart';
 import 'package:runap/utils/constants/text_strings.dart';
