@@ -15,13 +15,17 @@ class WorkoutData {
   LatLng? currentPosition;
   WorkoutGoal? goal;
 
-  get currentSpeed => null;
+  // Getter para velocidad actual en km/h (para compatibilidad con código existente)
+  double get currentSpeed => speedMetersPerSecond * 3.6;
 
-  get distance => null;
+  // Getter para ritmo actual en km/h
+  double get currentPace => isWorkoutActive ? getAverageSpeedKmh() : 0.0;
 
-  get calories => null;
-
-  get heartRate => null;
+  // Getters para mantener compatibilidad
+  double get distance => distanceMeters;
+  int get calories => _calculateCalories();
+  int get heartRate =>
+      0; // Valor ficticio, necesitaría un sensor para datos reales
 
   void updatePolyline() {
     polylines.add(
@@ -93,5 +97,14 @@ class WorkoutData {
     int seconds = estimatedSecondsLeft % 60;
 
     return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  // Método para calcular calorías quemadas (estimación básica)
+  int _calculateCalories() {
+    // Fórmula simple: aproximadamente 1 caloría por kg de peso por km recorrido
+    // Asumimos un peso promedio de 70kg
+    const double weightKg = 70.0;
+    double distanceKm = distanceMeters / 1000;
+    return (distanceKm * weightKg).round();
   }
 }

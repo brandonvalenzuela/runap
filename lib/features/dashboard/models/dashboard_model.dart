@@ -4,8 +4,9 @@ class Dashboard {
   final String goalTime;
   final int weeksToRace;
   final int totalSessions;
-  final int completedSessions;
-  final int completionRate;
+  // Estas propiedades ya no son finales para permitir actualizaciones
+  int completedSessions;
+  int completionRate;
   final List<Session> nextWeekSessions;
 
   Dashboard({
@@ -46,6 +47,15 @@ class Dashboard {
       'completionRate': completionRate,
       'nextWeekSessions': nextWeekSessions.map((e) => e.toJson()).toList(),
     };
+  }
+
+  // Método de conveniencia para actualizar las estadísticas basadas en sesiones completadas
+  void updateStats() {
+    completedSessions =
+        nextWeekSessions.where((session) => session.completed).length;
+    completionRate = totalSessions > 0
+        ? (completedSessions / totalSessions * 100).round()
+        : 0;
   }
 }
 

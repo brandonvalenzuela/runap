@@ -70,8 +70,8 @@ class HomeScreen extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: TColors.primaryColor.withAlpha(25),
                             borderRadius: BorderRadius.circular(16),
-                            // border: Border.all(
-                            //     color: TColors.primaryColor.withAlpha(76)),
+                            border: Border.all(
+                                color: TColors.primaryColor.withAlpha(76)),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -260,7 +260,9 @@ class HomeScreen extends StatelessWidget {
               },
             ),
 
-            // BODY - Sección Scrolleable con sesiones en orden cronológico
+            // Dentro del método build de tu Dashboard, actualiza esta parte:
+
+// BODY - Sección Scrolleable con sesiones en orden cronológico
             Expanded(
               child: Consumer<TrainingViewModel>(
                 builder: (context, viewModel, child) {
@@ -316,12 +318,7 @@ class HomeScreen extends StatelessWidget {
                                   session: session,
                                   showBorder: true,
                                   isPast: isPast,
-                                  onTap: () {
-                                    // Puedes agregar acción al tocar la tarjeta si es necesario
-                                  },
-                                  onToggleCompletion: (completed) {
-                                    viewModel.toggleSessionCompletion(session);
-                                  },
+                                  // No más onToggleCompletion, toda la tarjeta es clickeable
                                 );
                               },
                             ),
