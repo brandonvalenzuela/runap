@@ -101,9 +101,12 @@ class TrainingCard extends StatelessWidget {
     // Determinar el ícono según el tipo de entrenamiento
     String workoutIcon = _getWorkoutIcon(session.workoutName);
 
-    // Configurar los parámetros del entrenamiento para el mapa
+    // Busca la función navigateToMap() en training_card.dart (alrededor de la línea 141)
+// y reemplázala con esta versión:
+
     void navigateToMap() {
-      print('Intentando navegar al mapa. canStartWorkout = $canStartWorkout');
+      print(
+          '📱 TrainingCard - Intentando navegar al mapa. canStartWorkout: $canStartWorkout');
 
       // Verificación doble para mayor seguridad
       final now = DateTime.now();
@@ -116,7 +119,8 @@ class TrainingCard extends StatelessWidget {
           isToday && !session.workoutName.toLowerCase().contains('descanso');
 
       if (!shouldAllow) {
-        print('No se puede iniciar este entrenamiento: ${session.sessionDate}');
+        print(
+            '⛔ TrainingCard - No se puede iniciar este entrenamiento: ${session.sessionDate}');
 
         // Mensaje claro para el usuario
         ScaffoldMessenger.of(context).showSnackBar(
@@ -133,20 +137,24 @@ class TrainingCard extends StatelessWidget {
       WorkoutGoal? workoutGoal = _createWorkoutGoalFromSession(session);
 
       try {
-        // Verificar si el Provider está disponible
-        final viewModel =
-            Provider.of<TrainingViewModel>(context, listen: false);
+        // En lugar de usar Provider, verificamos si el ViewModel está registrado en GetX
+        if (!Get.isRegistered<TrainingViewModel>()) {
+          print(
+              '⚠️ TrainingCard - TrainingViewModel no registrado, registrándolo ahora...');
+          // Si no está registrado, lo registramos
+          final viewModel = TrainingViewModel();
+          Get.put(viewModel);
+        } else {
+          print('✅ TrainingCard - TrainingViewModel ya está registrado');
+        }
 
-        // Navegar con el Provider
-        Get.to(() => ChangeNotifierProvider.value(
-              value: viewModel,
-              child: MapScreen(
-                initialWorkoutGoal: workoutGoal,
-                sessionToUpdate: session,
-              ),
+        // Navegamos directamente con GetX sin usar Provider
+        Get.to(() => MapScreen(
+              initialWorkoutGoal: workoutGoal,
+              sessionToUpdate: session,
             ));
       } catch (e) {
-        print('Error al obtener TrainingViewModel: $e');
+        print('❌ TrainingCard - Error al navegar al mapa: $e');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al iniciar el entrenamiento: $e'),

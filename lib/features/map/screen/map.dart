@@ -2,15 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:runap/features/dashboard/models/dashboard_model.dart';
-import 'package:runap/features/dashboard/viewmodels/training_view_model.dart';
 import 'package:runap/features/map/controller/map_controller.dart';
 import 'package:runap/features/map/models/workout_goal.dart';
-import 'package:runap/features/map/models/workout_data.dart';
 import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/constants/sizes.dart';
-import 'package:provider/provider.dart';
 
-class MapScreen extends StatefulWidget {
+class MapScreen extends StatelessWidget {
   final WorkoutGoal? initialWorkoutGoal;
   final Session? sessionToUpdate;
 
@@ -21,257 +18,111 @@ class MapScreen extends StatefulWidget {
   });
 
   @override
-  State<MapScreen> createState() => _MapScreenState();
-}
-
-class _MapScreenState extends State<MapScreen> {
-  late MapWorkoutController _controller;
-  WorkoutData _workoutData = WorkoutData();
-  bool _showGoalSelector = false;
-  List<WorkoutGoal> _availableGoals = [];
-  bool _isLoading = true;
-  bool _isSaving = false;
-
-  @override
-  void initState() {
-    super.initState();
-
-    // Verificar si la sesión debería ser accesible (SOLO HOY)
-    if (widget.sessionToUpdate != null) {
-      final now = DateTime.now();
-      final isToday = now.year == widget.sessionToUpdate!.sessionDate.year &&
-          now.month == widget.sessionToUpdate!.sessionDate.month &&
-          now.day == widget.sessionToUpdate!.sessionDate.day;
-
-      final canAccess = isToday &&
-          !widget.sessionToUpdate!.workoutName
-              .toLowerCase()
-              .contains('descanso');
-
-      if (!canAccess) {
-        // No debería acceder a este entrenamiento, regresar
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                  'Solo puedes iniciar entrenamientos programados para hoy'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          Get.back(); // Regresar a la pantalla anterior
-        });
-        return;
-      }
-    }
-
-    // Inicializar el controlador
-    _controller = MapWorkoutController(
-      onWorkoutDataChanged: (data) {
-        setState(() {
-          _workoutData = data;
-        });
-      },
-    );
-
-    _initialize();
-  }
-
-  Future<void> _initialize() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    await _controller.initialize();
-
-    // Si recibimos un objetivo inicial (desde una sesión de entrenamiento)
-    if (widget.initialWorkoutGoal != null) {
-      _controller.setWorkoutGoal(widget.initialWorkoutGoal!);
-    }
-
-    // Cargar los objetivos disponibles
-    _availableGoals = await _controller.getAvailableGoals();
-
-    setState(() {
-      _isLoading = false;
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _onStartStopPress() {
-    if (_workoutData.isWorkoutActive) {
-      _stopWorkout();
-    } else {
-      _startWorkout();
-    }
-  }
-
-  void _startWorkout() {
-    _controller.startWorkout();
-  }
-
-  Future<void> _stopWorkout() async {
-    setState(() {
-      _isSaving = true;
-    });
-
-    // Detener el entrenamiento y guardar los datos
-    _controller.stopWorkout();
-
-    // Si hay una sesión a actualizar (viniendo del dashboard)
-    if (widget.sessionToUpdate != null) {
-      try {
-        // Actualizar la sesión como completada
-        final viewModel =
-            Provider.of<TrainingViewModel>(context, listen: false);
-        await viewModel.toggleSessionCompletion(widget.sessionToUpdate!);
-
-        // Mostrar un diálogo de éxito
-        await _showCompletionDialog();
-
-        // Volver al dashboard
-        Get.back();
-      } catch (e) {
-        // Mostrar error
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al actualizar el entrenamiento: $e')),
-        );
-      }
-    }
-
-    setState(() {
-      _isSaving = false;
-    });
-  }
-
-  Future<void> _showCompletionDialog() async {
-    return showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('¡Entrenamiento completado!'),
-          content: SingleChildScrollView(
-            child: ListBody(
-              children: <Widget>[
-                Text('Has completado tu entrenamiento de hoy.'),
-                SizedBox(height: 8),
-                Text(
-                  'Distancia: ${(_workoutData.distanceMeters / 1000).toStringAsFixed(2)} km',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  'Tiempo: ${_controller.getFormattedElapsedTime()}',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Volver al Dashboard'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _toggleGoalSelector() {
-    setState(() {
-      _showGoalSelector = !_showGoalSelector;
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
+    // Inyectar el controlador
+    final controller = Get.put(MapController(
+      initialSession: sessionToUpdate,
+      initialWorkoutGoal: initialWorkoutGoal,
+    ));
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          widget.sessionToUpdate != null
-              ? widget.sessionToUpdate!.workoutName
-              : 'Entrenamiento',
-        ),
+        title: Obx(() {
+          if (controller.sessionToUpdate.value != null) {
+            return Text(controller.sessionToUpdate.value!.workoutName);
+          }
+          return Text('Entrenamiento');
+        }),
         actions: [
-          IconButton(
-            icon: Icon(Icons.flag),
-            onPressed:
-                _workoutData.isWorkoutActive ? null : _toggleGoalSelector,
-          ),
+          Obx(() {
+            return IconButton(
+              icon: Icon(Icons.flag),
+              onPressed: controller.workoutData.value.isWorkoutActive
+                  ? null
+                  : controller.toggleGoalSelector,
+            );
+          }),
         ],
       ),
       body: Stack(
         children: [
           // Mapa
-          _buildMap(),
+          Obx(() => _buildMap(controller)),
 
           // Panel de información inferior
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
-            child: _buildInfoPanel(),
+            child: Obx(() => _buildInfoPanel(controller)),
           ),
 
           // Selector de objetivos (condicional)
-          if (_showGoalSelector) _buildGoalSelector(),
+          Obx(() {
+            if (controller.showGoalSelector.value) {
+              return _buildGoalSelector(controller);
+            }
+            return SizedBox.shrink();
+          }),
 
           // Indicador de carga
-          if (_isLoading)
-            Container(
-              color: Colors.black54,
-              child: Center(
-                child: CircularProgressIndicator(),
-              ),
-            ),
+          Obx(() {
+            if (controller.isLoading.value) {
+              return Container(
+                color: Colors.black54,
+                child: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              );
+            }
+            return SizedBox.shrink();
+          }),
 
           // Indicador de guardado
-          if (_isSaving)
-            Container(
-              color: Colors.black54,
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text(
-                      'Guardando entrenamiento...',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ],
+          Obx(() {
+            if (controller.isSaving.value) {
+              return Container(
+                color: Colors.black54,
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text(
+                        'Guardando entrenamiento...',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ),
+              );
+            }
+            return SizedBox.shrink();
+          }),
         ],
       ),
     );
   }
 
-  Widget _buildMap() {
+  Widget _buildMap(MapController controller) {
     return GoogleMap(
       initialCameraPosition: CameraPosition(
-        target: _workoutData.currentPosition ?? LatLng(20.651464, -103.392958),
+        target: controller.workoutData.value.currentPosition ??
+            LatLng(20.651464, -103.392958),
         zoom: 17.0,
       ),
       myLocationEnabled: true,
       myLocationButtonEnabled: false,
       zoomControlsEnabled: false,
-      polylines: _workoutData.polylines,
-      onMapCreated: (GoogleMapController controller) {
-        _controller.setMapController(controller);
+      polylines: controller.workoutData.value.polylines,
+      onMapCreated: (GoogleMapController mapController) {
+        controller.setMapControllerInstance(mapController);
       },
     );
   }
 
-  Widget _buildInfoPanel() {
+  Widget _buildInfoPanel(MapController controller) {
     return Container(
       padding: EdgeInsets.all(TSizes.defaultSpace),
       decoration: BoxDecoration(
@@ -292,7 +143,7 @@ class _MapScreenState extends State<MapScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           // Información del objetivo (si hay uno establecido)
-          if (_workoutData.goal != null) ...[
+          if (controller.workoutData.value.goal != null) ...[
             Text(
               'Objetivo',
               style: TextStyle(
@@ -306,15 +157,17 @@ class _MapScreenState extends State<MapScreen> {
               children: [
                 _buildMetricTile(
                   icon: Icons.straighten,
-                  value: '${_workoutData.goal!.targetDistanceKm} km',
+                  value:
+                      '${controller.workoutData.value.goal!.targetDistanceKm} km',
                   label: 'Distancia',
                 ),
                 _buildMetricTile(
                   icon: Icons.timer,
-                  value: '${_workoutData.goal!.targetTimeMinutes} min',
+                  value:
+                      '${controller.workoutData.value.goal!.targetTimeMinutes} min',
                   label: 'Tiempo',
                 ),
-                if (_workoutData.goal!.startTime != null) _buildProgressTile(),
+                _buildProgressTile(controller),
               ],
             ),
             SizedBox(height: 16),
@@ -327,20 +180,21 @@ class _MapScreenState extends State<MapScreen> {
               _buildMetricTile(
                 icon: Icons.straighten,
                 value:
-                    '${(_workoutData.distanceMeters / 1000).toStringAsFixed(2)} km',
+                    '${(controller.workoutData.value.distanceMeters / 1000).toStringAsFixed(2)} km',
                 label: 'Distancia',
               ),
               _buildMetricTile(
                 icon: Icons.timer,
-                value: _controller.getFormattedElapsedTime(),
+                value: controller.getFormattedElapsedTime(),
                 label: 'Tiempo',
               ),
               _buildMetricTile(
                 icon: Icons.speed,
-                value: _workoutData.isWorkoutActive
-                    ? '${_workoutData.currentPace.toStringAsFixed(2)} km/h'
-                    : '0.00 km/h',
-                label: 'Ritmo',
+                value: controller.workoutData.value.isWorkoutActive
+                    ? controller.workoutData.value
+                        .getPaceFormatted() // Usar el nuevo método
+                    : "--:--",
+                label: 'Ritmo (min/km)', // Cambiar la etiqueta para claridad
               ),
             ],
           ),
@@ -350,15 +204,19 @@ class _MapScreenState extends State<MapScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _onStartStopPress,
+              onPressed: controller.workoutData.value.isWorkoutActive
+                  ? controller.stopWorkout
+                  : controller.startWorkout,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _workoutData.isWorkoutActive
+                backgroundColor: controller.workoutData.value.isWorkoutActive
                     ? Colors.red
                     : TColors.primaryColor,
                 padding: EdgeInsets.symmetric(vertical: 12),
               ),
               child: Text(
-                _workoutData.isWorkoutActive ? 'DETENER' : 'INICIAR',
+                controller.workoutData.value.isWorkoutActive
+                    ? 'DETENER'
+                    : 'INICIAR',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
@@ -395,10 +253,11 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  Widget _buildProgressTile() {
+  Widget _buildProgressTile(MapController controller) {
     // Calcular el progreso
-    final elapsedSeconds = _controller.getElapsedTimeSeconds();
-    final targetSeconds = _workoutData.goal!.targetTimeMinutes * 60;
+    final elapsedSeconds = controller.getElapsedTimeSeconds();
+    final targetSeconds =
+        controller.workoutData.value.goal!.targetTimeMinutes * 60;
     final progress = targetSeconds > 0 ? elapsedSeconds / targetSeconds : 0.0;
 
     return Column(
@@ -426,7 +285,7 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  Widget _buildGoalSelector() {
+  Widget _buildGoalSelector(MapController controller) {
     return Container(
       color: Colors.black54,
       child: Center(
@@ -449,10 +308,11 @@ class _MapScreenState extends State<MapScreen> {
                 ),
               ),
               SizedBox(height: 16),
-              ..._availableGoals.map((goal) => _buildGoalOption(goal)),
+              ...controller.availableGoals
+                  .map((goal) => _buildGoalOption(controller, goal)),
               SizedBox(height: 16),
               TextButton(
-                onPressed: _toggleGoalSelector,
+                onPressed: controller.toggleGoalSelector,
                 child: Text('Cancelar'),
               ),
             ],
@@ -462,16 +322,14 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  Widget _buildGoalOption(WorkoutGoal goal) {
-    final isSelected =
-        _workoutData.goal?.targetDistanceKm == goal.targetDistanceKm &&
-            _workoutData.goal?.targetTimeMinutes == goal.targetTimeMinutes;
+  Widget _buildGoalOption(MapController controller, WorkoutGoal goal) {
+    final isSelected = controller.workoutData.value.goal?.targetDistanceKm ==
+            goal.targetDistanceKm &&
+        controller.workoutData.value.goal?.targetTimeMinutes ==
+            goal.targetTimeMinutes;
 
     return GestureDetector(
-      onTap: () {
-        _controller.setWorkoutGoal(goal);
-        _toggleGoalSelector();
-      },
+      onTap: () => controller.setWorkoutGoal(goal),
       child: Container(
         margin: EdgeInsets.only(bottom: 8),
         padding: EdgeInsets.all(12),

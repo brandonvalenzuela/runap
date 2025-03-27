@@ -1,36 +1,53 @@
-import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
 import 'package:runap/features/dashboard/models/dashboard_model.dart';
 import '../models/training_data.dart';
 import '../controllers/training_service.dart';
 
 enum LoadingStatus { initial, loading, loaded, error }
 
-class TrainingViewModel extends ChangeNotifier {
+class TrainingViewModel extends GetxController {
+  // Servicio para obtener datos de entrenamiento
   final TrainingService _trainingService = TrainingService();
 
-  TrainingData? _trainingData;
-  LoadingStatus _status = LoadingStatus.initial;
-  String _errorMessage = '';
+  // Variables observables (reactivas)
+  final Rx<TrainingData?> _trainingData = Rx<TrainingData?>(null);
+  final Rx<LoadingStatus> _status = LoadingStatus.initial.obs;
+  final RxString _errorMessage = ''.obs;
 
   // ID del usuario actual (podría venir de un servicio de autenticación)
   final int _userId = 1; // Por defecto usamos el usuario 1
 
   // Getters
-  TrainingData? get trainingData => _trainingData;
-  LoadingStatus get status => _status;
-  String get errorMessage => _errorMessage;
+  TrainingData? get trainingData => _trainingData.value;
+  LoadingStatus get status => _status.value;
+  String get errorMessage => _errorMessage.value;
 
-  // Constructor
-  TrainingViewModel() {
+  // Constructor - llamado cuando GetX instancia este controller
+  @override
+  void onInit() {
+    super.onInit();
+    print("🚀 TrainingViewModel - onInit");
+
     // Suscribirnos al stream de datos de entrenamiento
     _trainingService.trainingDataStream.listen((data) {
-      _trainingData = data;
-      _status = LoadingStatus.loaded;
+      print("📡 TrainingViewModel - Recibiendo datos del stream");
+      _trainingData.value = data;
+      _status.value = LoadingStatus.loaded;
+
+      // IMPORTANTE: Llamar a update() para notificar a GetBuilder
+      update();
+
+      // Verificar si hay datos y sesiones
+      if (data != null && data.dashboard.nextWeekSessions.isNotEmpty) {
+        print(
+            "✅ TrainingViewModel (stream) - Datos recibidos con ${data.dashboard.nextWeekSessions.length} sesiones");
+      } else {
+        print(
+            "⚠️ TrainingViewModel (stream) - Datos recibidos sin sesiones o nulos");
+      }
 
       // Verificar sesiones pasadas
       _updatePastSessions();
-
-      notifyListeners();
     });
 
     // Cargar datos iniciales
@@ -41,29 +58,65 @@ class TrainingViewModel extends ChangeNotifier {
   Future<void> loadDashboardData(
       {bool forceRefresh = false, int? userId}) async {
     try {
-      _status = LoadingStatus.loading;
-      notifyListeners();
+      print(
+          "🔄 TrainingViewModel - Iniciando carga de datos. ForceRefresh: $forceRefresh");
+
+      // Actualizar estado
+      _status.value = LoadingStatus.loading;
+      update(); // IMPORTANTE: Notificar a GetBuilder
 
       // Usamos el userId proporcionado o el valor por defecto
       final userIdToUse = userId ?? _userId;
 
-      _trainingData = await _trainingService.getDashboardData(
+      // Cargar datos
+      final data = await _trainingService.getDashboardData(
           forceRefresh: forceRefresh, userId: userIdToUse);
 
-      _status = LoadingStatus.loaded;
+      // Actualizar estado
+      _trainingData.value = data;
+      _status.value = LoadingStatus.loaded;
+
+      // Imprimir información para debug
+      if (data != null && data.dashboard.nextWeekSessions.isNotEmpty) {
+        print("✅ TrainingViewModel - Datos cargados exitosamente");
+        print(
+            "📊 Total de sesiones: ${data.dashboard.nextWeekSessions.length}");
+        print(
+            "📊 Primera sesión: ${data.dashboard.nextWeekSessions[0].workoutName}");
+
+        // IMPORTANTE: Verificar si la lista contiene elementos después de ordenarla
+        List<Session> testSessions = List.from(data.dashboard.nextWeekSessions);
+        testSessions.sort((a, b) => a.sessionDate.compareTo(b.sessionDate));
+        print("📊 Después de ordenar: ${testSessions.length} sesiones");
+        if (testSessions.isNotEmpty) {
+          print("📊 Primera sesión ordenada: ${testSessions[0].workoutName}");
+        }
+      } else {
+        print(
+            "⚠️ TrainingViewModel - No hay sesiones disponibles o datos nulos");
+      }
+
+      // IMPORTANTE: Llamar a update() DESPUÉS de modificar los datos
+      update();
 
       // Verificar sesiones pasadas
       _updatePastSessions();
     } catch (e) {
-      _status = LoadingStatus.error;
-      _errorMessage = e.toString();
-    } finally {
-      notifyListeners();
+      print("❌ TrainingViewModel - Error al cargar datos: $e");
+
+      _status.value = LoadingStatus.error;
+      _errorMessage.value = e.toString();
+
+      // IMPORTANTE: Notificar a GetBuilder sobre el error
+      update();
     }
   }
 
   // Método para marcar una sesión como completada o no
   Future<bool> toggleSessionCompletion(Session session) async {
+    print(
+        "🔄 TrainingViewModel - Cambiando estado de sesión: ${session.workoutName}");
+
     final newStatus = !session.completed;
 
     // Si la sesión es de hoy o futura, permitimos cambiar su estado
@@ -75,6 +128,7 @@ class TrainingViewModel extends ChangeNotifier {
 
     // Solo permitimos marcar como completadas sesiones presentes o futuras
     if (!isSessionInFuture && newStatus) {
+      print("⛔ No se permite cambiar estado de sesión pasada");
       return false;
     }
 
@@ -82,24 +136,29 @@ class TrainingViewModel extends ChangeNotifier {
         .markSessionAsCompleted(session, newStatus, userId: _userId);
 
     if (success) {
-      // También actualizamos localmente mientras esperamos la actualización del servicio
+      print("✅ Sesión actualizada exitosamente");
+
+      // Actualizar localmente
       session.completed = newStatus;
-      notifyListeners();
+
+      // IMPORTANTE: Notificar a GetBuilder
+      update();
       return true;
     }
 
+    print("❌ Error al actualizar sesión");
     return false;
   }
 
   // Método para actualizar el estado de sesiones pasadas
   void _updatePastSessions() {
-    if (_trainingData == null) return;
+    if (_trainingData.value == null) return;
 
     final now = DateTime.now();
     bool anyUpdated = false;
     List<Session> sessionsToUpdate = [];
 
-    for (var session in _trainingData!.dashboard.nextWeekSessions) {
+    for (var session in _trainingData.value!.dashboard.nextWeekSessions) {
       // Verificar si la sesión ya pasó y no está completada
       if (session.sessionDate.isBefore(now) && !session.completed) {
         // Agregar a la lista de sesiones a actualizar en el backend
@@ -110,12 +169,13 @@ class TrainingViewModel extends ChangeNotifier {
 
     // Actualizar en el backend las sesiones pasadas no completadas
     if (sessionsToUpdate.isNotEmpty) {
-      // Actualizamos cada sesión pasada para marcarla explícitamente como no completada
+      print("🔄 Actualizando ${sessionsToUpdate.length} sesiones pasadas");
       _markPastSessionsAsNotCompleted(sessionsToUpdate);
     }
 
     if (anyUpdated) {
-      notifyListeners();
+      // IMPORTANTE: Notificar a GetBuilder
+      update();
     }
   }
 
@@ -141,8 +201,9 @@ class TrainingViewModel extends ChangeNotifier {
   }
 
   @override
-  void dispose() {
+  void onClose() {
+    print("🔄 TrainingViewModel - onClose");
     _trainingService.dispose();
-    super.dispose();
+    super.onClose();
   }
 }

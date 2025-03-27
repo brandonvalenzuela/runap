@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:runap/bindings/general_bindings.dart';
+import 'package:runap/bindings/app_bindings.dart';
 import 'package:runap/utils/constants/colors.dart';
 import 'utils/theme/theme.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -14,7 +14,7 @@ class App extends StatelessWidget {
       themeMode: ThemeMode.system,
       theme: TAppTheme.lightTheme,
       darkTheme: TAppTheme.darkTheme,
-      initialBinding: GeneralBindings(),
+      initialBinding: AppBindings(),
       home: const Scaffold(
           backgroundColor: TColors.primaryColor,
           body: Center(
