@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
-import 'package:runap/features/dashboard/controllers/training_service.dart';
 import 'package:runap/features/dashboard/models/dashboard_model.dart';
 import '../models/training_data.dart';
+import '../controllers/training_service.dart';
 
 enum LoadingStatus { initial, loading, loaded, error }
 
@@ -26,8 +26,10 @@ class TrainingViewModel extends ChangeNotifier {
     _trainingService.trainingDataStream.listen((data) {
       _trainingData = data;
       _status = LoadingStatus.loaded;
+
       // Verificar sesiones pasadas
       _updatePastSessions();
+
       notifyListeners();
     });
 
@@ -63,6 +65,19 @@ class TrainingViewModel extends ChangeNotifier {
   // Método para marcar una sesión como completada o no
   Future<bool> toggleSessionCompletion(Session session) async {
     final newStatus = !session.completed;
+
+    // Si la sesión es de hoy o futura, permitimos cambiar su estado
+    final now = DateTime.now();
+    final isSessionInFuture = session.sessionDate.isAfter(now) ||
+        (session.sessionDate.year == now.year &&
+            session.sessionDate.month == now.month &&
+            session.sessionDate.day == now.day);
+
+    // Solo permitimos marcar como completadas sesiones presentes o futuras
+    if (!isSessionInFuture && newStatus) {
+      return false;
+    }
+
     final success = await _trainingService
         .markSessionAsCompleted(session, newStatus, userId: _userId);
 
@@ -118,6 +133,11 @@ class TrainingViewModel extends ChangeNotifier {
         session.completed = false;
       }
     }
+  }
+
+  // Método para sincronizar cambios pendientes con el servidor
+  Future<void> syncPendingChanges() async {
+    await _trainingService.syncPendingChanges(_userId);
   }
 
   @override

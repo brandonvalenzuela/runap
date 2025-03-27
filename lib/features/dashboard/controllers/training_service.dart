@@ -1,6 +1,6 @@
-// training_service.dart
 import 'dart:async';
 import 'package:runap/features/dashboard/models/dashboard_model.dart';
+import 'package:runap/features/map/utils/training_local_storage.dart';
 import 'package:runap/utils/http/http_client.dart';
 
 import '../models/training_data.dart';
@@ -28,43 +28,83 @@ class TrainingService {
   Stream<TrainingData> get trainingDataStream => _trainingDataController.stream;
 
   // Método para obtener los datos del dashboard
-  Future<TrainingData> getDashboardData({
-    bool forceRefresh = false,
-    int userId = 1,
-  }) async {
-    // Si tenemos datos en caché y no se fuerza la actualización
-    // y los datos tienen menos de 5 minutos, devolvemos el caché
-    if (!forceRefresh &&
+  Future<TrainingData> getDashboardData(
+      {bool forceRefresh = false, int userId = 1}) async {
+    // Verificar si es necesario actualizar desde el servidor
+    bool shouldFetchFromServer = forceRefresh;
+
+    // Si no es forzado, comprobar si hay caché en memoria
+    if (!shouldFetchFromServer &&
         _cachedTrainingData != null &&
         _lastFetchTime != null &&
         DateTime.now().difference(_lastFetchTime!).inMinutes < 5) {
       return _cachedTrainingData!;
     }
 
-    try {
-      // Construimos la URL con el parámetro userId
-      final endpoint = '$_dashboardEndpoint?userId=$userId';
+    // Si no hay caché en memoria, verificar el almacenamiento local
+    if (!shouldFetchFromServer) {
+      bool isCacheValid = await TrainingLocalStorage.isCacheValid();
 
-      // Obtenemos los datos frescos de la API
-      final response = await THttpHelper.get(endpoint);
-      final trainingData = TrainingData.fromJson(response);
+      if (isCacheValid) {
+        final localData = await TrainingLocalStorage.getTrainingData();
+        if (localData != null) {
+          final trainingData = TrainingData.fromJson(localData);
 
-      // Actualizamos el caché y el tiempo
-      _cachedTrainingData = trainingData;
-      _lastFetchTime = DateTime.now();
+          // Actualizar caché en memoria
+          _cachedTrainingData = trainingData;
+          _lastFetchTime = DateTime.now();
 
-      // Notificamos a los listeners
-      _trainingDataController.add(trainingData);
+          // Notificar a los listeners
+          _trainingDataController.add(trainingData);
 
-      return trainingData;
-    } catch (e) {
-      // Si hay error y tenemos datos en caché, los devolvemos
-      if (_cachedTrainingData != null) {
-        return _cachedTrainingData!;
+          return trainingData;
+        }
       }
-      // Si no hay caché, propagamos el error
-      rethrow;
+
+      // Si llegamos aquí, necesitamos obtener datos del servidor
+      shouldFetchFromServer = true;
     }
+
+    // Obtener datos del servidor
+    if (shouldFetchFromServer) {
+      try {
+        // Construimos la URL con el parámetro userId
+        final endpoint = '$_dashboardEndpoint?userId=$userId';
+
+        // Obtenemos los datos frescos de la API
+        final response = await THttpHelper.get(endpoint);
+        final trainingData = TrainingData.fromJson(response);
+
+        // Actualizar datos en el almacenamiento local
+        await TrainingLocalStorage.saveTrainingData(response);
+
+        // Actualizar caché en memoria
+        _cachedTrainingData = trainingData;
+        _lastFetchTime = DateTime.now();
+
+        // Notificar a los listeners
+        _trainingDataController.add(trainingData);
+
+        return trainingData;
+      } catch (e) {
+        // Si hay error y tenemos datos en caché, los devolvemos
+        if (_cachedTrainingData != null) {
+          return _cachedTrainingData!;
+        }
+
+        // Intentar obtener del almacenamiento local como último recurso
+        final localData = await TrainingLocalStorage.getTrainingData();
+        if (localData != null) {
+          return TrainingData.fromJson(localData);
+        }
+
+        // Si no hay caché, propagamos el error
+        throw Exception('Error al obtener datos del entrenamiento: $e');
+      }
+    }
+
+    // Este punto nunca debería alcanzarse, pero por seguridad lanzamos un error
+    throw Exception('Error inesperado al obtener datos del entrenamiento');
   }
 
   // Método para marcar una sesión como completada o no completada
@@ -73,14 +113,13 @@ class TrainingService {
     try {
       // Verificar si la sesión ya pasó y asegurarnos de que se marque como no completada
       final now = DateTime.now();
-      if (session.sessionDate.isBefore(now) && completed) {
-        // Si la sesión ya pasó y estamos intentando marcarla como completada,
-        // verificamos si esto se está haciendo explícitamente (por el usuario)
-        // o automáticamente (por la aplicación)
+      final sessionDate = session.sessionDate;
+      if (sessionDate.isBefore(now) && completed) {
+        // Si la sesión ya pasó, no permitir marcarla como completada
         final stackTrace = StackTrace.current.toString();
-        if (stackTrace.contains('_markPastSessionsAsNotCompleted')) {
-          // Es una actualización automática, permitimos que se marque como no completada
-          completed = false;
+        if (!stackTrace.contains('_markPastSessionsAsNotCompleted')) {
+          // Si es una acción del usuario (no automática), no permitir marcar como completada
+          return false;
         }
       }
 
@@ -91,14 +130,16 @@ class TrainingService {
         'completed': completed,
         'userId': userId, // Incluimos el ID del usuario
         'isPastSession':
-            session.sessionDate.isBefore(now) // Indicar si es una sesión pasada
+            sessionDate.isBefore(now) // Indicar si es una sesión pasada
       };
 
-      // Enviar la actualización
-      await THttpHelper.put(
-          '$_sessionEndpoint/${session.sessionDate.toIso8601String()}', data);
+      // Primero actualizar localmente para mejor experiencia de usuario
+      session.completed = completed;
 
-      // Si tenemos datos en caché, actualizamos también el caché
+      // Actualizar en el almacenamiento local
+      await TrainingLocalStorage.updateSession(session);
+
+      // Si hay datos en caché, actualizamos también el caché en memoria
       if (_cachedTrainingData != null) {
         final index = _cachedTrainingData!.dashboard.nextWeekSessions
             .indexWhere(
@@ -113,13 +154,32 @@ class TrainingService {
               .where((s) => s.completed)
               .length;
 
+          // Actualizar valores en el objeto caché
+          _cachedTrainingData!.dashboard.completedSessions = completedCount;
+          if (_cachedTrainingData!.dashboard.totalSessions > 0) {
+            _cachedTrainingData!.dashboard.completionRate = (completedCount /
+                    _cachedTrainingData!.dashboard.totalSessions *
+                    100)
+                .round();
+          }
+
           // Notificar a los listeners
           _trainingDataController.add(_cachedTrainingData!);
         }
       }
 
-      // Forzar una actualización completa de los datos
-      getDashboardData(forceRefresh: true);
+      // Enviar la actualización al servidor (en segundo plano)
+      THttpHelper.put(
+              '$_sessionEndpoint/${session.sessionDate.toIso8601String()}',
+              data)
+          .then((serverResponse) {
+        // Actualización exitosa en el servidor
+        // Podríamos hacer algo aquí si es necesario
+      }).catchError((error) {
+        // Error al actualizar en el servidor
+        // Podemos manejar la sincronización más tarde
+        print('Error al actualizar sesión en el servidor: $error');
+      });
 
       return true;
     } catch (e) {
@@ -131,5 +191,12 @@ class TrainingService {
   // Método para limpiar recursos al cerrar la aplicación
   void dispose() {
     _trainingDataController.close();
+  }
+
+  // Sincronizar datos pendientes con el servidor
+  Future<void> syncPendingChanges(int userId) async {
+    // Implementar lógica para sincronizar cambios pendientes
+    // Por ejemplo, verificar sesiones marcadas como completadas localmente
+    // pero que aún no se han enviado al servidor
   }
 }
