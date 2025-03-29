@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:runap/features/dashboard/models/dashboard_model.dart';
 import 'package:runap/features/map/utils/training_local_storage.dart';
 import 'package:runap/utils/http/http_client.dart';
@@ -33,22 +34,31 @@ class TrainingService {
     // Verificar si es necesario actualizar desde el servidor
     bool shouldFetchFromServer = forceRefresh;
 
+    print("💡 getDashboardData - ForceRefresh: $forceRefresh");
+
     // Si no es forzado, comprobar si hay caché en memoria
     if (!shouldFetchFromServer &&
         _cachedTrainingData != null &&
         _lastFetchTime != null &&
         DateTime.now().difference(_lastFetchTime!).inMinutes < 5) {
+      print("💡 getDashboardData - Usando caché en memoria");
       return _cachedTrainingData!;
     }
 
     // Si no hay caché en memoria, verificar el almacenamiento local
     if (!shouldFetchFromServer) {
       bool isCacheValid = await TrainingLocalStorage.isCacheValid();
+      print("💡 getDashboardData - Cache local válido: $isCacheValid");
 
       if (isCacheValid) {
         final localData = await TrainingLocalStorage.getTrainingData();
         if (localData != null) {
+          print("💡 getDashboardData - Usando caché local");
           final trainingData = TrainingData.fromJson(localData);
+
+          // IMPORTANTE: Verificar si las sesiones están cargadas
+          print(
+              "💡 getDashboardData - Sesiones cargadas: ${trainingData.dashboard.nextWeekSessions.length}");
 
           // Actualizar caché en memoria
           _cachedTrainingData = trainingData;
@@ -68,12 +78,18 @@ class TrainingService {
     // Obtener datos del servidor
     if (shouldFetchFromServer) {
       try {
+        print("💡 getDashboardData - Obteniendo datos del servidor");
         // Construimos la URL con el parámetro userId
         final endpoint = '$_dashboardEndpoint?userId=$userId';
 
         // Obtenemos los datos frescos de la API
         final response = await THttpHelper.get(endpoint);
+        print("📡 RESPUESTA API: ${json.encode(response)}");
         final trainingData = TrainingData.fromJson(response);
+
+        // IMPORTANTE: Verificar si las sesiones están cargadas desde el servidor
+        print(
+            "💡 getDashboardData - Sesiones cargadas desde servidor: ${trainingData.dashboard.nextWeekSessions.length}");
 
         // Actualizar datos en el almacenamiento local
         await TrainingLocalStorage.saveTrainingData(response);
@@ -87,14 +103,17 @@ class TrainingService {
 
         return trainingData;
       } catch (e) {
+        print("❌ getDashboardData - Error al obtener datos: $e");
         // Si hay error y tenemos datos en caché, los devolvemos
         if (_cachedTrainingData != null) {
+          print("💡 getDashboardData - Fallback a caché en memoria");
           return _cachedTrainingData!;
         }
 
         // Intentar obtener del almacenamiento local como último recurso
         final localData = await TrainingLocalStorage.getTrainingData();
         if (localData != null) {
+          print("💡 getDashboardData - Fallback a caché local");
           return TrainingData.fromJson(localData);
         }
 

@@ -1,6 +1,8 @@
-import 'package:flutter/material.dart';
+import 'dart:math';
+
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:runap/utils/constants/colors.dart';
 import 'workout_goal.dart';
 
 class WorkoutData {
@@ -16,10 +18,81 @@ class WorkoutData {
   WorkoutGoal? goal;
 
   // Getter para velocidad actual en km/h (para compatibilidad con código existente)
-  double get currentSpeed => speedMetersPerSecond * 3.6;
+  double get currentSpeed {
+    // Aplicar un límite máximo razonable (50 km/h es prácticamente imposible para un corredor)
+    double speedKmh = speedMetersPerSecond * 3.6;
+
+    // Si la velocidad es mayor a 50 km/h, probablemente es un error de cálculo
+    if (speedKmh > 50) {
+      return 0.0; // Devolver 0 para velocidades irreales
+    }
+
+    return speedKmh;
+  }
+
+  // NUEVO: Método para obtener el ritmo en formato min/km (lo que usan los corredores)
+  String getPaceFormatted() {
+    if (speedMetersPerSecond <= 0.1) {
+      // Velocidad muy baja o cero
+      return "--:--"; // No hay ritmo que mostrar
+    }
+
+    // Calcular minutos por kilómetro
+    double minutesPerKm = 60 / (speedMetersPerSecond * 3.6);
+
+    // Si el ritmo es menor a 2 min/km o mayor a 20 min/km, probablemente es un error
+    if (minutesPerKm < 2 || minutesPerKm > 20) {
+      return "--:--";
+    }
+
+    int minutes = minutesPerKm.floor();
+    int seconds = ((minutesPerKm - minutes) * 60).round();
+
+    // Formatear como min:seg
+    return "$minutes:${seconds.toString().padLeft(2, '0')}";
+  }
 
   // Getter para ritmo actual en km/h
-  double get currentPace => isWorkoutActive ? getAverageSpeedKmh() : 0.0;
+  double getAverageSpeedKmh() {
+    if (previousTime == null || !isWorkoutActive) return 0.0;
+
+    Duration duration = DateTime.now().difference(previousTime!);
+    if (duration.inSeconds == 0) return 0.0;
+
+    double hours = duration.inSeconds / 3600;
+    double distanceKm = distanceMeters / 1000;
+
+    double speed = distanceKm / hours;
+
+    // Aplicar un límite razonable
+    if (speed > 50) {
+      return 0.0;
+    }
+
+    return speed;
+  }
+
+  // NUEVO: Método para obtener el ritmo promedio en formato min/km
+  String getAveragePaceFormatted() {
+    double averageSpeed = getAverageSpeedKmh();
+
+    if (averageSpeed <= 0.1) {
+      return "--:--";
+    }
+
+    // Calcular minutos por kilómetro
+    double minutesPerKm = 60 / averageSpeed;
+
+    // Validar el rango
+    if (minutesPerKm < 2 || minutesPerKm > 20) {
+      return "--:--";
+    }
+
+    int minutes = minutesPerKm.floor();
+    int seconds = ((minutesPerKm - minutes) * 60).round();
+
+    return "$minutes:${seconds.toString().padLeft(2, '0')}";
+  }
 
   // Getters para mantener compatibilidad
   double get distance => distanceMeters;
@@ -28,14 +101,59 @@ class WorkoutData {
       0; // Valor ficticio, necesitaría un sensor para datos reales
 
   void updatePolyline() {
+    // Si no hay suficientes puntos, no creamos la polilínea
+    if (polylineCoordinates.length < 2) {
+      return;
+    }
+
+    // Eliminar polilíneas anteriores para evitar acumulación
+    polylines.clear();
+
+    // Crear nueva polilínea con los puntos actuales
     polylines.add(
       Polyline(
         polylineId: const PolylineId('running_route'),
         points: polylineCoordinates,
-        color: Colors.blue,
+        color: TColors.darkerGrey,
         width: 5,
+        // Añadir estas propiedades para una polilínea más suave
+        startCap: Cap.roundCap,
+        endCap: Cap.roundCap,
+        jointType: JointType.round,
       ),
     );
+  }
+
+// También, añade un método para limpiar puntos duplicados o muy cercanos
+// para mejorar el rendimiento y la precisión de la ruta
+
+  void optimizeRoute() {
+    if (polylineCoordinates.length <= 2) return;
+
+    List<LatLng> optimized = [polylineCoordinates.first];
+
+    for (int i = 1; i < polylineCoordinates.length; i++) {
+      LatLng current = polylineCoordinates[i];
+      LatLng previous = optimized.last;
+
+      // Calcular distancia aproximada (no necesitamos precisión perfecta aquí)
+      double distanceApprox = sqrt(
+              pow(current.latitude - previous.latitude, 2) +
+                  pow(current.longitude - previous.longitude, 2)) *
+          111000; // Factor aproximado para convertir grados a metros
+
+      // Solo añadir puntos que estén a más de 5 metros del punto anterior
+      if (distanceApprox > 5) {
+        optimized.add(current);
+      }
+    }
+
+    // Si hemos eliminado puntos, actualizar la lista y la polilínea
+    if (optimized.length < polylineCoordinates.length) {
+      polylineCoordinates.clear();
+      polylineCoordinates.addAll(optimized);
+      updatePolyline();
+    }
   }
 
   void reset() {
@@ -70,17 +188,6 @@ class WorkoutData {
 
   String getSpeedFormatted() => (speedMetersPerSecond * 3.6).toStringAsFixed(2);
   String getDistanceFormatted() => (distanceMeters / 1000).toStringAsFixed(2);
-
-  double getAverageSpeedKmh() {
-    if (previousTime == null || !isWorkoutActive) return 0.0;
-
-    Duration duration = DateTime.now().difference(previousTime!);
-    if (duration.inSeconds == 0) return 0.0;
-
-    double hours = duration.inSeconds / 3600;
-    double distanceKm = distanceMeters / 1000;
-    return distanceKm / hours;
-  }
 
   String getEstimatedCompletionTime() {
     if (goal == null || !isWorkoutActive || speedMetersPerSecond <= 0) {

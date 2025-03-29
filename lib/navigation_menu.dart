@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:runap/features/dashboard/screens/shop/store.dart';
 import 'package:runap/features/personalization/screens/settings/settings.dart';
 import 'package:runap/features/dashboard/screens/home.dart';
+import 'package:runap/tests/widgets/Test1.dart';
+import 'package:runap/tests/widgets/Test2.dart';
 import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/helpers/helper_functions.dart';
 
@@ -40,7 +43,10 @@ class NavigationMenu extends StatelessWidget {
             destinations: const [
               NavigationDestination(icon: Icon(Iconsax.home), label: 'Home'),
               NavigationDestination(
-                  icon: Icon(Iconsax.weight_1), label: 'Exercices'),
+                  icon: Icon(Iconsax.calendar), label: 'Calendar'),
+              NavigationDestination(icon: Icon(Iconsax.shop), label: 'Store'),
+              NavigationDestination(icon: Icon(Iconsax.cake), label: 'Test1'),
+              NavigationDestination(icon: Icon(Iconsax.cake), label: 'Test2'),
               NavigationDestination(icon: Icon(Iconsax.user), label: 'Profile'),
             ],
           ),
@@ -56,9 +62,11 @@ class NavigationController extends GetxController {
 
   final screens = [
     const HomeScreen(),
-    //const Store(),
     //const TrainingMapScreen(),
     Container(color: Colors.blue),
+    const Store(),
+    const Test1(),
+    const Test2(),
     const SettingsScreen(),
   ];
 }

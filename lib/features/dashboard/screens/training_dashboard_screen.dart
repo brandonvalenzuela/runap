@@ -1,6 +1,6 @@
 // training_dashboard_screen.dart
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 import 'package:runap/common/widgets/training/training_info_card.dart';
 import 'package:runap/common/widgets/training/training_show_case.dart';
 import 'package:runap/features/dashboard/models/dashboard_model.dart';
@@ -12,38 +12,33 @@ class TrainingDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => TrainingViewModel(),
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text('Mi Entrenamiento'),
-          actions: [
-            Consumer<TrainingViewModel>(
-              builder: (context, viewModel, child) {
-                return IconButton(
-                  icon: Icon(Icons.refresh),
-                  onPressed: () =>
-                      viewModel.loadDashboardData(forceRefresh: true),
-                );
-              },
-            ),
-          ],
-        ),
-        body: Consumer<TrainingViewModel>(
-          builder: (context, viewModel, child) {
-            if (viewModel.status == LoadingStatus.loading &&
-                viewModel.trainingData == null) {
-              return Center(child: CircularProgressIndicator());
-            } else if (viewModel.status == LoadingStatus.error) {
-              return _buildErrorView(context, viewModel);
-            } else if (viewModel.trainingData != null) {
-              return _buildDashboardContent(context, viewModel);
-            } else {
-              return Center(child: Text('No hay datos disponibles'));
-            }
-          },
-        ),
+    // Asegurar que el ViewModel esté disponible
+    // Puedes hacerlo en bindings si prefieres
+    final TrainingViewModel viewModel = Get.put(TrainingViewModel());
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Mi Entrenamiento'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh),
+            onPressed: () => viewModel.loadDashboardData(forceRefresh: true),
+          ),
+        ],
       ),
+      body: Obx(() {
+        // Verificamos el estado de carga
+        if (viewModel.status == LoadingStatus.loading &&
+            viewModel.trainingData == null) {
+          return Center(child: CircularProgressIndicator());
+        } else if (viewModel.status == LoadingStatus.error) {
+          return _buildErrorView(context, viewModel);
+        } else if (viewModel.trainingData != null) {
+          return _buildDashboardContent(context, viewModel);
+        } else {
+          return Center(child: Text('No hay datos disponibles'));
+        }
+      }),
     );
   }
 
@@ -100,12 +95,14 @@ class TrainingDashboardScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Mapear las categorías de sesiones
-                  ...sessionsByType.entries.map((entry) {
-                    return TrainingShowcase(
-                      title: _getCategoryTitle(entry.key),
-                      sessions: entry.value,
-                    );
-                  }).toList(),
+                  ...sessionsByType.entries.map(
+                    (entry) {
+                      return TrainingShowcase(
+                        title: _getCategoryTitle(entry.key),
+                        sessions: entry.value,
+                      );
+                    },
+                  ),
 
                   // Espacio adicional al final para evitar que el FAB tape contenido
                   SizedBox(height: 80),

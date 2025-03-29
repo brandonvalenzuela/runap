@@ -17,18 +17,6 @@ class TCategoryTab extends StatelessWidget {
           padding: const EdgeInsets.all(TSizes.defaultSpace),
           child: Column(
             children: [
-              /// -- BRANDS
-              // TBrandShowcase(images: [
-              //   TImages.jacketIcon,
-              //   TImages.shirtIcon,
-              //   TImages.tshirtIcon
-              // ]),
-              // TBrandShowcase(images: [
-              //   TImages.jacketIcon,
-              //   TImages.shirtIcon,
-              //   TImages.tshirtIcon
-              // ]),
-
               const SizedBox(height: TSizes.spaceBtwItems),
 
               /// -- PRODUCTS
@@ -36,7 +24,7 @@ class TCategoryTab extends StatelessWidget {
               const SizedBox(height: TSizes.spaceBtwItems),
 
               TGridLayout(
-                  itemCount: 4,
+                  itemCount: 2,
                   itemBuilder: (_, index) => const TWorkoutCardVertical()),
 
               const SizedBox(height: TSizes.spaceBtwSections),

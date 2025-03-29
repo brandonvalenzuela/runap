@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:runap/utils/constants/colors.dart';
-import 'package:runap/utils/device/device_utility.dart';
 import 'package:runap/utils/helpers/helper_functions.dart';
 
 class TTabBar extends StatelessWidget implements PreferredSizeWidget {
@@ -20,7 +19,7 @@ class TTabBar extends StatelessWidget implements PreferredSizeWidget {
         color: dark ? TColors.dark : TColors.white,
         child: TabBar(
           tabs: tabs,
-          isScrollable: true,
+          isScrollable: false,
           indicatorColor: TColors.primaryColor,
           labelColor: dark ? TColors.white : TColors.primaryColor,
           unselectedLabelColor: TColors.darkGrey,
@@ -28,5 +27,5 @@ class TTabBar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   @override
-  Size get preferredSize => Size.fromHeight(TDiviceUtility.getAppBarHeight());
+  Size get preferredSize => Size.fromHeight(0);
 }
