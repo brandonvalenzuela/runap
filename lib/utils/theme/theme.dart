@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/theme/custom_themes/appbar_theme.dart';
 import 'package:runap/utils/theme/custom_themes/bottom_sheet_theme.dart';
 import 'package:runap/utils/theme/custom_themes/checkbox_theme.dart';
@@ -18,7 +19,7 @@ class TAppTheme {
     primaryColor: Colors.orange,
     textTheme: TTextTheme.lightTextTheme,
     chipTheme: TChipTheme.lightChipTheme,
-    scaffoldBackgroundColor: Colors.white,
+    scaffoldBackgroundColor: TColors.white,
     appBarTheme: TAppBarTheme.lightAppBarTheme,
     checkboxTheme: TCheckboxTheme.lightCheckboxTheme,
     bottomSheetTheme: TBottomSheetTheme.lightBottomSheetTheme,

@@ -90,6 +90,7 @@ class THelperFunctions {
 
   static String getFormattedDate(DateTime date,
       {String format = 'dd MMM yyyy'}) {
+    // Usa DateFormat sin locale específico, solo el patrón de formato
     return DateFormat(format).format(date);
   }
 

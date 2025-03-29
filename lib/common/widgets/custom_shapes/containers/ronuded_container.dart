@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/constants/sizes.dart';
+import 'package:runap/utils/helpers/helper_functions.dart';
 
 class TRonudedContainer extends StatelessWidget {
   const TRonudedContainer({
@@ -12,7 +13,7 @@ class TRonudedContainer extends StatelessWidget {
     this.padding,
     this.showBorder = false,
     this.radius = TSizes.cardRadiusLg,
-    this.backgroundColor = TColors.white,
+    this.backgroundColor = Colors.transparent,
     this.borderColor = TColors.borderPrimary,
   });
 
@@ -28,12 +29,22 @@ class TRonudedContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final darkMode = THelperFunctions.isDarkMode(context);
     return Container(
       width: width,
       height: height,
       padding: padding,
       margin: margin,
       decoration: BoxDecoration(
+        shape: BoxShape.rectangle,
+        boxShadow: [
+          BoxShadow(
+            color: darkMode ? Colors.black38 : Colors.grey.withAlpha(51),
+            spreadRadius: 1,
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
         color: backgroundColor,
         borderRadius: BorderRadius.circular(radius),
         border: showBorder ? Border.all(color: borderColor) : null,
