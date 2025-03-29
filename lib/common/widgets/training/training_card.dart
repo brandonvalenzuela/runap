@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:provider/provider.dart';
 import 'package:runap/common/widgets/custom_shapes/containers/ronuded_container.dart';
 import 'package:runap/common/widgets/icons/t_circular_image.dart';
 import 'package:runap/features/dashboard/viewmodels/training_view_model.dart';
@@ -87,22 +86,13 @@ class TrainingCard extends StatelessWidget {
     final formattedDate = formatearFecha(session.sessionDate);
 
     // Determinar si es el entrenamiento de hoy
-    // final now = DateTime.now();
-    // final isToday = now.year == session.sessionDate.year &&
-    //     now.month == session.sessionDate.month &&
-    //     now.day == session.sessionDate.day;
 
     // Comprobar si este entrenamiento puede ser iniciado
     // Solo los entrenamientos no completados del día actual o futuros pueden iniciarse
     // y solo si no es un entrenamiento de descanso
-    // final canStartWorkout = (isToday || session.sessionDate.isAfter(now)) &&
-    //     !session.workoutName.toLowerCase().contains('descanso');
 
     // Determinar el ícono según el tipo de entrenamiento
     String workoutIcon = _getWorkoutIcon(session.workoutName);
-
-    // Busca la función navigateToMap() en training_card.dart (alrededor de la línea 141)
-// y reemplázala con esta versión:
 
     void navigateToMap() {
       print(
@@ -175,16 +165,16 @@ class TrainingCard extends StatelessWidget {
           child: TRonudedContainer(
             showBorder: showBorder,
             backgroundColor: isToday
-                ? TColors.primaryColor.withOpacity(0.1)
+                ? TColors.primaryColor.withAlpha(26)
                 : (session.completed
-                    ? TColors.success.withOpacity(0.1)
+                    ? TColors.success.withAlpha(26)
                     : (isPast && !session.completed
-                        ? Colors.grey.withOpacity(0.1)
-                        : Colors.transparent)),
+                        ? Colors.grey.withAlpha(26)
+                        : TColors.white)),
             borderColor: isToday
-                ? TColors.primaryColor.withOpacity(0.3)
+                ? TColors.primaryColor.withAlpha(78)
                 : (session.completed
-                    ? TColors.success.withOpacity(0.3)
+                    ? TColors.success.withAlpha(78)
                     : (isPast && !session.completed
                         ? Colors.grey
                         : Colors.transparent)),
@@ -337,13 +327,13 @@ class TrainingCard extends StatelessWidget {
   // Método para obtener el color de fondo del chip de estado
   Color _getStatusChipColor(bool isPast, bool completed, bool isToday) {
     if (completed) {
-      return TColors.success.withOpacity(0.2);
+      return TColors.success.withAlpha(53);
     } else if (isPast) {
-      return Colors.red.withOpacity(0.2);
+      return Colors.red.withAlpha(53);
     } else if (isToday) {
-      return TColors.secondaryColor.withOpacity(0.2);
+      return TColors.secondaryColor.withAlpha(53);
     } else {
-      return TColors.primaryColor.withOpacity(0.2);
+      return TColors.primaryColor.withAlpha(53);
     }
   }
 

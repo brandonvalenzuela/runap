@@ -7,7 +7,7 @@ class TrainingLocalStorage {
   static const String _lastFetchTimeKey = 'last_fetch_time';
 
   // Tiempo de caché en minutos
-  static const int _cacheValidityMinutes = 60; // 1 hora
+  static const int _cacheValidityMinutes = 15; // 1 hora
 
   // Guardar los datos de entrenamiento en el almacenamiento local
   static Future<void> saveTrainingData(Map<String, dynamic> data) async {

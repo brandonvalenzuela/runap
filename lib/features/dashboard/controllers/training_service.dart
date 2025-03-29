@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:runap/features/dashboard/models/dashboard_model.dart';
 import 'package:runap/features/map/utils/training_local_storage.dart';
 import 'package:runap/utils/http/http_client.dart';
@@ -83,6 +84,7 @@ class TrainingService {
 
         // Obtenemos los datos frescos de la API
         final response = await THttpHelper.get(endpoint);
+        print("📡 RESPUESTA API: ${json.encode(response)}");
         final trainingData = TrainingData.fromJson(response);
 
         // IMPORTANTE: Verificar si las sesiones están cargadas desde el servidor

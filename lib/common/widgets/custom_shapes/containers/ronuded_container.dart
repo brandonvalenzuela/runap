@@ -36,11 +36,12 @@ class TRonudedContainer extends StatelessWidget {
       padding: padding,
       margin: margin,
       decoration: BoxDecoration(
+        shape: BoxShape.rectangle,
         boxShadow: [
           BoxShadow(
             color: darkMode ? Colors.black38 : Colors.grey.withAlpha(51),
-            spreadRadius: 0.5,
-            blurRadius: 4,
+            spreadRadius: 1,
+            blurRadius: 10,
             offset: const Offset(0, -2),
           ),
         ],

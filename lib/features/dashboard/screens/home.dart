@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:iconsax/iconsax.dart';
 import 'package:runap/common/widgets/appbar/appbar.dart';
-import 'package:runap/common/widgets/texts/sections_heading.dart';
 import 'package:runap/common/widgets/training/training_card.dart';
 import 'package:runap/features/dashboard/models/dashboard_model.dart';
 import 'package:runap/features/dashboard/viewmodels/training_view_model.dart';
@@ -16,7 +16,7 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Asegurar que el ViewModel esté disponible
+    // Asegurar que el ViewModel esté disponible antes de usarlo
     // Usamos lazyPut porque podría estar registrado con anterioridad
     if (!Get.isRegistered<TrainingViewModel>()) {
       print("📱 HomeScreen - Registrando TrainingViewModel");
@@ -24,6 +24,11 @@ class HomeScreen extends StatelessWidget {
     } else {
       print("📱 HomeScreen - TrainingViewModel ya registrado");
     }
+
+    // Ahora usamos el ViewModel después de asegurarnos que está registrado
+    final today = DateTime.now();
+    print(
+        "🗓️ Buscando sesiones para: ${today.year}-${today.month}-${today.day}");
 
     return Scaffold(
       appBar: TAppBar(
@@ -61,6 +66,23 @@ class HomeScreen extends StatelessWidget {
       body: GetBuilder<TrainingViewModel>(
         builder: (viewModel) {
           print("🔍 HomeScreen - Construyendo pantalla completa");
+
+          // Verificar sesiones de hoy después de que ya tenemos datos
+          final todaySessions = viewModel
+                  .trainingData?.dashboard.nextWeekSessions
+                  .where((session) =>
+                      session.sessionDate.year == today.year &&
+                      session.sessionDate.month == today.month &&
+                      session.sessionDate.day == today.day)
+                  .toList() ??
+              [];
+          print("🗓️ Sesiones encontradas para hoy: ${todaySessions.length}");
+
+          // Si quieres resaltar las sesiones de hoy, puedes hacer algo como:
+          if (todaySessions.isNotEmpty) {
+            print(
+                "🎯 Primer entrenamiento de hoy: ${todaySessions.first.workoutName}");
+          }
 
           // Verificar estado de carga
           if (viewModel.status == LoadingStatus.loading &&
@@ -111,6 +133,30 @@ class HomeScreen extends StatelessWidget {
     sessions.sort((a, b) => a.sessionDate.compareTo(b.sessionDate));
     final now = DateTime.now();
 
+    // Verificar si hay sesiones para hoy
+    final todaySessions = sessions
+        .where((session) =>
+            session.sessionDate.year == now.year &&
+            session.sessionDate.month == now.month &&
+            session.sessionDate.day == now.day)
+        .toList();
+
+    // Encontrar la próxima sesión
+    final nextSession = sessions.firstWhere(
+      (session) =>
+          session.sessionDate.isAfter(now) ||
+          (session.sessionDate.year == now.year &&
+              session.sessionDate.month == now.month &&
+              session.sessionDate.day == now.day),
+      orElse: () => sessions.isNotEmpty
+          ? sessions.first
+          : Session(
+              sessionDate: DateTime.now().add(Duration(days: 1)),
+              workoutName: "No disponible",
+              description: "",
+            ),
+    );
+
     return Column(
       children: [
         // Header con información de entrenamiento
@@ -121,7 +167,6 @@ class HomeScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: TColors.primaryColor.withAlpha(25),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: TColors.primaryColor.withAlpha(76)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -191,6 +236,67 @@ class HomeScreen extends StatelessWidget {
           ),
         ),
 
+        // Mensaje para el día sin entrenamiento (si aplica)
+        if (todaySessions.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: TSizes.defaultSpace,
+              vertical: TSizes.sm,
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(TSizes.md),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.calendar_today, color: Colors.green),
+                      SizedBox(width: 8),
+                      Text(
+                        "Hoy - ${now.day}/${now.month}/${now.year}",
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 12),
+                  Text(
+                    "Día de recuperación activa",
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    "Aprovecha este día para descansar y prepararte para tu próxima sesión de entrenamiento.",
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Icon(Icons.arrow_forward,
+                          color: TColors.primaryColor, size: 16),
+                      SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          "Próximo entrenamiento: ${_formatDate(nextSession.sessionDate)} - ${nextSession.workoutName}",
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: TColors.primaryColor,
+                                  ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: TSizes.defaultSpace),
           child: Divider(),
@@ -199,9 +305,20 @@ class HomeScreen extends StatelessWidget {
         // Título de sección
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: TSizes.defaultSpace),
-          child: TSectionHeading(
-            title: 'Entrenamientos de la semana',
-            onPressed: () => Get.to(() => MapScreen()),
+          child: Row(
+            children: [
+              Text(
+                "Próximos entrenamientos",
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              Spacer(),
+              IconButton(
+                icon: Icon(Iconsax.map_1, size: 20),
+                onPressed: () => Get.to(() => const MapScreen()),
+              ),
+            ],
           ),
         ),
 
@@ -244,7 +361,7 @@ class HomeScreen extends StatelessWidget {
                         key: ValueKey(
                             'session-${session.workoutName}-${session.sessionDate}'),
                         session: session,
-                        showBorder: true,
+                        showBorder: false,
                         isPast: isPast,
                       );
                     },
@@ -253,6 +370,11 @@ class HomeScreen extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  // Función auxiliar para formatear fechas
+  String _formatDate(DateTime date) {
+    return "${date.day}/${date.month}/${date.year}";
   }
 
   // Widget para mostrar elementos de información
