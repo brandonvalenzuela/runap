@@ -21,8 +21,8 @@ class MapController extends GetxController {
 
   // Servicios y helpers
   late LocationService locationService;
-  final LocationPermissionHelper permissionHelper = LocationPermissionHelper();
-  final WorkoutDatabaseService databaseService = WorkoutDatabaseService();
+  LocationPermissionHelper permissionHelper = LocationPermissionHelper();
+  WorkoutDatabaseService databaseService = WorkoutDatabaseService();
 
   // Variables de control
   bool _isInitializing = false;
@@ -295,8 +295,10 @@ class MapController extends GetxController {
     try {
       // Obtener posición actual
       final initialPosition = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.best,
-          timeLimit: Duration(seconds: 5));
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.best,
+            timeLimit: Duration(seconds: 5),
+          ));
 
       // Verificar que la precisión sea buena
       if (initialPosition.accuracy <= 20) {

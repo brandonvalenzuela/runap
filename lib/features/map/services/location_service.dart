@@ -52,6 +52,8 @@ class LocationService {
   }
 
   void updateMetrics(WorkoutData data, Position currentPosition) {
+    bool shouldAddDistance = true;
+    
     if (data.previousPosition != null && data.previousTime != null) {
       // Calcular distancia entre posiciones
       double distance = Geolocator.distanceBetween(
@@ -67,38 +69,42 @@ class LocationService {
         print(
             "⚠️ Detección de salto grande en distancia: $distance metros. Ignorando esta actualización.");
         // No acumular esta distancia, probablemente es un error
-        return;
+        shouldAddDistance = false;
       }
 
-      data.distanceMeters += distance;
+      // Solo sumamos la distancia si no es un salto grande
+      if (shouldAddDistance) {
+        data.distanceMeters += distance;
 
-      DateTime currentTime = DateTime.now();
-      Duration timeDifference = currentTime.difference(data.previousTime!);
-      double timeSeconds =
-          timeDifference.inMilliseconds / 1000; // Más preciso usar milisegundos
+        DateTime currentTime = DateTime.now();
+        Duration timeDifference = currentTime.difference(data.previousTime!);
+        double timeSeconds =
+            timeDifference.inMilliseconds / 1000; // Más preciso usar milisegundos
 
-      // MEJORADO: Solo actualizar velocidad si hay suficiente tiempo transcurrido
-      if (timeSeconds > 0.1) {
-        // Al menos 100ms entre actualizaciones
-        // Calcular velocidad en m/s
-        double newSpeed = distance / timeSeconds;
+        // MEJORADO: Solo actualizar velocidad si hay suficiente tiempo transcurrido
+        if (timeSeconds > 0.1) {
+          // Al menos 100ms entre actualizaciones
+          // Calcular velocidad en m/s
+          double newSpeed = distance / timeSeconds;
 
-        // MEJORADO: Filtrar valores anómalos usando un filtro de suavizado
-        // Combinamos 30% de la nueva medición con 70% del valor anterior
-        if (data.speedMetersPerSecond > 0) {
-          data.speedMetersPerSecond =
-              data.speedMetersPerSecond * 0.7 + newSpeed * 0.3;
-        } else {
-          data.speedMetersPerSecond = newSpeed;
-        }
+          // MEJORADO: Filtrar valores anómalos usando un filtro de suavizado
+          // Combinamos 30% de la nueva medición con 70% del valor anterior
+          if (data.speedMetersPerSecond > 0) {
+            data.speedMetersPerSecond =
+                data.speedMetersPerSecond * 0.7 + newSpeed * 0.3;
+          } else {
+            data.speedMetersPerSecond = newSpeed;
+          }
 
-        // MEJORADO: Aplicar límites razonables (8.3 m/s = 30 km/h, que ya es muy rápido)
-        if (data.speedMetersPerSecond > 8.3) {
-          data.speedMetersPerSecond = 0; // Reiniciar para velocidades irreales
+          // MEJORADO: Aplicar límites razonables (8.3 m/s = 30 km/h, que ya es muy rápido)
+          if (data.speedMetersPerSecond > 8.3) {
+            data.speedMetersPerSecond = 0; // Reiniciar para velocidades irreales
+          }
         }
       }
     }
 
+    // Siempre actualizamos la posición y tiempo previos, incluso si hubo un salto grande
     data.previousPosition = currentPosition;
     data.previousTime = DateTime.now();
   }
