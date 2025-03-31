@@ -317,7 +317,7 @@ class HomeScreen extends StatelessWidget {
               Spacer(),
               IconButton(
                 icon: Icon(Iconsax.map_1, size: 20),
-                onPressed: () => Get.to(() => const MapScreen()),
+                onPressed: () => Get.to(() => MapScreen()),
               ),
             ],
           ),

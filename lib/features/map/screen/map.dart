@@ -10,8 +10,11 @@ import 'package:runap/utils/constants/sizes.dart';
 class MapScreen extends StatelessWidget {
   final WorkoutGoal? initialWorkoutGoal;
   final Session? sessionToUpdate;
+  
+  // Añadir GlobalKey para medir el panel de información
+  final GlobalKey infoPanelKey = GlobalKey();
 
-  const MapScreen({
+  MapScreen({
     super.key,
     this.initialWorkoutGoal,
     this.sessionToUpdate,
@@ -29,6 +32,10 @@ class MapScreen extends StatelessWidget {
       initialSession: sessionToUpdate,
       initialWorkoutGoal: initialWorkoutGoal,
     ));
+
+    // Añadir depuración adicional
+    print("🗺️ MapScreen - Posición actual: ${controller.workoutData.value.currentPosition}");
+    print("🗺️ MapScreen - Polilíneas: ${controller.workoutData.value.polylines.length}");
 
     return Scaffold(
       appBar: AppBar(
@@ -111,24 +118,333 @@ class MapScreen extends StatelessWidget {
   }
 
   Widget _buildMap(MapController controller) {
-    return GoogleMap(
-      initialCameraPosition: CameraPosition(
-        target: controller.workoutData.value.currentPosition ??
-            LatLng(20.651464, -103.392958),
-        zoom: 17.0,
-      ),
-      myLocationEnabled: true,
-      myLocationButtonEnabled: false,
-      zoomControlsEnabled: false,
-      polylines: controller.workoutData.value.polylines,
-      onMapCreated: (GoogleMapController mapController) {
-        controller.setMapControllerInstance(mapController);
-      },
+    // Obtener dimensiones de la pantalla
+    final screenHeight = MediaQuery.of(Get.context!).size.height;
+    final appBarHeight = AppBar().preferredSize.height;
+    
+    // Estimar altura del panel de información
+    final infoPanelHeight = screenHeight * 0.33;
+    
+    return Stack(
+      children: [
+        GoogleMap(
+          initialCameraPosition: CameraPosition(
+            target: controller.workoutData.value.currentPosition ??
+                LatLng(20.651464, -103.392958),
+            zoom: 17.0,
+          ),
+          myLocationEnabled: true,
+          myLocationButtonEnabled: false,
+          zoomControlsEnabled: false,
+          mapType: MapType.normal,
+          polylines: controller.workoutData.value.polylines,
+          onMapCreated: (GoogleMapController mapController) {
+            controller.setMapControllerInstance(mapController);
+            
+            // Aplicar estilo personalizado para running
+            mapController.setMapStyle('''
+[
+  {
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#f5f5f5"
+      }
+    ]
+  },
+  {
+    "elementType": "labels.icon",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#616161"
+      }
+    ]
+  },
+  {
+    "elementType": "labels.text.stroke",
+    "stylers": [
+      {
+        "color": "#f5f5f5"
+      }
+    ]
+  },
+  {
+    "featureType": "administrative.land_parcel",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "administrative.land_parcel",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#bdbdbd"
+      }
+    ]
+  },
+  {
+    "featureType": "administrative.neighborhood",
+    "stylers": [
+      {
+        "visibility": "simplified"
+      }
+    ]
+  },
+  {
+    "featureType": "poi",
+    "stylers": [
+      {
+        "visibility": "simplified"
+      }
+    ]
+  },
+  {
+    "featureType": "poi",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#eeeeee"
+      }
+    ]
+  },
+  {
+    "featureType": "poi",
+    "elementType": "labels.text",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "poi.attraction",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "poi.business",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "poi.government",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "poi.medical",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "poi.park",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#c1e7c1"
+      }
+    ]
+  },
+  {
+    "featureType": "poi.park",
+    "elementType": "labels.text",
+    "stylers": [
+      {
+        "visibility": "simplified"
+      }
+    ]
+  },
+  {
+    "featureType": "poi.park",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#9e9e9e"
+      }
+    ]
+  },
+  {
+    "featureType": "poi.place_of_worship",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "poi.school",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "poi.sports_complex",
+    "stylers": [
+      {
+        "visibility": "simplified"
+      }
+    ]
+  },
+  {
+    "featureType": "road",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#ffffff"
+      }
+    ]
+  },
+  {
+    "featureType": "road",
+    "elementType": "labels.icon",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "road.arterial",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#757575"
+      }
+    ]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#dadada"
+      }
+    ]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#616161"
+      }
+    ]
+  },
+  {
+    "featureType": "road.local",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#9e9e9e"
+      }
+    ]
+  },
+  {
+    "featureType": "transit",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "transit.line",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#e5e5e5"
+      }
+    ]
+  },
+  {
+    "featureType": "transit.station",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#eeeeee"
+      }
+    ]
+  },
+  {
+    "featureType": "water",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#c9c9c9"
+      }
+    ]
+  },
+  {
+    "featureType": "water",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#9e9e9e"
+      }
+    ]
+  }
+]
+            ''');
+            
+            // Forzar actualización del mapa
+            controller.forceMapUpdate();
+          },
+          padding: EdgeInsets.only(
+            top: appBarHeight,
+            bottom: infoPanelHeight,
+          ),
+          // Reducir el uso de memoria para carga más rápida
+          liteModeEnabled: false, // Cambiar a true en dispositivos de gama baja
+          // Optimizar para rendimiento
+          tiltGesturesEnabled: false,
+          compassEnabled: false,
+          indoorViewEnabled: false,
+          trafficEnabled: false,
+          buildingsEnabled: false,
+        ),
+        // Botón de centrado
+        Positioned(
+          right: 16,
+          bottom: infoPanelHeight + 20, // Posicionarlo justo encima del panel
+          child: FloatingActionButton(
+            mini: true,
+            backgroundColor: Colors.white,
+            child: Icon(Icons.my_location, color: TColors.primaryColor),
+            onPressed: controller.resetMapView,
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildInfoPanel(MapController controller) {
     return Container(
+      key: infoPanelKey,
       padding: EdgeInsets.all(TSizes.defaultSpace),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -144,9 +460,21 @@ class MapScreen extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: ListView(
+        shrinkWrap: true,
+        cacheExtent: 200,
+        physics: const NeverScrollableScrollPhysics(),
         children: [
+          // Añadir indicador de calidad GPS
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Obx(() => Text(
+                "GPS: ${controller.getGpsQualityIndicator()}",
+                style: TextStyle(fontSize: 12),
+              )),
+            ],
+          ),
           // Información del objetivo (si hay uno establecido)
           if (controller.workoutData.value.goal != null) ...[
             Text(
@@ -226,6 +554,68 @@ class MapScreen extends StatelessWidget {
               ),
             ),
           ),
+
+          // Añadir botón de opciones avanzadas cuando el entrenamiento está activo
+          if (controller.workoutData.value.isWorkoutActive) ...[
+            SizedBox(height: 8),
+            TextButton(
+              onPressed: () {
+                // Mostrar opciones avanzadas
+                Get.bottomSheet(
+                  Container(
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          "Opciones avanzadas",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                        ListTile(
+                          leading: Icon(Icons.refresh),
+                          title: Text("Reiniciar visualización"),
+                          subtitle: Text("Centra el mapa en tu posición actual"),
+                          onTap: () {
+                            controller.resetMapView();
+                            Get.back();
+                          },
+                        ),
+                        ListTile(
+                          leading: Icon(Icons.route),
+                          title: Text("Optimizar ruta"),
+                          subtitle: Text("Elimina puntos redundantes para mejorar la precisión"),
+                          onTap: () {
+                            controller.workoutData.value.optimizeRoute();
+                            controller.workoutData.refresh();
+                            Get.back();
+                          },
+                        ),
+                        // Añadir opción para cambiar estilo del mapa
+                        ListTile(
+                          leading: Icon(Icons.map),
+                          title: Text("Estilo del mapa"),
+                          subtitle: Text("Cambia entre estilos de visualización"),
+                          onTap: () {
+                            _showMapStyleOptions(controller);
+                            Get.back();
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+              child: Text("Opciones avanzadas"),
+            ),
+          ],
         ],
       ),
     );
@@ -238,20 +628,21 @@ class MapScreen extends StatelessWidget {
   }) {
     return Column(
       children: [
-        Icon(icon, color: TColors.primaryColor),
-        SizedBox(height: 4),
+        Icon(icon, color: TColors.primaryColor, size: 28),
+        const SizedBox(height: 4),
         Text(
           value,
-          style: TextStyle(
-            fontSize: 18,
+          style: const TextStyle(
+            fontSize: 22,
             fontWeight: FontWeight.bold,
+            color: Colors.black87,
           ),
         ),
         Text(
           label,
           style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey,
+            fontSize: 14,
+            color: Colors.grey[700],
           ),
         ),
       ],
@@ -369,6 +760,77 @@ class MapScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  String getGpsQualityIndicator(MapController controller) {
+    if (controller.workoutData.value.previousPosition == null) return "⚪"; // Sin datos
+    
+    double accuracy = controller.workoutData.value.previousPosition!.accuracy;
+    
+    if (accuracy <= 10) return "🟢"; // Excelente
+    if (accuracy <= 20) return "🟡"; // Buena
+    if (accuracy <= 40) return "🟠"; // Regular
+    return "🔴"; // Mala
+  }
+
+  // Y luego añade un método para obtener la altura del panel
+  double getInfoPanelHeight() {
+    if (infoPanelKey.currentContext != null) {
+      final RenderBox box = infoPanelKey.currentContext!.findRenderObject() as RenderBox;
+      return box.size.height;
+    }
+    return 220; // Valor por defecto si no se puede medir
+  }
+
+  void _showMapStyleOptions(MapController controller) {
+    Get.dialog(
+      AlertDialog(
+        title: Text("Estilo del mapa"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text("Running (Simple)"),
+              leading: Icon(Icons.run_circle_outlined, color: TColors.primaryColor),
+              onTap: () {
+                controller.setMapStyle("running_simple");
+                Get.back();
+              },
+            ),
+            ListTile(
+              title: Text("Running (Detallado)"),
+              leading: Icon(Icons.directions_run, color: TColors.primaryColor),
+              onTap: () {
+                controller.setMapStyle("running_detailed");
+                Get.back();
+              },
+            ),
+            ListTile(
+              title: Text("Terreno"),
+              leading: Icon(Icons.terrain, color: Colors.green),
+              onTap: () {
+                controller.setMapStyle("terrain");
+                Get.back();
+              },
+            ),
+            ListTile(
+              title: Text("Noche"),
+              leading: Icon(Icons.nightlight_round, color: Colors.blueGrey),
+              onTap: () {
+                controller.setMapStyle("night");
+                Get.back();
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text("Cancelar"),
+          ),
+        ],
       ),
     );
   }

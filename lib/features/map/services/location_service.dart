@@ -20,27 +20,29 @@ class LocationService {
   }
 
   void startLocationUpdates() {
-    // Aumentar el distanceFilter a un valor más razonable (15-20 metros)
+    // Configuración más eficiente
     const locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.best, // Cambiado de bestForNavigation a best
-      distanceFilter: 5, // 15 metros
-      timeLimit: Duration(
-          seconds:
-              1), // Añadir un límite de tiempo entre actualizaciones 3 segundos
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 8, // Aumentar a 8 metros para reducir eventos
+      timeLimit: Duration(seconds: 2), // Máximo una actualización cada 2 segundos
     );
+
+    // Añadir log para confirmar inicio
+    print("🛰️ LocationService - Iniciando actualizaciones GPS");
 
     _locationStreamSubscription =
         Geolocator.getPositionStream(locationSettings: locationSettings)
             .listen((position) {
       // Verificar la precisión - ignorar lecturas malas
       if (position.accuracy > 30) {
-        // Ignorar lecturas con precisión peor que 30 metros
         print(
             "⚠️ LocationService - Ignorando lectura imprecisa (${position.accuracy}m)");
         return;
       }
 
       final latLng = LatLng(position.latitude, position.longitude);
+      print("📍 LocationService - Nueva posición: $latLng (precisión: ${position.accuracy}m)");
+      
       onLocationUpdate(latLng);
       onMetricsUpdate(position);
     });
@@ -52,6 +54,9 @@ class LocationService {
   }
 
   void updateMetrics(WorkoutData data, Position currentPosition) {
+    // Imprimir datos para depuración
+    print("📊 Actualizando métricas. Velocidad GPS: ${currentPosition.speed} m/s");
+    
     bool shouldAddDistance = true;
     
     if (data.previousPosition != null && data.previousTime != null) {
@@ -63,50 +68,110 @@ class LocationService {
         currentPosition.longitude,
       );
 
-      // MEJORADO: Validar la distancia - si hay un salto muy grande podría ser un error GPS
-      // 100 metros en un segundo es bastante rápido para un corredor (360 km/h)
+      // Verificar tiempo transcurrido para cálculos precisos
+      DateTime currentTime = DateTime.now();
+      Duration timeDifference = currentTime.difference(data.previousTime!);
+      double timeSeconds = timeDifference.inMilliseconds / 1000;
+
+      // Calcular velocidad instantánea en m/s
+      double instantSpeed = distance / timeSeconds;
+      
+      // MEJORADO: Filtrado más completo
       if (distance > 100) {
-        print(
-            "⚠️ Detección de salto grande en distancia: $distance metros. Ignorando esta actualización.");
-        // No acumular esta distancia, probablemente es un error
+        // Filtro 1: Saltos demasiado grandes
+        print("⚠️ Salto de distancia ignorado: $distance metros");
         shouldAddDistance = false;
+      } else if (instantSpeed > 8.3) {
+        // Filtro 2: Velocidad irreal (> 30 km/h)
+        print("⚠️ Velocidad irreal ignorada: ${(instantSpeed * 3.6).toStringAsFixed(1)} km/h");
+        shouldAddDistance = false;
+      } else if (distance < 1.0 && timeSeconds < 1.0) {
+        // Filtro 3: Micromovimientos por imprecisión del GPS
+        print("🔍 Micromovimiento ignorado: $distance m");
+        shouldAddDistance = false;
+      } else if (currentPosition.accuracy > 25) {
+        // Filtro 4: Baja precisión del GPS
+        print("⚠️ Lectura de baja precisión: ${currentPosition.accuracy}m");
+        // Considerar si añadir o no esta distancia según el contexto
+        if (distance > currentPosition.accuracy * 0.5) {
+          // Si la distancia es significativamente mayor que la imprecisión, añadirla
+          print("✅ Distancia considerada significativa a pesar de la baja precisión");
+        } else {
+          shouldAddDistance = false;
+        }
       }
 
-      // Solo sumamos la distancia si no es un salto grande
+      // Solo sumamos la distancia si pasó todas las validaciones
       if (shouldAddDistance) {
         data.distanceMeters += distance;
+        print("✅ Distancia acumulada: ${data.distanceMeters} metros");
 
-        DateTime currentTime = DateTime.now();
-        Duration timeDifference = currentTime.difference(data.previousTime!);
-        double timeSeconds =
-            timeDifference.inMilliseconds / 1000; // Más preciso usar milisegundos
-
-        // MEJORADO: Solo actualizar velocidad si hay suficiente tiempo transcurrido
-        if (timeSeconds > 0.1) {
-          // Al menos 100ms entre actualizaciones
-          // Calcular velocidad en m/s
-          double newSpeed = distance / timeSeconds;
-
-          // MEJORADO: Filtrar valores anómalos usando un filtro de suavizado
-          // Combinamos 30% de la nueva medición con 70% del valor anterior
+        // Calcular velocidad en m/s solo si hay distancia medible
+        if (distance > 0 && timeSeconds > 0) {
+          double instantSpeed = distance / timeSeconds;
+          
+          // Aplicar filtro de suavizado para evitar fluctuaciones bruscas
           if (data.speedMetersPerSecond > 0) {
-            data.speedMetersPerSecond =
-                data.speedMetersPerSecond * 0.7 + newSpeed * 0.3;
+            // 70% valor anterior + 30% nueva medición 
+            data.speedMetersPerSecond = data.speedMetersPerSecond * 0.7 + instantSpeed * 0.3;
           } else {
-            data.speedMetersPerSecond = newSpeed;
+            // Primera medición
+            data.speedMetersPerSecond = instantSpeed;
           }
+          
+          // Imprimir velocidad calculada
+          print("🏃‍♂️ Velocidad actual: ${data.speedMetersPerSecond} m/s");
+          print("🏃‍♂️ Ritmo actual: ${data.getPaceFormatted()} min/km");
+        }
+      }
+    } else {
+      print("⚠️ Primera medición - no hay datos previos para calcular métricas");
+    }
 
-          // MEJORADO: Aplicar límites razonables (8.3 m/s = 30 km/h, que ya es muy rápido)
-          if (data.speedMetersPerSecond > 8.3) {
-            data.speedMetersPerSecond = 0; // Reiniciar para velocidades irreales
+    // Actualizar posición y tiempo previos para la siguiente medición
+    data.previousPosition = currentPosition;
+    data.previousTime = DateTime.now();
+
+    // Si hay un salto grande pero estamos en medio de un entrenamiento activo,
+    // podríamos interpolar puntos para mantener la continuidad
+    if (!shouldAddDistance && data.isWorkoutActive && data.polylineCoordinates.length > 5) {
+      final distance = Geolocator.distanceBetween(
+        data.previousPosition!.latitude,
+        data.previousPosition!.longitude,
+        currentPosition.latitude,
+        currentPosition.longitude
+      );
+
+      if (distance > 100 && distance < 500) { // Salto grande pero aún plausible
+        // Interpolar puntos entre la última posición conocida y la actual
+        final lastPoint = LatLng(
+          data.previousPosition!.latitude,
+          data.previousPosition!.longitude
+        );
+        final currentPoint = LatLng(currentPosition.latitude, currentPosition.longitude);
+        
+        // Número de puntos a interpolar basado en la distancia
+        final pointsToAdd = (distance / 20).round(); // Un punto cada ~20m
+        
+        if (pointsToAdd > 1 && pointsToAdd < 20) { // Límite razonable
+          for (int i = 1; i < pointsToAdd; i++) {
+            final fraction = i / pointsToAdd;
+            final interpolatedLat = lastPoint.latitude + 
+                (currentPoint.latitude - lastPoint.latitude) * fraction;
+            final interpolatedLng = lastPoint.longitude + 
+                (currentPoint.longitude - lastPoint.longitude) * fraction;
+            
+            data.polylineCoordinates.add(LatLng(interpolatedLat, interpolatedLng));
+            
+            // Añadir distancia interpolada
+            data.distanceMeters += distance / pointsToAdd;
           }
+          
+          print("🔄 Interpolados $pointsToAdd puntos para mantener continuidad de ruta");
+          data.updatePolyline();
         }
       }
     }
-
-    // Siempre actualizamos la posición y tiempo previos, incluso si hubo un salto grande
-    data.previousPosition = currentPosition;
-    data.previousTime = DateTime.now();
   }
 
   void dispose() {

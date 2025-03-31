@@ -30,45 +30,43 @@ class HomePage extends StatelessWidget {
           const BackgroundGradient(),
 
           // Contenido principal
-          SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Sección "Today" con fecha
-                const Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: TSizes.defaultSpace,
-                    vertical: TSizes.spaceBtwItems,
-                  ),
-                  child: DateHeader(),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Sección "Today" con fecha
+              const Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: TSizes.defaultSpace,
+                  vertical: TSizes.spaceBtwItems,
                 ),
+                child: DateHeader(),
+              ),
 
-                // Días de la semana con checkmarks
-                const WeekdayTracker(),
+              // Días de la semana con checkmarks
+              const WeekdayTracker(),
 
-                // Contenido desplazable (tarjetas)
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.all(TSizes.defaultSpace),
-                    children: const [
-                      SizedBox(height: TSizes.spaceBtwItems),
+              // Contenido desplazable (tarjetas)
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.all(TSizes.defaultSpace),
+                  children: const [
+                    SizedBox(height: TSizes.spaceBtwItems),
 
-                      // Tarjeta de Favoritos
-                      FavoritesCard(),
-                      SizedBox(height: TSizes.spaceBtwItems),
+                    // Tarjeta de Favoritos
+                    FavoritesCard(),
+                    SizedBox(height: TSizes.spaceBtwItems),
 
-                      // Tarjeta de Desafío Diario
-                      ChallengeCard(),
-                      SizedBox(height: TSizes.spaceBtwItems),
+                    // Tarjeta de Desafío Diario
+                    ChallengeCard(),
+                    SizedBox(height: TSizes.spaceBtwItems),
 
-                      // Tarjeta de Imagen con Cita
-                      QuoteCard(),
-                      SizedBox(height: TSizes.spaceBtwItems),
-                    ],
-                  ),
+                    // Tarjeta de Imagen con Cita
+                    QuoteCard(),
+                    SizedBox(height: TSizes.spaceBtwItems),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),

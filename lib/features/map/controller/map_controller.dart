@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -10,8 +12,22 @@ import 'package:runap/features/map/models/workout_goal.dart';
 import 'package:runap/features/map/services/location_service.dart';
 import 'package:runap/features/map/services/map_workout_data_provider.dart';
 import 'package:runap/features/map/utils/location_permission_helper.dart';
+import 'package:flutter/foundation.dart';
+import 'package:runap/features/map/screen/map.dart';
+import 'package:logger/logger.dart';
 
 class MapController extends GetxController {
+  final Logger logger = Logger(
+    printer: PrettyPrinter(
+      methodCount: 0,
+      errorMethodCount: 5,
+      lineLength: 50,
+      colors: true,
+      printEmojis: true,
+      dateTimeFormat: DateTimeFormat.onlyTimeAndSinceStart,
+    ),
+  );
+
   // Variables observables
   final Rx<WorkoutData> workoutData = WorkoutData().obs;
   final RxBool isLoading = true.obs;
@@ -25,7 +41,6 @@ class MapController extends GetxController {
   WorkoutDatabaseService databaseService = WorkoutDatabaseService();
 
   // Variables de control
-  bool _isInitializing = false;
   int _stabilizationCount = 0;
   LatLng? _lastStablePosition;
 
@@ -38,6 +53,13 @@ class MapController extends GetxController {
 
   // Sesión a actualizar (si viene del dashboard)
   final Rxn<Session> sessionToUpdate = Rxn<Session>();
+
+  // Añadir un flag para controlar el logging
+  final bool _isDebugMode = false; // Cambiar a false en producción
+
+  // Agregar campo para controlar si estamos simulando
+  bool _isSimulatingLocation = false;
+  Timer? _simulationTimer;
 
   // Constructor
   MapController({Session? initialSession, WorkoutGoal? initialWorkoutGoal}) {
@@ -84,11 +106,30 @@ class MapController extends GetxController {
       }
     }
 
-    initialize();
+    // Inicializar en un futuro para no bloquear la UI
+    Future.microtask(() => initialize());
+
+    // Detectar si estamos en emulador (esto es una aproximación, puedes mejorarla)
+    bool isEmulator = false;
+    try {
+      isEmulator = Platform.environment.containsKey('ANDROID_EMULATOR') || 
+                   Platform.environment.containsKey('VIRTUAL_DEVICE') ||
+                   Platform.environment.containsKey('SIMULATOR');
+    } catch (e) {
+      // Si hay error al verificar, asumir que no es emulador
+    }
+    
+    // Si es emulador o modo debug, activar simulación
+    if (isEmulator || kDebugMode) {
+      Future.delayed(Duration(seconds: 2), () {
+        simulateLocation();
+      });
+    }
   }
 
-// Añade este nuevo método a MapController para filtrar puntos GPS iniciales
   void _handleLocationUpdate(LatLng position) {
+    logger.d("📍 Nueva posición recibida: $position");
+    
     workoutData.update((val) {
       val?.currentPosition = position;
 
@@ -108,7 +149,7 @@ class MapController extends GetxController {
             if (distance > 50) {
               // Si hay un salto grande, resetear el contador
               _stabilizationCount = 0;
-              print(
+              logger.d(
                   "⚠️ MapController - Saltó GPS detectado (${distance.toStringAsFixed(1)}m), esperando estabilización");
               return;
             }
@@ -119,11 +160,11 @@ class MapController extends GetxController {
 
           // En fase de estabilización, no añadimos puntos a la ruta
           if (_stabilizationCount < 3) {
-            print(
-                "🔍 MapController - Estabilizando GPS: ${_stabilizationCount}/3");
+            logger.d(
+                "🔍 MapController - Estabilizando GPS: $_stabilizationCount/3");
             return;
           } else {
-            print(
+            logger.d(
                 "✅ MapController - GPS estabilizado, iniciando trazado de ruta");
           }
         }
@@ -131,49 +172,69 @@ class MapController extends GetxController {
         // Una vez estabilizado, añadimos puntos a la polilínea
         val?.polylineCoordinates.add(position);
         val?.updatePolyline();
-        mapController.value?.animateCamera(CameraUpdate.newLatLng(position));
+        
+        // Verificar que la polilínea se esté actualizando
+        if (val?.polylines.isNotEmpty == true) {
+          logger.d("✅ Polilínea actualizada - ${val?.polylineCoordinates.length} puntos");
+        } else {
+          logger.d("⚠️ Error: polylines está vacío después de updatePolyline()");
+        }
+        
+        // Centrar el mapa en la posición actual
+        mapController.value?.moveCamera(
+          CameraUpdate.newLatLng(workoutData.value.currentPosition!),
+        );
       }
     });
   }
 
   void _handleMetricsUpdate(Position position) {
-    locationService.updateMetrics(workoutData.value, position);
-
-    // Verificar si se ha alcanzado el objetivo después de actualizar métricas
-    if (workoutData.value.isWorkoutActive && workoutData.value.goal != null) {
-      workoutData.value.checkGoalCompletion();
-    }
-
-    // Forzar actualización de la UI
-    workoutData.refresh();
+    // Ejecutar en isolate o computeAsync si es posible
+    Future.microtask(() {
+      locationService.updateMetrics(workoutData.value, position);
+      
+      // Verificar objetivo solo si es necesario
+      if (workoutData.value.isWorkoutActive && workoutData.value.goal != null) {
+        workoutData.value.checkGoalCompletion();
+      }
+      
+      // Actualizar UI sólo después de completar cálculos
+      workoutData.refresh();
+    });
   }
 
   Future<void> initialize() async {
     isLoading.value = true;
+    
+    try {
+      // Ejecutar en paralelo para optimizar
+      await Future.wait([
+        checkLocationPermissions(),
+        _loadGoals(),
+      ]);
+    } catch (e) {
+      logger.d('Error en inicialización: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
 
-    await checkLocationPermissions();
-
-    // Cargar objetivo recomendado al iniciar
+  Future<void> _loadGoals() async {
     try {
       final recommendedGoal = await databaseService.getRecommendedWorkoutGoal();
-      if (recommendedGoal != null && workoutData.value.goal == null) {
-        workoutData.update((val) {
+      final goals = await databaseService.getAvailableWorkoutGoals();
+      
+      // Actualizar todo de una vez
+      workoutData.update((val) {
+        if (recommendedGoal != null && val?.goal == null) {
           val?.setGoal(recommendedGoal);
-        });
-      }
+        }
+      });
+      
+      availableGoals.value = goals;
     } catch (e) {
-      // Manejar error al cargar el objetivo recomendado
-      print('Error al cargar objetivo recomendado: $e');
+      logger.d('Error al cargar objetivos: $e');
     }
-
-    // Cargar objetivos disponibles
-    try {
-      availableGoals.value = await databaseService.getAvailableWorkoutGoals();
-    } catch (e) {
-      print('Error al cargar objetivos disponibles: $e');
-    }
-
-    isLoading.value = false;
   }
 
   void setWorkoutGoal(WorkoutGoal goal) {
@@ -255,6 +316,7 @@ class MapController extends GetxController {
 
   Future<void> getCurrentLocationAndAnimateCamera() async {
     try {
+      // Ejecutar en paralelo para optimizar
       Position position = await locationService.getCurrentPosition();
       LatLng latLng = LatLng(position.latitude, position.longitude);
 
@@ -264,15 +326,54 @@ class MapController extends GetxController {
 
       if (workoutData.value.currentPosition != null &&
           mapController.value != null) {
-        mapController.value!.animateCamera(CameraUpdate.newLatLngZoom(
-            workoutData.value.currentPosition!, 17.0));
+        mapController.value!.moveCamera(
+          CameraUpdate.newLatLngZoom(
+            workoutData.value.currentPosition!, 17.0),
+        );
       }
     } catch (e) {
-      print('Error al obtener la ubicación: $e');
+      logger.d('Error al obtener la ubicación: $e');
+    }
+  }
+
+  Future<bool> checkGpsStatus() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      Get.snackbar(
+        'GPS desactivado',
+        'Por favor activa el GPS para un mejor seguimiento',
+        backgroundColor: Colors.orange,
+        duration: Duration(seconds: 5),
+      );
+      return false;
+    }
+    
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 3),
+        )
+      );
+      
+      if (position.accuracy > 50) {
+        Get.snackbar(
+          'Señal GPS débil',
+          'La precisión actual es baja (${position.accuracy.toStringAsFixed(1)}m). Intenta en un área abierta.',
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 5),
+        );
+      }
+      
+      return true;
+    } catch (e) {
+      logger.d("⚠️ Error al verificar GPS: $e");
+      return false;
     }
   }
 
   void startWorkout() async {
+    // Verificar permisos
     LocationPermission permission =
         await permissionHelper.checkLocationPermission();
     if (permission != LocationPermission.always &&
@@ -281,16 +382,54 @@ class MapController extends GetxController {
     }
 
     // Mostrar indicador de inicialización
-    _isInitializing = true;
     _stabilizationCount = 0;
     _lastStablePosition = null;
-    update(); // Si usas GetX
+    update();
+
+    // Verificar si tenemos posición actual
+    if (workoutData.value.currentPosition == null) {
+      // Intentar obtener posición actual
+      try {
+        Position position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.best,
+            timeLimit: Duration(seconds: 5),
+          )
+        );
+        workoutData.update((val) {
+          val?.currentPosition = LatLng(position.latitude, position.longitude);
+        });
+        logger.d("✅ Posición inicial obtenida: ${position.latitude}, ${position.longitude}");
+      } catch (e) {
+        logger.d("⚠️ No se pudo obtener posición inicial: $e");
+        
+        // Si estamos en emulador o modo debug, usar posición por defecto
+        if (kDebugMode) {
+          workoutData.update((val) {
+            val?.currentPosition = LatLng(20.651464, -103.392958);
+          });
+          logger.d("🔮 Usando posición por defecto para el emulador");
+        } else {
+          // Informar al usuario
+          Get.snackbar(
+            'GPS no disponible',
+            'Por favor, verifica que el GPS está activado y sal al exterior para mejor señal',
+            backgroundColor: Colors.orange,
+          );
+        }
+      }
+    }
+
+    // Inicialización de estado
+    _stabilizationCount = 0;
+    _lastStablePosition = null;
+    update();
 
     // Obtener una ubicación estable antes de iniciar la ruta
-    print("🔄 MapController - Estabilizando ubicación GPS...");
+    logger.d("🔄 MapController - Estabilizando ubicación GPS...");
 
     // Esperar 2 segundos para que el GPS obtenga una buena señal
-    await Future.delayed(Duration(seconds: 2));
+    Future.delayed(Duration(seconds: 2));
 
     try {
       // Obtener posición actual
@@ -305,21 +444,28 @@ class MapController extends GetxController {
         // Precisión de 20 metros o mejor
         _lastStablePosition =
             LatLng(initialPosition.latitude, initialPosition.longitude);
-        print(
+        logger.d(
             "✅ MapController - Ubicación inicial estable: ${initialPosition.accuracy}m");
       } else {
-        print(
+        logger.d(
             "⚠️ MapController - Precisión inicial insuficiente: ${initialPosition.accuracy}m");
         // Continuaremos de todos modos, pero con una advertencia
       }
     } catch (e) {
-      print("⚠️ MapController - Error al obtener ubicación estable: $e");
+      logger.d("⚠️ MapController - Error al obtener ubicación estable: $e");
     }
 
-    // Resetear datos del workout
+    // Resetear datos del workout de manera completa
     workoutData.update((val) {
       val?.reset();
       val?.isWorkoutActive = true;
+      
+      // Inicializar explícitamente valores críticos
+      val?.distanceMeters = 0;
+      val?.speedMetersPerSecond = 0;
+      val?.polylineCoordinates.clear();
+      val?.polylines.clear();
+      val?.previousTime = DateTime.now(); // ¡IMPORTANTE! Inicializar el tiempo previo
 
       // Si hay un objetivo, actualizar su tiempo de inicio
       if (val?.goal != null) {
@@ -342,20 +488,38 @@ class MapController extends GetxController {
         // Solo añadir si las posiciones están razonablemente cerca (menos de 30m)
         if (distanceBetween < 30) {
           val.polylineCoordinates.add(_lastStablePosition!);
-          print("✅ MapController - Punto inicial añadido a la ruta");
+          logger.d("✅ MapController - Punto inicial añadido a la ruta");
+          val.updatePolyline(); // Asegurarse de actualizar la polilínea
         } else {
-          print(
+          logger.d(
               "⚠️ MapController - Diferencia grande entre posiciones, no se añade punto inicial");
-          // No añadir ningún punto, esperaremos a la primera actualización estable
         }
       }
     });
 
     workoutStartTime.value = DateTime.now();
-    _isInitializing = false;
-    update(); // Si usas GetX
+    update();
 
+    // Forzar actualización de la UI antes de iniciar
+    workoutData.refresh();
+    
+    // Imprimir estado inicial
+    logger.d("▶️ Iniciando entrenamiento - Estado inicial:");
+    logger.d("  🏃‍♂️ Activo: ${workoutData.value.isWorkoutActive}");
+    logger.d("  📍 Posición actual: ${workoutData.value.currentPosition}");
+    logger.d("  📏 Distancia: ${workoutData.value.distanceMeters} metros");
+    logger.d("  ⏱️ Tiempo: ${getFormattedElapsedTime()}");
+    logger.d("  🛣️ Puntos en ruta: ${workoutData.value.polylineCoordinates.length}");
+    logger.d("  🛣️ Polilíneas activas: ${workoutData.value.polylines.length}");
+
+    // Log detallado al iniciar
+    logWorkoutStatus(detailed: true);
+
+    // Iniciar actualizaciones de ubicación
     locationService.startLocationUpdates();
+
+    // Configurar actualizaciones periódicas del mapa
+    setupPeriodicMapUpdates();
 
     // Iniciar timer para verificar el objetivo cada segundo
     goalCheckTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -364,7 +528,8 @@ class MapController extends GetxController {
         return;
       }
 
-      workoutData.refresh(); // Actualizar la UI
+      // Asegurarse de que la UI se actualice constantemente
+      workoutData.refresh();
     });
   }
 
@@ -390,7 +555,17 @@ class MapController extends GetxController {
         await databaseService.saveWorkoutResult(
             distanceKm, durationSeconds, goalCompleted);
       } catch (e) {
-        print('Error al guardar resultados: $e');
+        logger.d('Error al guardar resultados: $e');
+      }
+    }
+
+    // Guardar la ruta si hay suficientes puntos
+    if (workoutData.value.polylineCoordinates.length > 5) {
+      try {
+        // Almacenar en la base de datos
+        await databaseService.saveWorkoutRoute(workoutData.value.polylineCoordinates);
+      } catch (e) {
+        logger.d("⚠️ Error al guardar la ruta: $e");
       }
     }
 
@@ -480,6 +655,514 @@ class MapController extends GetxController {
     locationService.dispose();
     mapController.value?.dispose();
     goalCheckTimer?.cancel();
+    _simulationTimer?.cancel();
     super.onClose();
+  }
+
+  void forceMapUpdate() {
+    if (workoutData.value.currentPosition != null && mapController.value != null) {
+      // Usar animateCamera con duración corta para mayor rendimiento
+      mapController.value!.moveCamera(
+        CameraUpdate.newLatLng(workoutData.value.currentPosition!),
+      );
+      
+      // Actualizar polylines solo si hay cambios reales
+      if (workoutData.value.polylineCoordinates.isNotEmpty && 
+          (workoutData.value.polylines.isEmpty || workoutData.value.polylines.length < 2)) {
+        workoutData.update((val) {
+          val?.updatePolyline();
+        });
+      }
+      
+      workoutData.refresh();
+    } else {
+      getCurrentLocationAndAnimateCamera();
+    }
+  }
+
+  void setupPeriodicMapUpdates() {
+    // Reducir frecuencia a cada 15 segundos
+    Timer.periodic(Duration(seconds: 15), (timer) {
+      if (!workoutData.value.isWorkoutActive) {
+        timer.cancel();
+        return;
+      }
+      
+      logger.d("🔄 Forzando actualización periódica del mapa");
+      forceMapUpdate();
+    });
+  }
+
+  void logWorkoutStatus({bool detailed = false}) {
+    if (!_isDebugMode) return;
+    
+    logger.d("📊 Estado del entrenamiento:");
+    logger.d("  🏃‍♂️ Activo: ${workoutData.value.isWorkoutActive}");
+    logger.d("  📍 Posición actual: ${workoutData.value.currentPosition}");
+    logger.d("  📏 Distancia: ${workoutData.value.distanceMeters} metros");
+    logger.d("  ⏱️ Tiempo: ${getFormattedElapsedTime()}");
+    logger.d("  🛣️ Puntos en ruta: ${workoutData.value.polylineCoordinates.length}");
+    
+    if (detailed) {
+      logger.d("  🧮 Detalles de cálculos:");
+      logger.d("    🚶‍♂️ Velocidad: ${workoutData.value.speedMetersPerSecond} m/s");
+      logger.d("    ⏲️ Ritmo: ${workoutData.value.getPaceFormatted()} min/km");
+      if (workoutData.value.previousPosition != null) {
+        logger.d("    📌 Precisión GPS: ${workoutData.value.previousPosition!.accuracy}m");
+      }
+      if (workoutData.value.goal != null) {
+        logger.d("    🎯 Objetivo: ${workoutData.value.goal!.targetDistanceKm} km");
+        logger.d("    ✅ Completado: ${workoutData.value.goal!.isCompleted}");
+      }
+    }
+  }
+
+  void resetMapView() {
+    if (workoutData.value.currentPosition != null && mapController.value != null) {
+      // Definir el padding (en píxeles) para cada lado del mapa
+      // Ajusta estos valores según el tamaño de tus paneles
+      const padding = EdgeInsets.only(
+        top: 60,    // Espacio para AppBar
+        bottom: 220, // Espacio para panel de información
+        left: 20,
+        right: 20,
+      );
+      
+      // Centrar el mapa con padding
+      mapController.value!.animateCamera(
+        CameraUpdate.newLatLngBounds(
+          // Crear un pequeño bounds alrededor de la posición actual
+          LatLngBounds(
+            southwest: LatLng(
+              workoutData.value.currentPosition!.latitude - 0.001,
+              workoutData.value.currentPosition!.longitude - 0.001,
+            ),
+            northeast: LatLng(
+              workoutData.value.currentPosition!.latitude + 0.001,
+              workoutData.value.currentPosition!.longitude + 0.001,
+            ),
+          ),
+          // Padding en píxeles
+          100, // Padding general
+        ),
+      );
+      
+      // Refrescar polylines
+      if (workoutData.value.polylineCoordinates.isNotEmpty) {
+        workoutData.update((val) {
+          val?.updatePolyline();
+        });
+      }
+      
+      workoutData.refresh();
+    } else {
+      logger.d("⚠️ No se puede actualizar el mapa: posición actual nula");
+      
+      // Intentar obtener la posición actual
+      getCurrentLocationAndAnimateCamera().then((_) {
+        if (workoutData.value.currentPosition != null) {
+          // Si ahora tenemos posición, intentar actualizar de nuevo
+          resetMapView();
+        } else {
+          // Informar al usuario que no se puede obtener la ubicación
+          Get.snackbar(
+            'Ubicación no disponible',
+            'Esperando señal GPS...',
+            backgroundColor: Colors.orange,
+            colorText: Colors.white,
+            duration: Duration(seconds: 2),
+          );
+        }
+      });
+    }
+  }
+
+  String getGpsQualityIndicator() {
+    if (workoutData.value.previousPosition == null) return "⚪"; // Sin datos
+    
+    double accuracy = workoutData.value.previousPosition!.accuracy;
+    
+    if (accuracy <= 10) return "🟢"; // Excelente
+    if (accuracy <= 20) return "🟡"; // Buena
+    if (accuracy <= 40) return "🟠"; // Regular
+    return "🔴"; // Mala
+  }
+
+  // Método para simular movimiento en el emulador
+  void simulateLocation() {
+    if (_isSimulatingLocation) return;
+    _isSimulatingLocation = true;
+    
+    // Posición inicial (puedes ajustarla a una posición realista)
+    final initialLat = 20.651464;
+    final initialLng = -103.392958;
+    
+    // Simular posición inicial
+    final initialPosition = LatLng(initialLat, initialLng);
+    workoutData.update((val) {
+      val?.currentPosition = initialPosition;
+    });
+    
+    // Forzar actualización inicial
+    if (mapController.value != null) {
+      mapController.value!.moveCamera(
+        CameraUpdate.newLatLngZoom(initialPosition, 17.0)
+      );
+    }
+    
+    // Simular movimiento cada 2 segundos
+    _simulationTimer = Timer.periodic(Duration(seconds: 2), (timer) {
+      // Solo simular si el entrenamiento está activo
+      if (!workoutData.value.isWorkoutActive) {
+        return;
+      }
+      
+      // Obtener última posición
+      final lastPosition = workoutData.value.currentPosition!;
+      
+      // Generar un pequeño desplazamiento (unos 10-20 metros)
+      final newLat = lastPosition.latitude + (0.0001 * (0.5 + 0.5 * Random().nextDouble()));
+      final newLng = lastPosition.longitude + (0.0001 * (0.5 + 0.5 * Random().nextDouble()));
+      
+      // Crear nueva posición
+      final newPosition = LatLng(newLat, newLng);
+      
+      // Crear posición con datos completos para la actualización de métricas
+      final position = Position(
+        latitude: newLat,
+        longitude: newLng,
+        timestamp: DateTime.now(),
+        accuracy: 8.0, // Buena precisión simulada
+        altitude: 0,
+        heading: 0,
+        speed: 2.0, // ~7.2 km/h
+        speedAccuracy: 1.0,
+        altitudeAccuracy: 0,
+        headingAccuracy: 0,
+      );
+      
+      // Simular actualización
+      _handleLocationUpdate(newPosition);
+      _handleMetricsUpdate(position);
+      
+      logger.d("🔮 Posición simulada: $newPosition");
+    });
+    
+    // Mostrar indicador
+    Get.snackbar(
+      'Modo de simulación',
+      'Usando ubicaciones simuladas para pruebas',
+      backgroundColor: Colors.purple.withAlpha(179),
+      colorText: Colors.white,
+      duration: Duration(seconds: 3),
+    );
+  }
+
+  // Agregar un método en el controlador para centrar el mapa con ajuste automático
+  void centerMapWithAutoPadding() {
+    if (workoutData.value.currentPosition == null || mapController.value == null) {
+      resetMapView(); // Usar el método simple si no podemos calcular
+      return;
+    }
+    
+    // Intentar obtener la referencia a MapScreen para medir el panel
+    MapScreen? mapScreen;
+    try {
+      // Buscar la primera instancia de MapScreen en la pila de widgets
+      final context = Get.context;
+      if (context != null) {
+        mapScreen = context.findAncestorWidgetOfExactType<MapScreen>();
+      }
+    } catch (e) {
+      logger.d("⚠️ No se pudo encontrar MapScreen: $e");
+    }
+    
+    // Padding por defecto si no podemos obtener las medidas reales
+    double bottomPadding = 220;
+    
+    // Si encontramos MapScreen, intentar obtener la altura real
+    if (mapScreen != null) {
+      try {
+        bottomPadding = mapScreen.getInfoPanelHeight();
+        logger.d("📏 Altura del panel de información: $bottomPadding");
+      } catch (e) {
+        logger.d("⚠️ Error al medir panel: $e");
+      }
+    }
+    
+    // Ajustar la cámara con padding calculado
+    mapController.value!.animateCamera(
+      CameraUpdate.newLatLngBounds(
+        LatLngBounds(
+          southwest: LatLng(
+            workoutData.value.currentPosition!.latitude - 0.0005,
+            workoutData.value.currentPosition!.longitude - 0.0005,
+          ),
+          northeast: LatLng(
+            workoutData.value.currentPosition!.latitude + 0.0005,
+            workoutData.value.currentPosition!.longitude + 0.0005,
+          ),
+        ),
+        // Usar valores calculados para el padding
+        bottomPadding.toInt() / 2,
+      ),
+    );
+    
+    workoutData.refresh();
+  }
+
+  // Añadir un método de precarga del mapa para acelerar la inicialización
+  void preloadMapResources() {
+    // Este método debería llamarse desde onInit()
+    
+    // Precalcular algunos valores comunes
+    final initialPosition = workoutData.value.currentPosition ?? LatLng(20.651464, -103.392958);
+    
+    // Preparar polylines con un conjunto vacío pero ya inicializado
+    workoutData.update((val) {
+      if (val?.polylines.isEmpty == true) {
+        // Inicializar con un conjunto vacío pero ya configurado
+        val?.polylines.clear();
+      }
+    });
+    
+    // Preparar la posición inicial si es posible
+    Future.microtask(() async {
+      try {
+        Position position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 5),
+          ),
+        );
+        workoutData.update((val) {
+          val?.currentPosition = LatLng(position.latitude, position.longitude);
+        });
+      } catch (e) {
+        logger.d("⚠️ No se pudo obtener posición inicial: $e");
+      }
+    });
+  }
+
+  // Añadir un método para gestionar estilos del mapa
+  void setMapStyle(String styleName) {
+    if (mapController.value == null) return;
+
+    String styleJson = "";
+    
+    switch (styleName) {
+      case "running_simple":
+        styleJson = '''
+[
+  {
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#f5f5f5"
+      }
+    ]
+  },
+  {
+    "elementType": "labels.icon",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "poi",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "transit",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  }
+]
+        ''';
+        break;
+        
+      case "running_detailed":
+        styleJson = '''
+[
+  {
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#f5f5f5"
+      }
+    ]
+  },
+  {
+    "featureType": "poi.business",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "poi.park",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#c1e7c1"
+      }
+    ]
+  },
+  {
+    "featureType": "road",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#ffffff"
+      }
+    ]
+  },
+  {
+    "featureType": "water",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#c9c9c9"
+      }
+    ]
+  }
+]
+        ''';
+        break;
+        
+      case "terrain":
+        styleJson = '''
+[
+  {
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#ebe3cd"
+      }
+    ]
+  },
+  {
+    "featureType": "landscape.natural",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#dfd2ae"
+      }
+    ]
+  },
+  {
+    "featureType": "poi.park",
+    "elementType": "geometry.fill",
+    "stylers": [
+      {
+        "color": "#a5b076"
+      }
+    ]
+  },
+  {
+    "featureType": "road",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#f5f1e6"
+      }
+    ]
+  },
+  {
+    "featureType": "water",
+    "elementType": "geometry.fill",
+    "stylers": [
+      {
+        "color": "#b9d3c2"
+      }
+    ]
+  }
+]
+        ''';
+        break;
+        
+      case "night":
+        styleJson = '''
+[
+  {
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#242f3e"
+      }
+    ]
+  },
+  {
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#746855"
+      }
+    ]
+  },
+  {
+    "elementType": "labels.text.stroke",
+    "stylers": [
+      {
+        "color": "#242f3e"
+      }
+    ]
+  },
+  {
+    "featureType": "road",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#38414e"
+      }
+    ]
+  },
+  {
+    "featureType": "road",
+    "elementType": "geometry.stroke",
+    "stylers": [
+      {
+        "color": "#212a37"
+      }
+    ]
+  },
+  {
+    "featureType": "water",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#17263c"
+      }
+    ]
+  }
+]
+        ''';
+        break;
+    }
+    
+    if (styleJson.isNotEmpty) {
+      mapController.value!.setMapStyle(styleJson);
+      
+      // También actualizamos el color de las polilíneas según el estilo
+      if (styleName == "night") {
+        workoutData.update((val) {
+          val?.updatePolyline(primaryColor: Colors.cyan, outlineColor: Colors.white);
+        });
+      } else {
+        workoutData.update((val) {
+          val?.updatePolyline(); // Usar colores por defecto
+        });
+      }
+    }
   }
 }

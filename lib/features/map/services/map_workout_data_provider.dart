@@ -1,4 +1,5 @@
 import 'package:runap/features/map/models/workout_goal.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class WorkoutDatabaseService {
   // En una implementación real, aquí conectarías con tu base de datos
@@ -32,5 +33,13 @@ class WorkoutDatabaseService {
     // En una implementación real, aquí guardarías los datos en la base de datos
     print(
         'Workout saved: $distanceKm km in $durationSeconds seconds. Goal completed: $goalCompleted');
+  }
+
+  Future<void> saveWorkoutRoute(List<LatLng> routePoints) async {
+    // Simulate saving to database
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    // In a real implementation, you would save the route points to the database
+    print('Workout route saved with ${routePoints.length} points');
   }
 }

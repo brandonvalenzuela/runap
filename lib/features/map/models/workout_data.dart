@@ -1,8 +1,8 @@
 import 'dart:math';
 
+import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:runap/utils/constants/colors.dart';
 import 'workout_goal.dart';
 
 class WorkoutData {
@@ -118,28 +118,40 @@ class WorkoutData {
     currentPosition = newPosition;
   }
 
-  void updatePolyline() {
-    // Si no hay suficientes puntos, no creamos la polilínea
-    if (polylineCoordinates.length < 2) {
-      return;
-    }
-
-    // Eliminar polilíneas anteriores para evitar acumulación
-    polylines.clear();
-
-    // Crear nueva polilínea con los puntos actuales
-    polylines.add(
-      Polyline(
-        polylineId: const PolylineId('running_route'),
-        points: polylineCoordinates,
-        color: TColors.darkerGrey,
-        width: 5,
-        // Añadir estas propiedades para una polilínea más suave
-        startCap: Cap.roundCap,
-        endCap: Cap.roundCap,
-        jointType: JointType.round,
-      ),
+  void updatePolyline({Color? primaryColor, Color? outlineColor}) {
+    if (polylineCoordinates.length < 2) return;
+    
+    // Usar colores pasados o por defecto
+    final Color runningColor = primaryColor ?? Colors.blue.shade600;
+    final Color runningOutlineColor = outlineColor ?? Colors.black;
+    
+    // Crear polilíneas con estilo deportivo
+    final Polyline backgroundLine = Polyline(
+      polylineId: PolylineId('workout_route_bg'),
+      color: runningOutlineColor,
+      width: 9,
+      points: polylineCoordinates,
+      zIndex: 1,
+      jointType: JointType.round,
+      startCap: Cap.roundCap,
+      endCap: Cap.roundCap,
     );
+    
+    final Polyline foregroundLine = Polyline(
+      polylineId: PolylineId('workout_route_fg'),
+      color: runningColor,
+      width: 6,
+      points: polylineCoordinates,
+      zIndex: 2,
+      jointType: JointType.round,
+      startCap: Cap.roundCap,
+      endCap: Cap.roundCap,
+    );
+    
+    // Añadir ambas polilíneas
+    polylines.clear();
+    polylines.add(backgroundLine);
+    polylines.add(foregroundLine);
   }
 
   // También, añade un método para limpiar puntos duplicados o muy cercanos
