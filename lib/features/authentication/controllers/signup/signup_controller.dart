@@ -30,7 +30,9 @@ class SignupController extends GetxController {
     try {
       // Start Loading
       TFullScreenLoader.openLoadingDialog(
-          'We are processing your information...', TImages.clothIcon);
+        'We are processing your information...',
+        TImages.docerAnimation,
+      );
 
       // Check Internet Connectivity
       final isConnected = await NetworkManager.instance.isConnected();
@@ -58,9 +60,19 @@ class SignupController extends GetxController {
       }
 
       // Register user in the firebase Authentication & Save user data in the Firebase
-      final userCredential = await AuthenticationRepository.instace
+      final userCredential = await AuthenticationRepository.instance
           .registerWithEmailAndPassword(
               email.text.trim(), password.text.trim());
+
+      // Verify if user was created successfully
+      if (userCredential.user == null) {
+        TFullScreenLoader.stopLoading();
+        TLoaders.errorSnackBar(
+          title: 'Oh Snap!',
+          message: 'Account creation failed. Please try again.',
+        );
+        return;
+      }
 
       // Save Authenticated user data in the Firebase Firestore
       final newUser = UserModel(
@@ -81,9 +93,10 @@ class SignupController extends GetxController {
 
       // Show Success Message
       TLoaders.successSnackBar(
-          title: 'Congratulations!',
-          message:
-              'Your account has been created successfully! Verify email to continue .');
+        title: 'Congratulations!',
+        message:
+            'Your account has been created successfully! Verify email to continue .',
+      );
 
       // Move to Verify Email Screen
       Get.to(() => VerifyEmailScreen(email: email.text.trim()));

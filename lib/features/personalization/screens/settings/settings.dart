@@ -9,6 +9,7 @@ import 'package:runap/common/widgets/texts/sections_heading.dart';
 import 'package:runap/features/personalization/screens/profile/profile.dart';
 import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/constants/sizes.dart';
+import 'package:runap/data/repositories/authentication/authentication_repository.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -120,7 +121,9 @@ class SettingsScreen extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton(
-                        onPressed: () {}, child: const Text('Logout')),
+                        onPressed: () =>
+                            AuthenticationRepository.instance.logout(),
+                        child: const Text('Logout')),
                   ),
                   SizedBox(height: TSizes.spaceBtwSections * 2.5),
                 ],

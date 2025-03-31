@@ -49,6 +49,10 @@ class TrainingCard extends StatelessWidget {
     final canStartWorkout =
         isToday && !session.workoutName.toLowerCase().contains('descanso');
 
+    // SOLO PARA PRUEBAS
+    // final canStartWorkout = (isToday || session.sessionDate.isAfter(now)) &&
+    //     !session.workoutName.toLowerCase().contains('descanso');
+
     print('Puede iniciar: $canStartWorkout');
 
     // Función personalizada para formatear fecha en español
@@ -155,7 +159,27 @@ class TrainingCard extends StatelessWidget {
     }
 
     return InkWell(
-      onTap: canStartWorkout ? () => navigateToMap() : null,
+      onTap: canStartWorkout
+          ? () => navigateToMap()
+          : (isToday && session.workoutName.toLowerCase().contains('descanso'))
+              ? () {
+                  // Mostrar mensaje específico para días de descanso
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                          'Hoy es tu día de descanso. ¡Aprovecha para recuperarte!'),
+                      backgroundColor: Colors.blue,
+                      action: SnackBarAction(
+                        label: 'Entendido',
+                        textColor: Colors.white,
+                        onPressed: () {
+                          // Cerrar el SnackBar cuando se presiona el botón
+                        },
+                      ),
+                    ),
+                  );
+                }
+              : null,
       child: Opacity(
         opacity: canStartWorkout
             ? 1.0
@@ -328,7 +352,8 @@ class TrainingCard extends StatelessWidget {
   Color _getStatusChipColor(bool isPast, bool completed, bool isToday) {
     if (completed) {
       return TColors.success.withAlpha(53);
-    } else if (isPast) {
+    } else if (isPast && !isToday) {
+      // Añadir verificación de "isToday"
       return Colors.red.withAlpha(53);
     } else if (isToday) {
       return TColors.secondaryColor.withAlpha(53);
@@ -337,11 +362,12 @@ class TrainingCard extends StatelessWidget {
     }
   }
 
-  // Método para obtener el color del texto del chip de estado
+// Método para obtener el color del texto del chip de estado
   Color _getStatusTextColor(bool isPast, bool completed, bool isToday) {
     if (completed) {
       return TColors.success;
-    } else if (isPast) {
+    } else if (isPast && !isToday) {
+      // Añadir verificación de "isToday"
       return Colors.red;
     } else if (isToday) {
       return TColors.secondaryColor;
@@ -350,11 +376,12 @@ class TrainingCard extends StatelessWidget {
     }
   }
 
-  // Método para obtener el texto del chip de estado
+// Método para obtener el texto del chip de estado
   String _getStatusText(bool isPast, bool completed, bool isToday) {
     if (completed) {
       return 'Completado';
-    } else if (isPast) {
+    } else if (isPast && !isToday) {
+      // Añadir verificación de "isToday"
       return 'Perdido';
     } else if (isToday) {
       return 'Hoy';

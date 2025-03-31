@@ -13,7 +13,7 @@ import 'package:runap/utils/exceptions/firebase_exceptions.dart';
 import 'package:runap/utils/exceptions/format_exceptions.dart';
 
 class AuthenticationRepository extends GetxController {
-  static AuthenticationRepository get instace => Get.find();
+  static AuthenticationRepository get instance => Get.find();
 
   // Variables
   final deviceStorage = GetStorage();
@@ -32,14 +32,18 @@ class AuthenticationRepository extends GetxController {
   screenRedirect() async {
     final user = _auth.currentUser;
     if (user != null) {
+      // If the user is logged in
       if (user.emailVerified) {
+        // If the user's email is verified, navigate to the main Navigation Menu
         Get.offAll(() => const NavigationMenu());
       } else {
+        //If the user's email is not verified, navigate to the VerifyEmailScreen
         Get.offAll(() => VerifyEmailScreen(email: _auth.currentUser?.email));
       }
     } else {
       // Local Storage
       deviceStorage.writeIfNull('IsFirstTime', true);
+
       // Check if it's the first time launching the app
       deviceStorage.read('IsFirstTime') != true
           ? Get.offAll(() =>
@@ -52,13 +56,36 @@ class AuthenticationRepository extends GetxController {
 /* --------------------------------------- Email & Password sign-in ------------------------------------------ */
 
   /// [EmailAuthentication] - SignIn
+  Future<UserCredential> loginWithEmailAndPassword(
+      String email, String password) async {
+    try {
+      return await _auth.signInWithEmailAndPassword(
+          email: email, password: password);
+    } on FirebaseAuthException catch (e) {
+      throw TFirebaseAuthException(e.code).message;
+    } on FirebaseException catch (e) {
+      throw TFirebaseException(e.code).message;
+    } on FormatException catch (_) {
+      throw const TFormatException();
+    } on PlatformException catch (e) {
+      throw TExceptions(e.code).message;
+    } catch (e) {
+      throw 'Something went wrong. Please try again';
+    }
+  }
 
   /// [EmailAuthentication] - REGISTER
   Future<UserCredential> registerWithEmailAndPassword(
       String email, String password) async {
     try {
-      return await _auth.createUserWithEmailAndPassword(
+      final userCredential = await _auth.createUserWithEmailAndPassword(
           email: email, password: password);
+
+      if (userCredential.user == null) {
+        throw 'Failed to create user account. Please try again.';
+      }
+
+      return userCredential;
     } on FirebaseAuthException catch (e) {
       throw TFirebaseAuthException(e.code).message;
     } on FirebaseException catch (e) {

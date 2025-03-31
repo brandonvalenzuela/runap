@@ -165,6 +165,13 @@ class TrainingService {
                 (s) => s.sessionDate.isAtSameMomentAs(session.sessionDate));
 
         if (index != -1) {
+          // Si el estado ya está igual al que se quiere establecer, no hacer nada
+          if (_cachedTrainingData!
+                  .dashboard.nextWeekSessions[index].completed ==
+              completed) {
+            return true; // Ya está en el estado deseado, no hay cambios
+          }
+
           _cachedTrainingData!.dashboard.nextWeekSessions[index].completed =
               completed;
 

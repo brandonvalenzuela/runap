@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:runap/common/widgets/login_signup/form_divider.dart';
-import 'package:runap/common/widgets/login_signup/social_buttons.dart';
-import 'package:runap/features/authentication/screens/signup/widget/signup_form.dart';
 import 'package:runap/utils/constants/sizes.dart';
 import 'package:runap/utils/constants/text_strings.dart';
+import 'package:runap/features/authentication/screens/signup/widget/signup_form.dart';
+import 'package:runap/common/widgets/login_signup/form_divider.dart';
+import 'package:runap/common/widgets/login_signup/social_buttons.dart';
 
 class SignupScreen extends StatelessWidget {
   const SignupScreen({super.key});
@@ -29,7 +28,7 @@ class SignupScreen extends StatelessWidget {
               const SizedBox(height: TSizes.spaceBtwSections),
 
               /// DIVIDER
-              TFormDevider(dividerText: TTexts.orSignUpWith.capitalize!),
+              TFormDevider(dividerText: TTexts.orSignUpWith),
               const SizedBox(height: TSizes.spaceBtwSections),
 
               /// SOCIAL BUTTONS

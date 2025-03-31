@@ -239,14 +239,15 @@ class HomeScreen extends StatelessWidget {
         // Mensaje para el día sin entrenamiento (si aplica)
         if (todaySessions.isEmpty)
           Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: TSizes.defaultSpace,
-              vertical: TSizes.sm,
+            padding: const EdgeInsets.only(
+              bottom: TSizes.defaultSpace,
+              left: TSizes.defaultSpace,
+              right: TSizes.defaultSpace,
             ),
             child: Container(
               padding: const EdgeInsets.all(TSizes.md),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
+                color: Colors.green.withAlpha(26),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(

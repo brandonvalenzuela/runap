@@ -19,6 +19,11 @@ class MapScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Asegurarse de imprimir información de depuración
+    print(
+        "🗺️ MapScreen - Construyendo con sessionToUpdate: ${sessionToUpdate?.workoutName}");
+    print(
+        "🗺️ MapScreen - initialWorkoutGoal: ${initialWorkoutGoal?.targetDistanceKm}km");
     // Inyectar el controlador
     final controller = Get.put(MapController(
       initialSession: sessionToUpdate,

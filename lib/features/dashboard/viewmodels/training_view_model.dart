@@ -46,8 +46,10 @@ class TrainingViewModel extends GetxController {
             "⚠️ TrainingViewModel (stream) - Datos recibidos sin sesiones o nulos");
       }
 
-      // Verificar sesiones pasadas
-      _updatePastSessions();
+      // Solo llamar a actualizar sesiones pasadas si no estamos ya en ese proceso
+      if (!_isUpdatingPastSessions) {
+        _updatePastSessions();
+      }
     });
 
     // Cargar datos iniciales
@@ -150,32 +152,42 @@ class TrainingViewModel extends GetxController {
     return false;
   }
 
+  // Variable para controlar si estamos en medio de una actualización
+  bool _isUpdatingPastSessions = false;
+
   // Método para actualizar el estado de sesiones pasadas
   void _updatePastSessions() {
-    if (_trainingData.value == null) return;
+    // Si ya estamos actualizando o no hay datos, salir
+    if (_isUpdatingPastSessions || _trainingData.value == null) return;
 
-    final now = DateTime.now();
-    bool anyUpdated = false;
-    List<Session> sessionsToUpdate = [];
+    try {
+      _isUpdatingPastSessions = true;
 
-    for (var session in _trainingData.value!.dashboard.nextWeekSessions) {
-      // Verificar si la sesión ya pasó y no está completada
-      if (session.sessionDate.isBefore(now) && !session.completed) {
-        // Agregar a la lista de sesiones a actualizar en el backend
-        sessionsToUpdate.add(session);
-        anyUpdated = true;
+      final now = DateTime.now();
+      bool anyUpdated = false;
+      List<Session> sessionsToUpdate = [];
+
+      for (var session in _trainingData.value!.dashboard.nextWeekSessions) {
+        // Verificar si la sesión ya pasó y no está completada
+        if (session.sessionDate.isBefore(now) && !session.completed) {
+          // Agregar a la lista de sesiones a actualizar en el backend
+          sessionsToUpdate.add(session);
+          anyUpdated = true;
+        }
       }
-    }
 
-    // Actualizar en el backend las sesiones pasadas no completadas
-    if (sessionsToUpdate.isNotEmpty) {
-      print("🔄 Actualizando ${sessionsToUpdate.length} sesiones pasadas");
-      _markPastSessionsAsNotCompleted(sessionsToUpdate);
-    }
+      // Actualizar en el backend las sesiones pasadas no completadas
+      if (sessionsToUpdate.isNotEmpty) {
+        print("🔄 Actualizando ${sessionsToUpdate.length} sesiones pasadas");
+        _markPastSessionsAsNotCompleted(sessionsToUpdate);
+      }
 
-    if (anyUpdated) {
-      // IMPORTANTE: Notificar a GetBuilder
-      update();
+      // Solo notificar si realmente hubo cambios
+      if (anyUpdated) {
+        update();
+      }
+    } finally {
+      _isUpdatingPastSessions = false;
     }
   }
 

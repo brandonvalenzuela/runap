@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:runap/common/styles/spacing_styles.dart';
 import 'package:runap/common/widgets/login_signup/form_divider.dart';
 import 'package:runap/common/widgets/login_signup/social_buttons.dart';
@@ -26,7 +25,7 @@ class LoginScreen extends StatelessWidget {
               const TLoginForm(),
 
               /// Divider
-              TFormDevider(dividerText: TTexts.orSignInWith.capitalize!),
+              TFormDevider(dividerText: TTexts.orSignInWith),
               const SizedBox(height: TSizes.spaceBtwSections),
 
               /// Footer

@@ -58,8 +58,8 @@ class HomePage extends StatelessWidget {
                 child: ListView(
                   children: const [
                     EntryCardWidget(
-                      iconBackgroundColor: Color(0xFFF8E8E8),
-                      iconColor: Color(0xFFE5A4A4),
+                      iconBackgroundColor: Color(0xFFfff3e0),
+                      iconColor: Color(0xFFfdd884),
                       title: 'Daily Reflection',
                       time: '11:26 AM',
                       content:
@@ -81,10 +81,9 @@ class HomePage extends StatelessWidget {
           ),
         ),
       ),
-      bottomNavigationBar: const BottomNavBarWidget(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {},
-        backgroundColor: const Color(0xFFEF7A85),
+        backgroundColor: const Color(0xFFfbc05e),
         child: const Icon(Icons.add, color: Colors.white),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
@@ -145,7 +144,7 @@ class StatsCardWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withAlpha(13),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -216,14 +215,17 @@ class PromoCardWidget extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFFEF7A85), Color(0xFFEC6B76)],
+          colors: [
+            Color(0xFFfbc05e),
+            Color(0xFFf78314)
+          ], //[Color(0xFFEF7A85), Color(0xFFEC6B76)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFEF7A85).withOpacity(0.3),
+            color: const Color(0xFFfbc05e).withAlpha(104),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -238,7 +240,7 @@ class PromoCardWidget extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.3),
+                  color: Colors.white.withAlpha(104),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Icon(
@@ -264,7 +266,7 @@ class PromoCardWidget extends StatelessWidget {
                     subtitle,
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withAlpha(230),
                     ),
                   ),
                 ],
@@ -309,7 +311,7 @@ class DateHeaderWidget extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withAlpha(13),
                 blurRadius: 5,
                 offset: const Offset(0, 2),
               ),
@@ -390,7 +392,7 @@ class EntryCardWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withAlpha(13),
             blurRadius: 5,
             offset: const Offset(0, 2),
           ),
@@ -483,46 +485,6 @@ class TagWidget extends StatelessWidget {
         style: const TextStyle(
           fontSize: 12,
           color: Colors.black54,
-        ),
-      ),
-    );
-  }
-}
-
-// Widget para la barra de navegación inferior
-class BottomNavBarWidget extends StatelessWidget {
-  const BottomNavBarWidget({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return BottomAppBar(
-      shape: const CircularNotchedRectangle(),
-      notchMargin: 8,
-      child: Container(
-        height: 60,
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.wb_sunny_outlined),
-              onPressed: () {},
-            ),
-            IconButton(
-              icon: const Icon(Icons.chat_bubble_outline),
-              onPressed: () {},
-            ),
-            const SizedBox(width: 40), // Espacio para el FAB
-            IconButton(
-              icon: const Icon(Icons.show_chart),
-              onPressed: () {},
-            ),
-            IconButton(
-              icon: const Icon(Icons.document_scanner_outlined,
-                  color: Colors.black87),
-              onPressed: () {},
-            ),
-          ],
         ),
       ),
     );

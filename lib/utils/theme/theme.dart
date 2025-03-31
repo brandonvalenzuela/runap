@@ -19,7 +19,7 @@ class TAppTheme {
     primaryColor: Colors.orange,
     textTheme: TTextTheme.lightTextTheme,
     chipTheme: TChipTheme.lightChipTheme,
-    scaffoldBackgroundColor: TColors.white,
+    scaffoldBackgroundColor: TColors.lightBackground,
     appBarTheme: TAppBarTheme.lightAppBarTheme,
     checkboxTheme: TCheckboxTheme.lightCheckboxTheme,
     bottomSheetTheme: TBottomSheetTheme.lightBottomSheetTheme,

@@ -22,7 +22,7 @@ class VerifyEmailController extends GetxController {
   /// Send Email Verification Link.
   sendEmailVerification() async {
     try {
-      await AuthenticationRepository.instace.sendEmailVerification();
+      await AuthenticationRepository.instance.sendEmailVerification();
       TLoaders.successSnackBar(
           title: 'Email send',
           message: 'Please check your email to verify your account.');
@@ -40,10 +40,10 @@ class VerifyEmailController extends GetxController {
         timer.cancel();
         Get.off(
           () => SuccessScreen(
-            image: TImages.verifyIllustration,
+            image: TImages.docerAnimation,
             title: TTexts.yourAccountCreatedTitle,
             subtitle: TTexts.yourAccountCreatedSubTitle,
-            onPressed: () => AuthenticationRepository.instace.screenRedirect(),
+            onPressed: () => AuthenticationRepository.instance.screenRedirect(),
           ),
         );
       }
@@ -56,10 +56,10 @@ class VerifyEmailController extends GetxController {
     if (currentUser != null && currentUser.emailVerified) {
       Get.off(
         () => SuccessScreen(
-          image: TImages.staticSuccessIllustration,
+          image: TImages.docerAnimation,
           title: TTexts.yourAccountCreatedTitle,
           subtitle: TTexts.yourAccountCreatedSubTitle,
-          onPressed: () => AuthenticationRepository.instace.screenRedirect(),
+          onPressed: () => AuthenticationRepository.instance.screenRedirect(),
         ),
       );
     }

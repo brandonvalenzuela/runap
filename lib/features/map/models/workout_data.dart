@@ -97,8 +97,26 @@ class WorkoutData {
   // Getters para mantener compatibilidad
   double get distance => distanceMeters;
   int get calories => _calculateCalories();
-  int get heartRate =>
-      0; // Valor ficticio, necesitaría un sensor para datos reales
+  int get heartRate => 0; // Valor ficticio, necesitaría un sensor para datos reales
+
+  void addPolylineCoordinate(LatLng coordinate) {
+    polylineCoordinates.add(coordinate);
+    currentPosition = coordinate;
+    updatePolyline();
+  }
+
+  void updateDistance(LatLng newPosition) {
+    if (currentPosition != null) {
+      double newDistance = Geolocator.distanceBetween(
+        currentPosition!.latitude,
+        currentPosition!.longitude,
+        newPosition.latitude,
+        newPosition.longitude,
+      );
+      distanceMeters += newDistance;
+    }
+    currentPosition = newPosition;
+  }
 
   void updatePolyline() {
     // Si no hay suficientes puntos, no creamos la polilínea
@@ -124,9 +142,8 @@ class WorkoutData {
     );
   }
 
-// También, añade un método para limpiar puntos duplicados o muy cercanos
-// para mejorar el rendimiento y la precisión de la ruta
-
+  // También, añade un método para limpiar puntos duplicados o muy cercanos
+  // para mejorar el rendimiento y la precisión de la ruta
   void optimizeRoute() {
     if (polylineCoordinates.length <= 2) return;
 

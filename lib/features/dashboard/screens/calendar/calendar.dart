@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:runap/utils/constants/image_strings.dart';
+import 'package:runap/utils/constants/sizes.dart';
 
-class Test2 extends StatelessWidget {
-  const Test2({super.key});
+class CalendarScreen extends StatelessWidget {
+  const CalendarScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -32,13 +34,12 @@ class HomePage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Barra superior con avatar y perfil
-                const TopBar(),
-
                 // Sección "Today" con fecha
                 const Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: TSizes.defaultSpace,
+                    vertical: TSizes.spaceBtwItems,
+                  ),
                   child: DateHeader(),
                 ),
 
@@ -48,35 +49,26 @@ class HomePage extends StatelessWidget {
                 // Contenido desplazable (tarjetas)
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24.0, vertical: 24.0),
+                    padding: const EdgeInsets.all(TSizes.defaultSpace),
                     children: const [
-                      SizedBox(height: 12),
+                      SizedBox(height: TSizes.spaceBtwItems),
 
                       // Tarjeta de Favoritos
                       FavoritesCard(),
-                      SizedBox(height: 16),
+                      SizedBox(height: TSizes.spaceBtwItems),
 
                       // Tarjeta de Desafío Diario
                       ChallengeCard(),
-                      SizedBox(height: 16),
+                      SizedBox(height: TSizes.spaceBtwItems),
 
                       // Tarjeta de Imagen con Cita
                       QuoteCard(),
-                      SizedBox(height: 16),
+                      SizedBox(height: TSizes.spaceBtwItems),
                     ],
                   ),
                 ),
               ],
             ),
-          ),
-
-          // Barra de navegación inferior
-          const Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: BottomNavBar(),
           ),
         ],
       ),
@@ -96,64 +88,13 @@ class BackgroundGradient extends StatelessWidget {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Color(0xFFFF6D91), // Rosa intenso
-            Color(0xFFFF8F8F), // Rosa suave
-            Color(0xFFF0F1F5), // Blanco grisáceo
-            Color(0xFFF0F1F5), // Blanco grisáceo
+            Color(0xFFf78314), // Naranja inicial
+            Color(0xFFfbc05e), // Naranja ligeramente más claro
+            Color(0xFFfdd884), // Naranja aún más claro
+            Color(0xFFfff3e0), // Amarillo muy pálido (casi blanco)
           ],
           stops: [0.0, 0.4, 0.6, 1.0],
         ),
-      ),
-    );
-  }
-}
-
-// Widget de barra superior con avatar y perfil
-class TopBar extends StatelessWidget {
-  const TopBar({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Hora actual
-          const Text(
-            '2:01',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-
-          // Indicadores de estado del dispositivo
-          Row(
-            children: const [
-              Text(
-                '1.36 KB/s',
-                style: TextStyle(fontSize: 12, color: Colors.white),
-              ),
-              SizedBox(width: 8),
-              Icon(Icons.bluetooth, size: 16, color: Colors.white),
-              SizedBox(width: 8),
-              Icon(Icons.volume_off, size: 16, color: Colors.white),
-              SizedBox(width: 8),
-              Icon(Icons.signal_cellular_alt, size: 16, color: Colors.white),
-              SizedBox(width: 8),
-              Icon(Icons.wifi, size: 16, color: Colors.white),
-              SizedBox(width: 8),
-              Icon(Icons.battery_charging_full, size: 16, color: Colors.white),
-              SizedBox(width: 4),
-              Text(
-                '81%',
-                style: TextStyle(fontSize: 12, color: Colors.white),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }
@@ -168,31 +109,7 @@ class DateHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          height: 80,
-          width: 80,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(40),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withAlpha(26),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Center(
-            child: Image.asset(
-              'assets/robot_avatar.png', // Asegúrate de tener esta imagen en tus assets
-              height: 50,
-              width: 50,
-              // Alternativa: usa un icono en vez de la imagen
-              // child: Icon(Icons.android, size: 40, color: Colors.blue),
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
+        const SizedBox(height: TSizes.spaceBtwItems),
         const Text(
           'Today',
           style: TextStyle(
@@ -306,7 +223,7 @@ class FavoritesCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF526380),
+                  color: Color(0xFF555555), // Cambiado a gris oscuro
                 ),
               ),
               const SizedBox(height: 4),
@@ -324,7 +241,8 @@ class FavoritesCard extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF5F6F8),
+                  color: const Color(0xFFfff3e0)
+                      .withAlpha(204), // Cambiado a tono claro de la paleta
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -334,12 +252,12 @@ class FavoritesCard extends StatelessWidget {
                       'Have more to share?',
                       style: TextStyle(
                         fontSize: 16,
-                        color: Color(0xFF526380),
+                        color: Color(0xFF555555), // Cambiado a gris oscuro
                       ),
                     ),
                     Icon(
                       Icons.add,
-                      color: Color(0xFFFF7E7E),
+                      color: Color(0xFFf78314), // Cambiado a naranja
                       size: 24,
                     ),
                   ],
@@ -356,7 +274,7 @@ class FavoritesCard extends StatelessWidget {
             height: 48,
             width: 48,
             decoration: BoxDecoration(
-              color: const Color(0xFFFF7E7E),
+              color: const Color(0xFFf78314), // Cambiado a naranja
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
@@ -387,7 +305,7 @@ class ChallengeCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24.0),
       decoration: BoxDecoration(
-        color: const Color(0xFFFF7E7E),
+        color: const Color(0xFFf78314), // Cambiado a naranja
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -492,8 +410,7 @@ class QuoteCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         image: const DecorationImage(
-          image: AssetImage(
-              'assets/nature_image.jpg'), // Asegúrate de tener esta imagen
+          image: AssetImage(TImages.fitnessIllustration),
           fit: BoxFit.cover,
         ),
         boxShadow: [
@@ -556,79 +473,38 @@ class QuoteCard extends StatelessWidget {
   }
 }
 
-// Widget de la barra de navegación inferior
-class BottomNavBar extends StatelessWidget {
-  const BottomNavBar({super.key});
+// // Botón flotante central para añadir
+// class AddButton extends StatelessWidget {
+//  const AddButton({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 80,
-      padding: const EdgeInsets.symmetric(horizontal: 40),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(26),
-            blurRadius: 10,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _buildNavItem(Icons.wb_sunny_outlined, true),
-          _buildNavItem(Icons.chat_bubble_outline, false),
-          const SizedBox(width: 60), // Espacio para el botón central
-          _buildNavItem(Icons.show_chart, false),
-          _buildNavItem(Icons.folder_outlined, false),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNavItem(IconData icon, bool isSelected) {
-    return Icon(
-      icon,
-      size: 24,
-      color: isSelected ? const Color(0xFF526380) : Colors.grey,
-    );
-  }
-}
-
-// Botón flotante central para añadir
-class AddButton extends StatelessWidget {
-  const AddButton({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      bottom: 40,
-      left: 0,
-      right: 0,
-      child: Center(
-        child: Container(
-          height: 60,
-          width: 60,
-          decoration: BoxDecoration(
-            color: const Color(0xFFFF7E7E),
-            borderRadius: BorderRadius.circular(30),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFFF7E7E).withAlpha(104),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: const Icon(
-            Icons.add,
-            color: Colors.white,
-            size: 30,
-          ),
-        ),
-      ),
-    );
-  }
-}
+//  @override
+//  Widget build(BuildContext context) {
+//    return Positioned(
+//      bottom: 40,
+//      left: 0,
+//      right: 0,
+//      child: Center(
+//        child: Container(
+//          height: 60,
+//          width: 60,
+//          decoration: BoxDecoration(
+//            color: const Color(0xFFFF7E7E),
+//            borderRadius: BorderRadius.circular(30),
+//            boxShadow: [
+//              BoxShadow(
+//                color: const Color(0xFFFF7E7E).withAlpha(104),
+//                blurRadius: 10,
+//                offset: const Offset(0, 4),
+//              ),
+//            ],
+//          ),
+//          child: const Icon(
+//            Icons.add,
+//            color: Colors.white,
+//            size: 30,
+//          ),
+//        ),
+//      ),
+//    );
+//  }
+// }
