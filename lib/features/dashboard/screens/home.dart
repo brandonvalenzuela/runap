@@ -68,14 +68,9 @@ class HomeScreen extends StatelessWidget {
           print("🔍 HomeScreen - Construyendo pantalla completa");
 
           // Verificar sesiones de hoy después de que ya tenemos datos
-          final todaySessions = viewModel
-                  .trainingData?.dashboard.nextWeekSessions
-                  .where((session) =>
-                      session.sessionDate.year == today.year &&
-                      session.sessionDate.month == today.month &&
-                      session.sessionDate.day == today.day)
-                  .toList() ??
-              [];
+          final todaySessions = viewModel.trainingData?.dashboard.nextWeekSessions
+              .where((session) => isSameDay(session.sessionDate, today))
+              .toList() ?? [];
           print("🗓️ Sesiones encontradas para hoy: ${todaySessions.length}");
 
           // Si quieres resaltar las sesiones de hoy, puedes hacer algo como:
@@ -135,10 +130,7 @@ class HomeScreen extends StatelessWidget {
 
     // Verificar si hay sesiones para hoy
     final todaySessions = sessions
-        .where((session) =>
-            session.sessionDate.year == now.year &&
-            session.sessionDate.month == now.month &&
-            session.sessionDate.day == now.day)
+        .where((session) => isSameDay(session.sessionDate, now))
         .toList();
 
     // Encontrar la próxima sesión
@@ -353,7 +345,7 @@ class HomeScreen extends StatelessWidget {
                       final session = sessions[index];
 
                       // Verificar si la sesión ya pasó
-                      bool isPast = session.sessionDate.isBefore(now);
+                      bool isPast = isBeforeToday(session.sessionDate);
 
                       print(
                           "🏋️ Renderizando sesión $index: ${session.workoutName}");
@@ -400,5 +392,20 @@ class HomeScreen extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  // Añadir estos métodos a la clase HomeScreen
+  bool isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year && 
+           date1.month == date2.month && 
+           date1.day == date2.day;
+  }
+
+  bool isBeforeToday(DateTime date) {
+    final now = DateTime.now();
+    // Solo comparar la fecha, ignorando la hora
+    final dateOnly = DateTime(date.year, date.month, date.day);
+    final nowOnly = DateTime(now.year, now.month, now.day);
+    return dateOnly.isBefore(nowOnly);
   }
 }

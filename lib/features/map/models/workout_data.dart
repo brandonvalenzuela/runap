@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:runap/utils/constants/colors.dart';
 import 'workout_goal.dart';
 
 class WorkoutData {
@@ -122,14 +123,14 @@ class WorkoutData {
     if (polylineCoordinates.length < 2) return;
     
     // Usar colores pasados o por defecto
-    final Color runningColor = primaryColor ?? Colors.blue.shade600;
-    final Color runningOutlineColor = outlineColor ?? Colors.black;
+    final Color runningColor = primaryColor ?? TColors.primaryColor;
+    final Color runningOutlineColor = outlineColor ?? TColors.colorBlack;
     
     // Crear polilíneas con estilo deportivo
     final Polyline backgroundLine = Polyline(
       polylineId: PolylineId('workout_route_bg'),
       color: runningOutlineColor,
-      width: 9,
+      width: 8,
       points: polylineCoordinates,
       zIndex: 1,
       jointType: JointType.round,
@@ -140,7 +141,7 @@ class WorkoutData {
     final Polyline foregroundLine = Polyline(
       polylineId: PolylineId('workout_route_fg'),
       color: runningColor,
-      width: 6,
+      width: 5,
       points: polylineCoordinates,
       zIndex: 2,
       jointType: JointType.round,

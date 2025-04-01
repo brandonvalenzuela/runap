@@ -4,19 +4,11 @@ class TColors {
   TColors._();
 
   //App Basic Colors
-  static const Color primaryColor = Color.fromARGB(255, 255, 156, 42);
+  static const Color primaryColor = Color(0xFFf78314);
   static const Color secondaryColor = Color(0xFFFFE24B);
   static const Color accent = Color(0xFFb0c7ff);
+  static const Color colorBlack = Color(0xFF434343);
 
-  //Gradient Colors
-  static const Gradient linerGradient = LinearGradient(
-      begin: Alignment(0.0, 0.0),
-      end: Alignment(0.707, -0.707),
-      colors: [
-        Color(0xFFFF9A9E),
-        Color(0xFFFAD0C4),
-        Color(0xFFFAD0C4),
-      ]);
 
   //Text Colors
   static const Color textPrimary = Color(0xFF333333);

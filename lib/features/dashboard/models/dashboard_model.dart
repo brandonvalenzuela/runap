@@ -57,6 +57,21 @@ class Dashboard {
         ? (completedSessions / totalSessions * 100).round()
         : 0;
   }
+
+  // Método para comparar si dos fechas son el mismo día
+  bool isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year && 
+           date1.month == date2.month && 
+           date1.day == date2.day;
+  }
+
+  // Método para determinar si una fecha es anterior a hoy
+  bool isBeforeToday(DateTime date) {
+    final now = DateTime.now();
+    return date.year < now.year || 
+          (date.year == now.year && date.month < now.month) ||
+          (date.year == now.year && date.month == now.month && date.day < now.day);
+  }
 }
 
 class Session {

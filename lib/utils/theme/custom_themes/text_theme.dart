@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:runap/utils/constants/colors.dart';
 
 class TTextTheme {
   TTextTheme._();
@@ -6,31 +7,31 @@ class TTextTheme {
   ///Custom text theme for light theme
   static TextTheme lightTextTheme = TextTheme(
     headlineLarge: const TextStyle().copyWith(
-        fontSize: 32.0, fontWeight: FontWeight.bold, color: Colors.black),
+        fontSize: 32.0, fontWeight: FontWeight.bold, color: TColors.colorBlack),
     headlineMedium: const TextStyle().copyWith(
-        fontSize: 24.0, fontWeight: FontWeight.w600, color: Colors.black),
+        fontSize: 24.0, fontWeight: FontWeight.w600, color: TColors.colorBlack),
     headlineSmall: const TextStyle().copyWith(
-        fontSize: 18.0, fontWeight: FontWeight.w600, color: Colors.black),
+        fontSize: 18.0, fontWeight: FontWeight.w600, color: TColors.colorBlack),
     titleLarge: const TextStyle().copyWith(
-        fontSize: 16.0, fontWeight: FontWeight.w600, color: Colors.black),
+        fontSize: 16.0, fontWeight: FontWeight.w600, color: TColors.colorBlack),
     titleMedium: const TextStyle().copyWith(
-        fontSize: 16.0, fontWeight: FontWeight.w500, color: Colors.black),
+        fontSize: 16.0, fontWeight: FontWeight.w500, color: TColors.colorBlack),
     titleSmall: const TextStyle().copyWith(
-        fontSize: 16.0, fontWeight: FontWeight.w400, color: Colors.black),
+        fontSize: 16.0, fontWeight: FontWeight.w400, color: TColors.colorBlack),
     bodyLarge: const TextStyle().copyWith(
-        fontSize: 14.0, fontWeight: FontWeight.w500, color: Colors.black),
+        fontSize: 14.0, fontWeight: FontWeight.w500, color: TColors.colorBlack),
     bodyMedium: const TextStyle().copyWith(
-        fontSize: 14.0, fontWeight: FontWeight.normal, color: Colors.black),
+        fontSize: 14.0, fontWeight: FontWeight.normal, color: TColors.colorBlack),
     bodySmall: const TextStyle().copyWith(
         fontSize: 14.0,
         fontWeight: FontWeight.w500,
-        color: Colors.black.withAlpha(128)),
+        color: TColors.colorBlack.withAlpha(128)),
     labelLarge: const TextStyle().copyWith(
-        fontSize: 12.0, fontWeight: FontWeight.normal, color: Colors.black),
+        fontSize: 12.0, fontWeight: FontWeight.normal, color: TColors.colorBlack),
     labelMedium: const TextStyle().copyWith(
         fontSize: 12.0,
         fontWeight: FontWeight.normal,
-        color: Colors.black.withAlpha(128)),
+        color: TColors.colorBlack.withAlpha(128)),
   );
 
   /// Custom TextTheme for dark theme

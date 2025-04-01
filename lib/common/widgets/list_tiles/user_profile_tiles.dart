@@ -20,16 +20,16 @@ class TUserPorfileTile extends StatelessWidget {
       title: Text('Brandon Valenzuela',
           style: Theme.of(context)
               .textTheme
-              .headlineSmall!
-              .apply(color: TColors.black)),
+              .titleMedium!
+              .apply(color: TColors.colorBlack)),
       subtitle: Text('brandonvalenzual@gmail.com',
           style: Theme.of(context)
               .textTheme
               .bodyMedium!
-              .apply(color: TColors.black)),
+              .apply(color: TColors.colorBlack)),
       trailing: IconButton(
           onPressed: onPressed,
-          icon: const Icon(Iconsax.edit, color: TColors.black)),
+          icon: const Icon(Iconsax.edit, color: TColors.colorBlack)),
     );
   }
 }
