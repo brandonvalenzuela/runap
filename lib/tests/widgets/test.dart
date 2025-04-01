@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class Test1 extends StatelessWidget {
-  const Test1({super.key});
+class Test extends StatelessWidget {
+  const Test({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -216,8 +216,8 @@ class PromoCardWidget extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [
+            Color(0xFFf78314),
             Color(0xFFfbc05e),
-            Color(0xFFf78314)
           ], //[Color(0xFFEF7A85), Color(0xFFEC6B76)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
@@ -226,8 +226,8 @@ class PromoCardWidget extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: const Color(0xFFfbc05e).withAlpha(104),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
+            blurRadius: 20,
+            offset: const Offset(0, 15),
           ),
         ],
       ),

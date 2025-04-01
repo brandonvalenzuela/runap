@@ -5,7 +5,7 @@ import 'package:runap/features/dashboard/screens/calendar/calendar.dart';
 import 'package:runap/features/personalization/screens/settings/settings.dart';
 import 'package:runap/features/dashboard/screens/home.dart';
 import 'package:runap/tests/report_screen.dart';
-import 'package:runap/tests/widgets/Test1.dart';
+import 'package:runap/tests/widgets/test.dart';
 import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/helpers/helper_functions.dart';
 
@@ -63,7 +63,7 @@ class NavigationController extends GetxController {
   final screens = [
     const HomeScreen(),
     const CalendarScreen(),
-    const Test1(),
+    const Test(),
     const SettingsScreen(),
     DebugScreen(),
   ];

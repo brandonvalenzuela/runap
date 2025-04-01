@@ -68,9 +68,11 @@ class HomeScreen extends StatelessWidget {
           print("🔍 HomeScreen - Construyendo pantalla completa");
 
           // Verificar sesiones de hoy después de que ya tenemos datos
-          final todaySessions = viewModel.trainingData?.dashboard.nextWeekSessions
-              .where((session) => isSameDay(session.sessionDate, today))
-              .toList() ?? [];
+          final todaySessions = viewModel
+                  .trainingData?.dashboard.nextWeekSessions
+                  .where((session) => isSameDay(session.sessionDate, today))
+                  .toList() ??
+              [];
           print("🗓️ Sesiones encontradas para hoy: ${todaySessions.length}");
 
           // Si quieres resaltar las sesiones de hoy, puedes hacer algo como:
@@ -216,7 +218,7 @@ class HomeScreen extends StatelessWidget {
                   valueColor:
                       AlwaysStoppedAnimation<Color>(TColors.primaryColor),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: TSizes.xs),
 
                 // Texto de progreso
                 Text(
@@ -350,12 +352,16 @@ class HomeScreen extends StatelessWidget {
                       print(
                           "🏋️ Renderizando sesión $index: ${session.workoutName}");
 
-                      return TrainingCard(
-                        key: ValueKey(
-                            'session-${session.workoutName}-${session.sessionDate}'),
-                        session: session,
-                        showBorder: false,
-                        isPast: isPast,
+                      return Padding(
+                        padding:
+                            EdgeInsets.only(bottom: TSizes.spaceBtwItems / 2),
+                        child: TrainingCard(
+                          key: ValueKey(
+                              'session-${session.workoutName}-${session.sessionDate}'),
+                          session: session,
+                          showBorder: false,
+                          isPast: isPast,
+                        ),
                       );
                     },
                   ),
@@ -396,9 +402,9 @@ class HomeScreen extends StatelessWidget {
 
   // Añadir estos métodos a la clase HomeScreen
   bool isSameDay(DateTime date1, DateTime date2) {
-    return date1.year == date2.year && 
-           date1.month == date2.month && 
-           date1.day == date2.day;
+    return date1.year == date2.year &&
+        date1.month == date2.month &&
+        date1.day == date2.day;
   }
 
   bool isBeforeToday(DateTime date) {

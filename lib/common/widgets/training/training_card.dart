@@ -49,10 +49,6 @@ class TrainingCard extends StatelessWidget {
     final canStartWorkout =
         isToday && !session.workoutName.toLowerCase().contains('descanso');
 
-    // SOLO PARA PRUEBAS
-    // final canStartWorkout = (isToday || session.sessionDate.isAfter(now)) &&
-    //     !session.workoutName.toLowerCase().contains('descanso');
-
     print('Puede iniciar: $canStartWorkout');
 
     // Función personalizada para formatear fecha en español
