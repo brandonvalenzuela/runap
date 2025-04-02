@@ -37,20 +37,18 @@ class _TrainingCardState extends State<TrainingCard>
   bool _isHovered = false;
   bool _isTapped = false;
   
-  // Añadir un controlador para la animación de ripple
-  bool _showRipple = false;
-  double _rippleRadius = 0;
+  // Posición del toque para efecto de ripple
   Offset _tapPosition = Offset.zero;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 400), // Hacerla más rápida
+      duration: const Duration(milliseconds: 200),
       vsync: this,
     );
 
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate( // Cambio más notorio
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOutQuint),
     );
 
@@ -80,18 +78,12 @@ class _TrainingCardState extends State<TrainingCard>
   }
 
   void _handleTapUp(TapUpDetails details) {
-    // Activar animación de ripple
     setState(() {
       _isTapped = false;
-      _showRipple = true;
-      _rippleRadius = 0;
       if ((details.localPosition - _tapPosition).distance > 10) {
         _tapPosition = details.localPosition;
       }
     });
-    
-    // Iniciar animación de ondas expandiéndose
-    _animateRipple();
     
     _controller.reverse();
   }
@@ -101,41 +93,6 @@ class _TrainingCardState extends State<TrainingCard>
       _isTapped = false;
     });
     _controller.reverse();
-  }
-  
-  // Método para animar el efecto de ondas
-  void _animateRipple() {
-    const duration = Duration(milliseconds: 800); // Aumentar duración
-    final startTime = DateTime.now();
-    
-    // Animación mediante ticker
-    void tick() {
-      final elapsedTime = DateTime.now().difference(startTime);
-      if (elapsedTime < duration) {
-        final progress = elapsedTime.inMilliseconds / duration.inMilliseconds;
-        
-        // Usar una curva de animación más suave para el crecimiento
-        final easedProgress = Curves.easeOutQuint.transform(progress);
-        
-        setState(() {
-          // El radio crece con el tiempo usando la curva
-          _rippleRadius = 180 * easedProgress; // Radio máximo más grande
-          // La opacidad disminuye con el tiempo, pero de forma no lineal
-          _showRipple = true;
-        });
-        
-        // Programar el siguiente frame
-        Future.delayed(Duration(milliseconds: 16), tick);
-      } else {
-        // Finalizar animación
-        setState(() {
-          _showRipple = false;
-        });
-      }
-    }
-    
-    // Iniciar la animación
-    tick();
   }
 
   @override
@@ -188,9 +145,10 @@ class _TrainingCardState extends State<TrainingCard>
 
     void navigateToMap() {
       final now = DateTime.now();
-      final isToday = now.year == widget.session.sessionDate.year &&
-          now.month == widget.session.sessionDate.month &&
-          now.day == widget.session.sessionDate.day;
+      final isToday =
+          now.year == widget.session.sessionDate.year &&
+              now.month == widget.session.sessionDate.month &&
+              now.day == widget.session.sessionDate.day;
 
       final shouldAllow = isToday &&
           !widget.session.workoutName.toLowerCase().contains('descanso');
@@ -205,31 +163,97 @@ class _TrainingCardState extends State<TrainingCard>
         );
         return;
       }
+      
+      // Iniciar la animación de la tarjeta inmediatamente
+      _controller.forward();
 
-      // Eliminamos el SnackBar y usamos solo la animación visual
-
-      WorkoutGoal? workoutGoal = _createWorkoutGoalFromSession(widget.session);
-
-      try {
+      // Método auxiliar para navegar sin animación en caso de error
+      void navigateWithoutAnimation() {
+        WorkoutGoal? workoutGoal = _createWorkoutGoalFromSession(widget.session);
+        
         if (!Get.isRegistered<TrainingViewModel>()) {
           final viewModel = TrainingViewModel();
           Get.put(viewModel);
         }
-
-        // Retraso suficiente para ver la animación
-        Future.delayed(Duration(milliseconds: 600), () {
-          Get.to(() => MapScreen(
-                initialWorkoutGoal: workoutGoal,
-                sessionToUpdate: widget.session,
-              ));
-        });
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al iniciar el entrenamiento: $e'),
-            backgroundColor: Colors.red,
+        
+        Get.to(
+          () => MapScreen(
+            initialWorkoutGoal: workoutGoal,
+            sessionToUpdate: widget.session,
           ),
         );
+      }
+
+      try {
+        // Obtener posición del toque en coordenadas globales
+        final RenderBox? box = context.findRenderObject() as RenderBox?;
+        if (box == null) {
+          print("No se pudo obtener el RenderBox");
+          navigateWithoutAnimation();
+          return;
+        }
+        
+        final position = box.localToGlobal(Offset.zero);
+        final size = box.size;
+        
+        // Calcular la posición del toque en coordenadas globales (pantalla)
+        final Offset globalTapPosition = Offset(
+          position.dx + _tapPosition.dx,
+          position.dy + _tapPosition.dy,
+        );
+        
+        print("Posición de tarjeta: $position");
+        print("Posición de toque local: $_tapPosition");
+        print("Posición de toque global calculada: $globalTapPosition");
+        
+        // Preparar datos para la navegación
+        WorkoutGoal? workoutGoal = _createWorkoutGoalFromSession(widget.session);
+        
+        if (!Get.isRegistered<TrainingViewModel>()) {
+          final viewModel = TrainingViewModel();
+          Get.put(viewModel);
+        }
+        
+        // Crear el overlay para la animación
+        OverlayEntry? overlayEntry;
+        overlayEntry = OverlayEntry(
+          builder: (context) => _buildFullScreenRipple(globalTapPosition, overlayEntry),
+        );
+        
+        // Añadir el overlay al final de la pila para que esté por encima de todo
+        final overlay = Overlay.of(context);
+        if (overlay == null) {
+          print("No se pudo obtener el Overlay");
+          navigateWithoutAnimation();
+          return;
+        }
+        
+        // Iniciar la navegación a MapScreen inmediatamente
+        Get.to(
+          () => MapScreen(
+            initialWorkoutGoal: workoutGoal,
+            sessionToUpdate: widget.session,
+          ),
+          transition: Transition.fadeIn,
+          duration: Duration(milliseconds: 300),
+        )!.then((_) {
+          // Una vez que la MapScreen está cargada, insertar el overlay para la animación
+          overlay.insert(overlayEntry!);
+          
+          // Remover el overlay después de 0.5 segundos de que MapScreen esté cargada
+          Future.delayed(Duration(milliseconds: 500), () {
+            try {
+              if (overlayEntry != null) {
+                overlayEntry.remove();
+              }
+            } catch (e) {
+              print("Error al remover overlay: $e");
+            }
+          });
+        });
+      } catch (e) {
+        print("Error en la navegación: $e");
+        navigateWithoutAnimation();
       }
     }
 
@@ -237,6 +261,7 @@ class _TrainingCardState extends State<TrainingCard>
       animation: _controller,
       builder: (context, child) {
         return Stack(
+          clipBehavior: Clip.none,
           children: [
             // Contenedor principal
             GestureDetector(
@@ -274,7 +299,7 @@ class _TrainingCardState extends State<TrainingCard>
                     padding: const EdgeInsets.all(TSizes.cardRadiusLg),
                     decoration: BoxDecoration(
                       color: _isTapped && canStartWorkout 
-                          ? TColors.primaryColor.withOpacity(0.1) // Aumentar opacidad
+                          ? TColors.primaryColor.withOpacity(0.1)
                           : Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
@@ -345,7 +370,7 @@ class _TrainingCardState extends State<TrainingCard>
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: TColors.success.withOpacity(0.2),
+                                  color: TColors.success.withAlpha(56),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
@@ -362,7 +387,7 @@ class _TrainingCardState extends State<TrainingCard>
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: TColors.primaryColor.withOpacity(0.2),
+                                  color: TColors.primaryColor.withAlpha(56),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
@@ -379,7 +404,7 @@ class _TrainingCardState extends State<TrainingCard>
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: Colors.red.withOpacity(0.2),
+                                  color: Colors.red.withAlpha(56),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
@@ -416,33 +441,6 @@ class _TrainingCardState extends State<TrainingCard>
                 ),
               ),
             ),
-            
-            // Efecto de ondas (Ripple)
-            if (_showRipple && canStartWorkout)
-              Positioned.fill(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Positioned(
-                        left: _tapPosition.dx - _rippleRadius,
-                        top: _tapPosition.dy - _rippleRadius,
-                        width: _rippleRadius * 2,
-                        height: _rippleRadius * 2,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: TColors.primaryColor.withOpacity(
-                              0.5 * (1 - Curves.easeInQuart.transform(_rippleRadius / 180))
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
           ],
         );
       },
@@ -495,12 +493,14 @@ class _TrainingCardState extends State<TrainingCard>
 
   IconData _getIconData(String workoutName) {
     workoutName = workoutName.toLowerCase();
-    if (workoutName.contains('carrera') || workoutName.contains('correr'))
+    if (workoutName.contains('carrera') || workoutName.contains('correr')) {
       return Icons.directions_run;
+    }
     if (workoutName.contains('descanso')) return Icons.hotel;
     if (workoutName.contains('fuerza')) return Icons.fitness_center;
-    if (workoutName.contains('tempo') || workoutName.contains('velocidad'))
+    if (workoutName.contains('tempo') || workoutName.contains('velocidad')) {
       return Icons.speed;
+    }
     return Icons.directions_run;
   }
 
@@ -515,10 +515,10 @@ class _TrainingCardState extends State<TrainingCard>
   Color _getIconBackgroundColor(
       String workoutName, bool isToday, bool completed, bool isPast) {
     workoutName = workoutName.toLowerCase();
-    if (completed) return TColors.success.withOpacity(0.2);
-    if (isToday) return TColors.primaryColor.withOpacity(0.2);
-    if (isPast && !completed) return Colors.grey.withOpacity(0.2);
-    if (workoutName.contains('descanso')) return Colors.blue.withOpacity(0.2);
+    if (completed) return TColors.success.withAlpha(51);
+    if (isToday) return TColors.primaryColor.withAlpha(56);
+    if (isPast && !completed) return Colors.grey.withAlpha(56);
+    if (workoutName.contains('descanso')) return Colors.blue.withAlpha(56);
     return const Color(0xFFF2F3F7);
   }
 
@@ -560,5 +560,112 @@ class _TrainingCardState extends State<TrainingCard>
       print('Error creating WorkoutGoal: $e');
       return null;
     }
+  }
+
+  // Construir el efecto de ripple a pantalla completa como overlay
+  Widget _buildFullScreenRipple(Offset globalTapPosition, OverlayEntry? overlayEntry) {
+    return _FullScreenRippleAnimation(
+      globalTapPosition: globalTapPosition,
+      overlayEntry: overlayEntry,
+      primaryColor: TColors.primaryColor,
+    );
+  }
+}
+
+// Crear un widget separado para manejar la animación de forma más confiable
+class _FullScreenRippleAnimation extends StatefulWidget {
+  final Offset globalTapPosition;
+  final OverlayEntry? overlayEntry;
+  final Color primaryColor;
+
+  const _FullScreenRippleAnimation({
+    required this.globalTapPosition,
+    this.overlayEntry,
+    required this.primaryColor,
+  });
+
+  @override
+  State<_FullScreenRippleAnimation> createState() => _FullScreenRippleAnimationState();
+}
+
+class _FullScreenRippleAnimationState extends State<_FullScreenRippleAnimation>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+  final double maxRadius = 2000.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500), // Reducida a 500ms
+    );
+
+    _animation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeOutQuad, // Curva más rápida
+      ),
+    );
+
+    // Iniciar la animación automáticamente
+    _animationController.forward();
+    
+    // Imprimir para depuración
+    print("Animación de ripple iniciada desde: ${widget.globalTapPosition}");
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animationController,
+      builder: (context, child) {
+        // La progresión del radio es más rápida
+        final rippleProgress = _animation.value;
+        final rippleRadius = maxRadius * rippleProgress;
+        
+        final fadeOpacity = rippleRadius > 200 
+          ? (rippleRadius - 200) / 1800 
+          : 0.0;
+          
+        return Material(
+          type: MaterialType.transparency,
+          child: Stack(
+            children: [
+              // Fondo que se oscurece gradualmente - más rápido
+              if (rippleRadius > 200)
+                Positioned.fill(
+                  child: AnimatedOpacity(
+                    opacity: fadeOpacity,
+                    duration: Duration(milliseconds: 500), // Reducida a 500ms
+                    child: Container(color: Colors.black12),
+                  ),
+                ),
+                
+              // Efecto circular desde el punto de toque
+              Positioned(
+                left: widget.globalTapPosition.dx - rippleRadius,
+                top: widget.globalTapPosition.dy - rippleRadius,
+                width: rippleRadius * 2,
+                height: rippleRadius * 2,
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: widget.primaryColor
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

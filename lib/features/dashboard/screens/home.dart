@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'dart:math';
-import 'package:runap/common/widgets/appbar/appbar.dart';
 import 'package:runap/common/widgets/training/training_card.dart';
 import 'package:runap/features/dashboard/models/dashboard_model.dart';
 import 'package:runap/features/dashboard/viewmodels/training_view_model.dart';

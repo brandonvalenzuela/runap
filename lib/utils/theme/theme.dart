@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/theme/custom_themes/appbar_theme.dart';
 import 'package:runap/utils/theme/custom_themes/bottom_sheet_theme.dart';
@@ -20,7 +21,13 @@ class TAppTheme {
     textTheme: TTextTheme.lightTextTheme,
     chipTheme: TChipTheme.lightChipTheme,
     scaffoldBackgroundColor: TColors.lightBackground,
-    appBarTheme: TAppBarTheme.lightAppBarTheme,
+    appBarTheme: TAppBarTheme.lightAppBarTheme.copyWith(
+      systemOverlayStyle: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent, // Or any color you prefer for light theme
+        statusBarIconBrightness: Brightness.dark, // For dark icons on a light background
+        statusBarBrightness: Brightness.light, // For iOS: light status bar
+      ),
+    ),
     checkboxTheme: TCheckboxTheme.lightCheckboxTheme,
     bottomSheetTheme: TBottomSheetTheme.lightBottomSheetTheme,
     elevatedButtonTheme: TElevatedButtonTheme.lightElevatedButtonTheme,
@@ -31,12 +38,18 @@ class TAppTheme {
   static ThemeData darkTheme = ThemeData(
     useMaterial3: true,
     fontFamily: 'Poppins',
-    brightness: Brightness.light,
+    brightness: Brightness.dark, // Changed brightness to dark for dark theme
     primaryColor: Colors.orange,
     textTheme: TTextTheme.darkTextTheme,
     chipTheme: TChipTheme.darkChipTheme,
     scaffoldBackgroundColor: TColors.colorBlack,
-    appBarTheme: TAppBarTheme.darkAppBarTheme,
+    appBarTheme: TAppBarTheme.darkAppBarTheme.copyWith(
+      systemOverlayStyle: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent, // Or any color you prefer for dark theme
+        statusBarIconBrightness: Brightness.light, // For light icons on a dark background
+        statusBarBrightness: Brightness.dark, // For iOS: dark status bar
+      ),
+    ),
     checkboxTheme: TCheckboxTheme.darkCheckboxTheme,
     bottomSheetTheme: TBottomSheetTheme.darkBottomSheetTheme,
     elevatedButtonTheme: TElevatedButtonTheme.darkElevatedButtonTheme,
