@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:runap/features/dashboard/viewmodels/training_view_model.dart';
 import 'package:runap/features/map/models/workout_goal.dart';
@@ -34,16 +35,22 @@ class _TrainingCardState extends State<TrainingCard>
   late Animation<double> _opacityAnimation;
   late Animation<double> _blurAnimation;
   bool _isHovered = false;
+  bool _isTapped = false;
+  
+  // Añadir un controlador para la animación de ripple
+  bool _showRipple = false;
+  double _rippleRadius = 0;
+  Offset _tapPosition = Offset.zero;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 400), // Hacerla más rápida
       vsync: this,
     );
 
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.04).animate(
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate( // Cambio más notorio
       CurvedAnimation(parent: _controller, curve: Curves.easeOutQuint),
     );
 
@@ -63,15 +70,72 @@ class _TrainingCardState extends State<TrainingCard>
   }
 
   void _handleTapDown(TapDownDetails details) {
+    setState(() {
+      _isTapped = true;
+      _tapPosition = details.localPosition;
+    });
     _controller.forward();
+    
+    HapticFeedback.lightImpact();
   }
 
   void _handleTapUp(TapUpDetails details) {
+    // Activar animación de ripple
+    setState(() {
+      _isTapped = false;
+      _showRipple = true;
+      _rippleRadius = 0;
+      if ((details.localPosition - _tapPosition).distance > 10) {
+        _tapPosition = details.localPosition;
+      }
+    });
+    
+    // Iniciar animación de ondas expandiéndose
+    _animateRipple();
+    
     _controller.reverse();
   }
 
   void _handleTapCancel() {
+    setState(() {
+      _isTapped = false;
+    });
     _controller.reverse();
+  }
+  
+  // Método para animar el efecto de ondas
+  void _animateRipple() {
+    const duration = Duration(milliseconds: 800); // Aumentar duración
+    final startTime = DateTime.now();
+    
+    // Animación mediante ticker
+    void tick() {
+      final elapsedTime = DateTime.now().difference(startTime);
+      if (elapsedTime < duration) {
+        final progress = elapsedTime.inMilliseconds / duration.inMilliseconds;
+        
+        // Usar una curva de animación más suave para el crecimiento
+        final easedProgress = Curves.easeOutQuint.transform(progress);
+        
+        setState(() {
+          // El radio crece con el tiempo usando la curva
+          _rippleRadius = 180 * easedProgress; // Radio máximo más grande
+          // La opacidad disminuye con el tiempo, pero de forma no lineal
+          _showRipple = true;
+        });
+        
+        // Programar el siguiente frame
+        Future.delayed(Duration(milliseconds: 16), tick);
+      } else {
+        // Finalizar animación
+        setState(() {
+          _showRipple = false;
+        });
+      }
+    }
+    
+    // Iniciar la animación
+    tick();
   }
 
   @override
@@ -142,6 +206,8 @@ class _TrainingCardState extends State<TrainingCard>
         return;
       }
 
+      // Eliminamos el SnackBar y usamos solo la animación visual
+
       WorkoutGoal? workoutGoal = _createWorkoutGoalFromSession(widget.session);
 
       try {
@@ -150,10 +216,13 @@ class _TrainingCardState extends State<TrainingCard>
           Get.put(viewModel);
         }
 
-        Get.to(() => MapScreen(
-              initialWorkoutGoal: workoutGoal,
-              sessionToUpdate: widget.session,
-            ));
+        // Retraso suficiente para ver la animación
+        Future.delayed(Duration(milliseconds: 600), () {
+          Get.to(() => MapScreen(
+                initialWorkoutGoal: workoutGoal,
+                sessionToUpdate: widget.session,
+              ));
+        });
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -167,179 +236,214 @@ class _TrainingCardState extends State<TrainingCard>
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
-        return GestureDetector(
-          onTapDown: canStartWorkout ? _handleTapDown : null,
-          onTapUp: canStartWorkout ? _handleTapUp : null,
-          onTapCancel: canStartWorkout ? _handleTapCancel : null,
-          onTap: canStartWorkout
-              ? () => navigateToMap()
-              : (isToday &&
-                      widget.session.workoutName
-                          .toLowerCase()
-                          .contains('descanso'))
-                  ? () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                              'Hoy es tu día de descanso. ¡Aprovecha para recuperarte!'),
-                          backgroundColor: Colors.blue,
-                          action: SnackBarAction(
-                            label: 'Entendido',
-                            textColor: Colors.white,
-                            onPressed: () {},
-                          ),
-                        ),
-                      );
-                    }
-                  : null,
-          child: Transform.scale(
-            scale: _scaleAnimation.value,
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 700),
-              opacity: 1.0,
-              child: Container(
-                padding: const EdgeInsets.all(TSizes.cardRadiusLg),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black
-                          .withOpacity(0.05 * _controller.value + 0.05),
-                      blurRadius: 10 * _controller.value + 5,
-                      offset: Offset(0, 3 * _controller.value + 2),
-                      spreadRadius: 2 * _controller.value,
-                    ),
-                  ],
-                  border: widget.showBorder
-                      ? Border.all(
-                          color: isToday
-                              ? TColors.primaryColor.withAlpha(78)
-                              : (widget.session.completed
-                                  ? TColors.success.withAlpha(78)
-                                  : (widget.isPast && !widget.session.completed
-                                      ? Colors.grey
-                                      : Colors.transparent)),
-                          width: 1.5,
-                        )
+        return Stack(
+          children: [
+            // Contenedor principal
+            GestureDetector(
+              onTapDown: canStartWorkout ? _handleTapDown : null,
+              onTapUp: canStartWorkout ? _handleTapUp : null,
+              onTapCancel: canStartWorkout ? _handleTapCancel : null,
+              onTap: canStartWorkout
+                  ? () => navigateToMap()
+                  : (isToday &&
+                          widget.session.workoutName
+                              .toLowerCase()
+                              .contains('descanso'))
+                      ? () {
+                          HapticFeedback.mediumImpact();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                  'Hoy es tu día de descanso. ¡Aprovecha para recuperarte!'),
+                              backgroundColor: Colors.blue,
+                              action: SnackBarAction(
+                                label: 'Entendido',
+                                textColor: Colors.white,
+                                onPressed: () {},
+                              ),
+                            ),
+                          );
+                        }
                       : null,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: iconBackgroundColor,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Icon(
-                            _getIconData(widget.session.workoutName),
-                            color: iconColor,
-                            size: 20,
-                          ),
+              child: Transform.scale(
+                scale: _scaleAnimation.value,
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 700),
+                  opacity: 1.0,
+                  child: Container(
+                    padding: const EdgeInsets.all(TSizes.cardRadiusLg),
+                    decoration: BoxDecoration(
+                      color: _isTapped && canStartWorkout 
+                          ? TColors.primaryColor.withOpacity(0.1) // Aumentar opacidad
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black
+                              .withOpacity(0.05 * _controller.value + 0.05),
+                          blurRadius: 10 * _controller.value + 5,
+                          offset: Offset(0, 3 * _controller.value + 2),
+                          spreadRadius: 2 * _controller.value,
                         ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      ],
+                      border: widget.showBorder
+                          ? Border.all(
+                              color: isToday
+                                  ? TColors.primaryColor.withAlpha(78)
+                                  : (widget.session.completed
+                                      ? TColors.success.withAlpha(78)
+                                      : (widget.isPast && !widget.session.completed
+                                          ? Colors.grey
+                                          : Colors.transparent)),
+                              width: 1.5,
+                            )
+                          : null,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            Text(
-                              widget.session.workoutName,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: iconBackgroundColor,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Icon(
+                                _getIconData(widget.session.workoutName),
+                                color: iconColor,
+                                size: 20,
                               ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              formattedDate,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.black45,
-                              ),
+                            const SizedBox(width: 12),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.session.workoutName,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  formattedDate,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.black45,
+                                  ),
+                                ),
+                              ],
                             ),
+                            const Spacer(),
+                            if (widget.session.completed)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: TColors.success.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  'Completado',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: TColors.success,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              )
+                            else if (isToday)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: TColors.primaryColor.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  'Hoy',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: TColors.primaryColor,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              )
+                            else if (widget.isPast && !widget.session.completed)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  'Perdido',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
-                        const Spacer(),
-                        if (widget.session.completed)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: TColors.success.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              'Completado',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: TColors.success,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          )
-                        else if (isToday)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: TColors.primaryColor.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              'Hoy',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: TColors.primaryColor,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          )
-                        else if (widget.isPast && !widget.session.completed)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              'Perdido',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.red,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                        const SizedBox(height: 12),
+                        Text(
+                          widget.session.description,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.black87,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (widget.session.workoutName.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            children: _buildTags(widget.session.description),
+                          ),
+                        ],
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      widget.session.description,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.black87,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (widget.session.workoutName.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        children: _buildTags(widget.session.description),
-                      ),
-                    ],
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
+            
+            // Efecto de ondas (Ripple)
+            if (_showRipple && canStartWorkout)
+              Positioned.fill(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned(
+                        left: _tapPosition.dx - _rippleRadius,
+                        top: _tapPosition.dy - _rippleRadius,
+                        width: _rippleRadius * 2,
+                        height: _rippleRadius * 2,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: TColors.primaryColor.withOpacity(
+                              0.5 * (1 - Curves.easeInQuart.transform(_rippleRadius / 180))
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
         );
       },
     );
