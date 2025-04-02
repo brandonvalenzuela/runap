@@ -227,7 +227,7 @@ class PromoCardWidget extends StatelessWidget {
           BoxShadow(
             color: const Color(0xFFfbc05e).withAlpha(104),
             blurRadius: 20,
-            offset: const Offset(0, 15),
+            offset: const Offset(0, 8),
           ),
         ],
       ),
