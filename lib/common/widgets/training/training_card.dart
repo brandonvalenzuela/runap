@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:runap/features/dashboard/viewmodels/training_view_model.dart';
 import 'package:runap/features/map/models/workout_goal.dart';
 import 'package:runap/features/map/screen/map.dart';
 import 'package:runap/utils/constants/colors.dart';
@@ -45,6 +44,10 @@ class _TrainingCardState extends State<TrainingCard>
   @override
   void initState() {
     super.initState();
+    _setupAnimations();
+  }
+  
+  void _setupAnimations() {
     _controller = AnimationController(
       duration: const Duration(milliseconds: 200),
       vsync: this,
@@ -62,6 +65,49 @@ class _TrainingCardState extends State<TrainingCard>
       CurvedAnimation(parent: _controller, curve: Curves.easeOutQuint),
     );
   }
+  
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Asegurarse de que el controller esté en estado inicial
+    if (_controller.isCompleted || _controller.value > 0) {
+      _controller.reset();
+    }
+  }
+  
+  @override
+  void didUpdateWidget(TrainingCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reiniciar estado si cambia la sesión
+    if (oldWidget.session != widget.session) {
+      _isTapped = false;
+      if (_controller.value > 0) {
+        _controller.reset();
+      }
+    }
+  }
+
+  @override
+  void activate() {
+    super.activate();
+    print("🔄 TrainingCard - activate");
+    // Reiniciar animaciones cuando el widget se reactiva
+    _isTapped = false;
+    _isNavigating = false;
+    if (_controller.isCompleted || _controller.value > 0) {
+      _controller.reset();
+    }
+  }
+  
+  @override
+  void deactivate() {
+    print("🔄 TrainingCard - deactivate");
+    // Asegurarse de que la animación no se quede a medias
+    if (!_controller.isDismissed) {
+      _controller.reset();
+    }
+    super.deactivate();
+  }
 
   @override
   void dispose() {
@@ -74,6 +120,8 @@ class _TrainingCardState extends State<TrainingCard>
       _isTapped = true;
       _tapPosition = details.localPosition;
     });
+    // Asegurarse de que la animación comience desde el principio
+    _controller.reset();
     _controller.forward();
     
     HapticFeedback.lightImpact();
@@ -87,15 +135,25 @@ class _TrainingCardState extends State<TrainingCard>
       }
     });
     
-    _controller.reverse();
+    // Solo revertir si no es una navegación
+    if (!_isNavigating) {
+      _controller.reverse();
+    }
   }
 
   void _handleTapCancel() {
     setState(() {
       _isTapped = false;
     });
-    _controller.reverse();
+    
+    // Solo revertir si no es una navegación
+    if (!_isNavigating) {
+      _controller.reverse();
+    }
   }
+  
+  // Flag para evitar que la animación se revierta mientras navegamos
+  bool _isNavigating = false;
 
   @override
   Widget build(BuildContext context) {
@@ -104,8 +162,7 @@ class _TrainingCardState extends State<TrainingCard>
     final isToday = now.year == widget.session.sessionDate.year &&
         now.month == widget.session.sessionDate.month &&
         now.day == widget.session.sessionDate.day;
-    final canStartWorkout = isToday &&
-        !widget.session.workoutName.toLowerCase().contains('descanso');
+    final canStartWorkout = isToday;
 
     String formatearFecha(DateTime fecha) {
       final List<String> diasSemana = [
@@ -146,16 +203,14 @@ class _TrainingCardState extends State<TrainingCard>
     Color iconColor = _getIconColor(widget.session.workoutName, isToday);
 
     void navigateToMap() {
+      // Verificamos solo si es hoy, sin importar si es descanso o no
       final now = DateTime.now();
       final isToday =
           now.year == widget.session.sessionDate.year &&
               now.month == widget.session.sessionDate.month &&
               now.day == widget.session.sessionDate.day;
 
-      final shouldAllow = isToday &&
-          !widget.session.workoutName.toLowerCase().contains('descanso');
-
-      if (!shouldAllow) {
+      if (!isToday) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content:
@@ -166,113 +221,90 @@ class _TrainingCardState extends State<TrainingCard>
         return;
       }
       
-      // Iniciar la animación de la tarjeta inmediatamente
+      print("🚀 Iniciando entrenamiento: ${widget.session.workoutName}");
+      
+      // Marcar que estamos navegando para evitar que se revierta la animación
+      setState(() {
+        _isNavigating = true;
+      });
+      
+      // Asegurarnos de comenzar la animación desde el principio
+      _controller.reset();
       _controller.forward();
 
-      // Método auxiliar para navegar sin animación en caso de error
-      void navigateWithoutAnimation() {
-        WorkoutGoal? workoutGoal = _createWorkoutGoalFromSession(widget.session);
-        
-        if (!Get.isRegistered<TrainingViewModel>()) {
-          final viewModel = TrainingViewModel();
-          Get.put(viewModel);
+      // Obtener la posición global para el ripple
+      final RenderBox renderBox = context.findRenderObject() as RenderBox;
+      final Offset localPosition = _tapPosition;
+      final Offset globalPosition = renderBox.localToGlobal(localPosition);
+      
+      // Preparar completers para coordinar la animación
+      final mapReadyCompleter = Completer<bool>();
+      final minAnimationCompleter = Completer<bool>();
+      final startTime = DateTime.now();
+      
+      // Crear el overlay con la animación de ripple
+      final overlayState = Overlay.of(context);
+      OverlayEntry? overlayEntry;
+      
+      // Crear la entrada con autorreferencia
+      overlayEntry = OverlayEntry(
+        builder: (context) => _buildRippleWithAnimation(
+          globalPosition,
+          overlayEntry,
+          mapReadyCompleter,
+          minAnimationCompleter,
+          startTime,
+        ),
+      );
+      
+      // Mostrar el overlay
+      overlayState.insert(overlayEntry);
+      
+      // Garantizar una duración mínima de animación (1.5 segundos para mejor visibilidad)
+      Future.delayed(Duration(milliseconds: 1500), () {
+        if (!minAnimationCompleter.isCompleted) {
+          minAnimationCompleter.complete(true);
         }
-        
+      });
+
+      // Método auxiliar para reiniciar el estado cuando volvamos
+      void _resetCardStateAfterReturn() {
+        if (mounted) {
+          print("⏪ Reiniciando estado de tarjeta al volver");
+          setState(() {
+            _isNavigating = false;
+            _isTapped = false;
+          });
+          // Asegurarse de que la animación esté completamente reiniciada
+          _controller.reset();
+        }
+      }
+      
+      // Retrasar ligeramente la navegación para ver la animación de ripple
+      Future.delayed(Duration(milliseconds: 800), () {
+        // Navegar a MapScreen con callback para resetear al volver
         Get.to(
           () => MapScreen(
-            initialWorkoutGoal: workoutGoal,
+            initialWorkoutGoal: _createWorkoutGoalFromSession(widget.session),
             sessionToUpdate: widget.session,
-          ),
-        );
-      }
-
-      try {
-        // Obtener posición del toque en coordenadas globales
-        final RenderBox? box = context.findRenderObject() as RenderBox?;
-        if (box == null) {
-          print("No se pudo obtener el RenderBox");
-          navigateWithoutAnimation();
-          return;
-        }
-        
-        final position = box.localToGlobal(Offset.zero);
-        final size = box.size;
-        
-        // Calcular la posición del toque en coordenadas globales (pantalla)
-        final Offset globalTapPosition = Offset(
-          position.dx + _tapPosition.dx,
-          position.dy + _tapPosition.dy,
-        );
-        
-        // Preparar datos para la navegación
-        WorkoutGoal? workoutGoal = _createWorkoutGoalFromSession(widget.session);
-        
-        if (!Get.isRegistered<TrainingViewModel>()) {
-          final viewModel = TrainingViewModel();
-          Get.put(viewModel);
-        }
-        
-        // Crear un Completer para controlar cuando el mapa está listo
-        final mapReadyCompleter = Completer<bool>();
-        
-        // Crear un controlador para el tiempo mínimo de animación
-        final minAnimationDuration = Completer<bool>();
-        
-        // Guardar la hora de inicio para calcular tiempos
-        final startTime = DateTime.now();
-        
-        // Iniciar el temporizador para la duración mínima de la animación (2 segundos)
-        Future.delayed(Duration(milliseconds: 1000), () {
-          if (!minAnimationDuration.isCompleted) {
-            minAnimationDuration.complete(true);
-          }
-        });
-        
-        // Crear el overlay para la animación
-        OverlayEntry? overlayEntry;
-        overlayEntry = OverlayEntry(
-          builder: (context) => _buildRippleWithAnimation(
-            globalTapPosition, 
-            overlayEntry,
-            mapReadyCompleter,
-            minAnimationDuration,
-            startTime
-          ),
-        );
-        
-        // Obtener el overlay del contexto
-        final overlay = Overlay.of(context);
-        if (overlay == null) {
-          print("No se pudo obtener el Overlay");
-          navigateWithoutAnimation();
-          return;
-        }
-        
-        // Insertar el overlay inmediatamente para mostrar la animación
-        overlay.insert(overlayEntry);
-        
-        // Iniciar la navegación a MapScreen en segundo plano
-        Future.microtask(() {
-          Get.to(
-            () => MapScreen(
-              initialWorkoutGoal: workoutGoal,
-              sessionToUpdate: widget.session,
-              onMapInitialized: () {
-                // Este callback será llamado cuando el mapa esté listo
-                print("🗺️ MapScreen inicializado correctamente");
+            onMapInitialized: () {
+              print("🗺️ MapScreen inicializado correctamente");
+              // Completar cuando el mapa esté listo, pero con un pequeño retraso
+              // para permitir que la animación sea visible
+              Future.delayed(Duration(milliseconds: 200), () {
                 if (!mapReadyCompleter.isCompleted) {
                   mapReadyCompleter.complete(true);
                 }
-              },
-            ),
-            transition: Transition.fadeIn,
-            duration: Duration(milliseconds: 300),
-          );
+              });
+            },
+          ),
+          transition: Transition.fadeIn,
+          duration: Duration(milliseconds: 500), // Transición más lenta
+        )?.then((_) {
+          // Este callback se ejecuta cuando se vuelve de la pantalla de mapa
+          _resetCardStateAfterReturn();
         });
-      } catch (e) {
-        print("Error en la navegación: $e");
-        navigateWithoutAnimation();
-      }
+      });
     }
 
     return AnimatedBuilder(
@@ -288,26 +320,17 @@ class _TrainingCardState extends State<TrainingCard>
               onTapCancel: canStartWorkout ? _handleTapCancel : null,
               onTap: canStartWorkout
                   ? () => navigateToMap()
-                  : (isToday &&
-                          widget.session.workoutName
-                              .toLowerCase()
-                              .contains('descanso'))
-                      ? () {
-                          HapticFeedback.mediumImpact();
+                  : (isToday
+                      ? null
+                      : () {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
+                            const SnackBar(
                               content: Text(
-                                  'Hoy es tu día de descanso. ¡Aprovecha para recuperarte!'),
-                              backgroundColor: Colors.blue,
-                              action: SnackBarAction(
-                                label: 'Entendido',
-                                textColor: Colors.white,
-                                onPressed: () {},
-                              ),
+                                  'Solo puedes iniciar entrenamientos programados para hoy'),
+                              backgroundColor: Colors.red,
                             ),
                           );
-                        }
-                      : null,
+                        }),
               child: Transform.scale(
                 scale: _scaleAnimation.value,
                 child: AnimatedOpacity(
@@ -549,6 +572,8 @@ class _TrainingCardState extends State<TrainingCard>
 
   WorkoutGoal? _createWorkoutGoalFromSession(Session session) {
     try {
+      print("📊 Creando WorkoutGoal a partir de: ${session.description}");
+      
       // Analizamos la descripción para determinar la distancia y el tiempo objetivo
       String description = session.description.toLowerCase();
       double targetDistanceKm = 5.0; // Valor predeterminado
@@ -560,6 +585,7 @@ class _TrainingCardState extends State<TrainingCard>
       if (distanceMatch != null) {
         targetDistanceKm =
             double.tryParse(distanceMatch.group(1) ?? '5.0') ?? 5.0;
+        print("📏 Distancia detectada: $targetDistanceKm km");
       }
 
       // Extraer tiempo (minutos)
@@ -567,6 +593,7 @@ class _TrainingCardState extends State<TrainingCard>
       var timeMatch = timeRegExp.firstMatch(description);
       if (timeMatch != null) {
         targetTimeMinutes = int.tryParse(timeMatch.group(1) ?? '30') ?? 30;
+        print("⏱️ Tiempo detectado: $targetTimeMinutes min");
       }
 
       return WorkoutGoal(
@@ -575,8 +602,13 @@ class _TrainingCardState extends State<TrainingCard>
         startTime: DateTime.now(),
       );
     } catch (e) {
-      print('Error creating WorkoutGoal: $e');
-      return null;
+      print('❌ Error creating WorkoutGoal: $e');
+      // En caso de error, devolver un objetivo predeterminado
+      return WorkoutGoal(
+        targetDistanceKm: 5.0,
+        targetTimeMinutes: 30,
+        startTime: DateTime.now(),
+      );
     }
   }
 
@@ -626,7 +658,7 @@ class _FullScreenRippleAnimationState extends State<_FullScreenRippleAnimation>
   late AnimationController _animationController;
   late Animation<double> _animation;
   late Animation<double> _fadeAnimation;
-  final double maxRadius = 2000.0;
+  final double maxRadius = 3000.0; // Radio mayor para cubrir toda la pantalla
   bool _shouldRemove = false;
 
   @override
@@ -634,20 +666,23 @@ class _FullScreenRippleAnimationState extends State<_FullScreenRippleAnimation>
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000), // Duración base más larga
+      duration: const Duration(milliseconds: 4500), // Duración aún más larga
     );
 
+    // Animación de expansión del círculo con curva personalizada
     _animation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _animationController,
-        curve: Curves.easeOutQuad,
+        // Curva más lenta al principio para ver el efecto de expansión
+        curve: Interval(0.0, 0.8, curve: Curves.easeOutCubic),
       ),
     );
     
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 0.2).animate(
+    // Animación para el fondo que se oscurece
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 0.3).animate(
       CurvedAnimation(
         parent: _animationController,
-        curve: Interval(0.3, 0.8, curve: Curves.easeInOut),
+        curve: Interval(0.2, 0.7, curve: Curves.easeInOut),
       ),
     );
 
@@ -665,29 +700,58 @@ class _FullScreenRippleAnimationState extends State<_FullScreenRippleAnimation>
       widget.mapReadyCompleter.future,
       widget.minAnimationCompleter.future
     ]).then((_) {
-      // Una vez que ambos completers están listos, continuamos la animación por 1 segundo más
+      // Una vez que ambos completers están listos, calculamos cuánto tiempo ha pasado
       final elapsedTime = DateTime.now().difference(widget.startTime).inMilliseconds;
-      final additionalTimeNeeded = math.max(0, 1000 - (elapsedTime - 1000));
       
-      print("🕒 Tiempo transcurrido: ${elapsedTime}ms, tiempo adicional: ${additionalTimeNeeded}ms");
+      // Garantizar un tiempo mínimo de animación de 2500ms
+      // Esto asegura que la animación circular sea visible claramente
+      final additionalTimeNeeded = math.max(0, 2500 - elapsedTime);
+      
+      print("🕒 Animación Ripple - Tiempo transcurrido: ${elapsedTime}ms, tiempo adicional: ${additionalTimeNeeded}ms");
       
       // Agregar tiempo adicional para mantener la animación visible
       Future.delayed(Duration(milliseconds: additionalTimeNeeded), () {
         if (mounted) {
+          // Crear una transición suave para la salida
           setState(() {
             _shouldRemove = true;
           });
           
-          // Completar la animación rápidamente
-          _animationController.duration = Duration(milliseconds: 300);
+          // Crear una animación de salida más larga y suave
+          _animationController.duration = Duration(milliseconds: 1500);
+          
+          // Usar una curva más suave para la salida
+          _animation = Tween<double>(
+            begin: _animation.value,
+            end: 1.2, // Expandir un poco más allá antes de desaparecer
+          ).animate(
+            CurvedAnimation(
+              parent: _animationController,
+              curve: Curves.easeOutCubic,
+            ),
+          );
+          
+          // Reiniciar la animación de fade para el cierre
+          _fadeAnimation = Tween<double>(
+            begin: _fadeAnimation.value,
+            end: 0.0, // Desvanecer completamente
+          ).animate(
+            CurvedAnimation(
+              parent: _animationController,
+              curve: Interval(0.3, 1.0, curve: Curves.easeInOutCubic),
+            ),
+          );
+          
+          // Completar la animación suavemente
           _animationController.forward(from: _animationController.value)
             .then((_) {
               // Remover el overlay cuando la animación termina
               if (widget.overlayEntry != null) {
                 try {
+                  print("🕒 Animación Ripple - Removiendo overlay");
                   widget.overlayEntry!.remove();
                 } catch (e) {
-                  print("Error al remover el overlay: $e");
+                  print("❌ Error al remover el overlay: $e");
                 }
               }
             });
@@ -719,7 +783,7 @@ class _FullScreenRippleAnimationState extends State<_FullScreenRippleAnimation>
         // Calcular la opacidad del círculo en función de _shouldRemove
         final circleOpacity = _shouldRemove 
             ? (1.0 - _animationController.value) 
-            : 1.0;
+            : (0.9 - (0.3 * _animation.value)); // Más visible al inicio y luego se desvanece
             
         return Material(
           type: MaterialType.transparency,
@@ -729,7 +793,8 @@ class _FullScreenRippleAnimationState extends State<_FullScreenRippleAnimation>
               Positioned.fill(
                 child: AnimatedOpacity(
                   opacity: backgroundOpacity,
-                  duration: Duration(milliseconds: 300),
+                  duration: Duration(milliseconds: 800),
+                  curve: Curves.easeInOut,
                   child: Container(color: Colors.black),
                 ),
               ),
@@ -743,7 +808,13 @@ class _FullScreenRippleAnimationState extends State<_FullScreenRippleAnimation>
                 child: Container(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: widget.primaryColor.withOpacity(circleOpacity),
+                    // Usar borde para que el círculo sea más definido
+                    border: Border.all(
+                      color: widget.primaryColor,//.withAlpha((circleOpacity * 255).toInt()),
+                      width: 6.0, // Borde más grueso
+                    ),
+                    // Color de relleno más transparente para ver el efecto circular
+                    color: widget.primaryColor//.withAlpha((circleOpacity * 100).toInt()),
                   ),
                 ),
               ),

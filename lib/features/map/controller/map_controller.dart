@@ -751,42 +751,18 @@ class MapController extends GetxController {
     }
   }
 
+  // Método para actualizar la vista del mapa según la posición actual
   void resetMapView() {
     if (workoutData.value.currentPosition != null && mapController.value != null) {
-      // Definir el padding (en píxeles) para cada lado del mapa
-      // Ajusta estos valores según el tamaño de tus paneles
-      const padding = EdgeInsets.only(
-        top: 60,    // Espacio para AppBar
-        bottom: 220, // Espacio para panel de información
-        left: 20,
-        right: 20,
-      );
+      print("🗺️ Actualizando vista del mapa a posición actual");
       
-      // Centrar el mapa con padding
+      // Crear los límites para la cámara
       mapController.value!.animateCamera(
-        CameraUpdate.newLatLngBounds(
-          // Crear un pequeño bounds alrededor de la posición actual
-          LatLngBounds(
-            southwest: LatLng(
-              workoutData.value.currentPosition!.latitude - 0.001,
-              workoutData.value.currentPosition!.longitude - 0.001,
-            ),
-            northeast: LatLng(
-              workoutData.value.currentPosition!.latitude + 0.001,
-              workoutData.value.currentPosition!.longitude + 0.001,
-            ),
-          ),
-          // Padding en píxeles
-          100, // Padding general
+        CameraUpdate.newLatLngZoom(
+          workoutData.value.currentPosition!,
+          17.0,
         ),
       );
-      
-      // Refrescar polylines
-      if (workoutData.value.polylineCoordinates.isNotEmpty) {
-        workoutData.update((val) {
-          val?.updatePolyline();
-        });
-      }
       
       workoutData.refresh();
     } else {
@@ -808,6 +784,39 @@ class MapController extends GetxController {
           );
         }
       });
+    }
+  }
+
+  // Método para reiniciar el mapa si es necesario (después de un cambio en el ciclo de vida)
+  void resetMapIfNeeded() {
+    print("🗺️ Verificando si es necesario reiniciar el mapa");
+    
+    // Si el controlador del mapa existe, intentar actualizar la vista
+    if (mapController.value != null) {
+      // Pequeña pausa para que el mapa se cargue completamente
+      Future.delayed(Duration(milliseconds: 300), () {
+        resetMapView();
+        
+        // También actualizamos los datos
+        refreshLocationData();
+      });
+    } else {
+      print("⚠️ No se puede reiniciar el mapa: controlador nulo");
+    }
+  }
+
+  // Método para actualizar los datos de ubicación
+  void refreshLocationData() {
+    print("🗺️ Actualizando datos de ubicación");
+    
+    // Solo si el servicio de ubicación existe
+    if (locationService != null) {
+      // Reiniciar las actualizaciones de ubicación
+      locationService.startLocationUpdates();
+      
+      // Como no tenemos un método para solicitar una actualización única,
+      // simplemente esperamos a que llegue la próxima actualización
+      print("🗺️ Esperando próxima actualización de ubicación...");
     }
   }
 
@@ -892,57 +901,54 @@ class MapController extends GetxController {
     );
   }
 
-  // Agregar un método en el controlador para centrar el mapa con ajuste automático
-  void centerMapWithAutoPadding() {
-    if (workoutData.value.currentPosition == null || mapController.value == null) {
-      resetMapView(); // Usar el método simple si no podemos calcular
+  // Método para centrar el mapa en el recorrido
+  void centerMapOnRoute() {
+    if (workoutData.value.polylineCoordinates.isEmpty ||
+        mapController.value == null) {
       return;
     }
-    
-    // Intentar obtener la referencia a MapScreen para medir el panel
-    MapScreen? mapScreen;
+
+    // Crear un bounds que incluya todos los puntos del recorrido
+    double minLat = 90.0, maxLat = -90.0, minLng = 180.0, maxLng = -180.0;
+
+    for (LatLng point in workoutData.value.polylineCoordinates) {
+      if (point.latitude < minLat) minLat = point.latitude;
+      if (point.latitude > maxLat) maxLat = point.latitude;
+      if (point.longitude < minLng) minLng = point.longitude;
+      if (point.longitude > maxLng) maxLng = point.longitude;
+    }
+
+    // Definir el padding (en píxeles) para cada lado del mapa
+    // Ajusta estos valores según el tamaño de tus paneles
+    const double topPadding = 60.0;    // Espacio para AppBar
+    const double bottomPadding = 220.0; // Espacio estimado para panel de información
+    const double sidePadding = 20.0;
+
     try {
-      // Buscar la primera instancia de MapScreen en la pila de widgets
-      final context = Get.context;
-      if (context != null) {
-        mapScreen = context.findAncestorWidgetOfExactType<MapScreen>();
-      }
-    } catch (e) {
-      logger.d("⚠️ No se pudo encontrar MapScreen: $e");
-    }
-    
-    // Padding por defecto si no podemos obtener las medidas reales
-    double bottomPadding = 220;
-    
-    // Si encontramos MapScreen, intentar obtener la altura real
-    if (mapScreen != null) {
-      try {
-        bottomPadding = mapScreen.getInfoPanelHeight();
-        logger.d("📏 Altura del panel de información: $bottomPadding");
-      } catch (e) {
-        logger.d("⚠️ Error al medir panel: $e");
-      }
-    }
-    
-    // Ajustar la cámara con padding calculado
-    mapController.value!.animateCamera(
-      CameraUpdate.newLatLngBounds(
-        LatLngBounds(
-          southwest: LatLng(
-            workoutData.value.currentPosition!.latitude - 0.0005,
-            workoutData.value.currentPosition!.longitude - 0.0005,
-          ),
-          northeast: LatLng(
-            workoutData.value.currentPosition!.latitude + 0.0005,
-            workoutData.value.currentPosition!.longitude + 0.0005,
-          ),
+      final bounds = LatLngBounds(
+        southwest: LatLng(minLat, minLng),
+        northeast: LatLng(maxLat, maxLng),
+      );
+
+      // Centrar el mapa con padding
+      mapController.value!.animateCamera(
+        CameraUpdate.newLatLngBounds(
+          bounds,
+          sidePadding, // Padding general
         ),
-        // Usar valores calculados para el padding
-        bottomPadding.toInt() / 2,
-      ),
-    );
-    
-    workoutData.refresh();
+      );
+    } catch (e) {
+      logger.e("❌ Error al centrar el mapa en la ruta: $e");
+
+      // Si hay un error, intentar un enfoque más simple
+      if (workoutData.value.polylineCoordinates.isNotEmpty) {
+        final center = workoutData.value.polylineCoordinates[
+            workoutData.value.polylineCoordinates.length ~/ 2];
+        mapController.value!.animateCamera(
+          CameraUpdate.newLatLngZoom(center, 15),
+        );
+      }
+    }
   }
 
   // Añadir un método de precarga del mapa para acelerar la inicialización

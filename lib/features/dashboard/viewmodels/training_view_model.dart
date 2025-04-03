@@ -86,6 +86,9 @@ class TrainingViewModel extends GetxController {
         print(
             "📊 Primera sesión: ${data.dashboard.nextWeekSessions[0].workoutName}");
 
+        // Verificar si hay sesiones para hoy
+        _verificarSesionesHoy(data.dashboard.nextWeekSessions);
+
         // IMPORTANTE: Verificar si la lista contiene elementos después de ordenarla
         List<Session> testSessions = List.from(data.dashboard.nextWeekSessions);
         testSessions.sort((a, b) => a.sessionDate.compareTo(b.sessionDate));
@@ -112,6 +115,28 @@ class TrainingViewModel extends GetxController {
       // IMPORTANTE: Notificar a GetBuilder sobre el error
       update();
     }
+  }
+
+  // Nuevo método para verificar si hay sesiones de hoy
+  void _verificarSesionesHoy(List<Session> sessions) {
+    final now = DateTime.now();
+    int sesionesHoy = 0;
+    int sesionesDescansoHoy = 0;
+    
+    for (var session in sessions) {
+      final isToday = session.sessionDate.year == now.year &&
+                    session.sessionDate.month == now.month &&
+                    session.sessionDate.day == now.day;
+                    
+      if (isToday) {
+        sesionesHoy++;
+        if (session.workoutName.toLowerCase().contains('descanso')) {
+          sesionesDescansoHoy++;
+        }
+      }
+    }
+    
+    print("📊 Sesiones para hoy: $sesionesHoy (descanso: $sesionesDescansoHoy)");
   }
 
   // Método para marcar una sesión como completada o no
@@ -210,6 +235,38 @@ class TrainingViewModel extends GetxController {
   // Método para sincronizar cambios pendientes con el servidor
   Future<void> syncPendingChanges() async {
     await _trainingService.syncPendingChanges(_userId);
+  }
+
+                                      // Método para forzar la generación de datos aleatorios para pruebas
+  Future<void> generarDatosAleatorios() async {
+    print("🚀 Generando datos aleatorios para pruebas");
+    
+    try {
+      // Actualizar estado
+      _status.value = LoadingStatus.loading;
+      update();
+      
+      // Usar el método específico del TrainingService
+      final datos = await _trainingService.generarDatosAleatoriosParaHoy();
+      
+      if (datos != null) {
+        _trainingData.value = datos;
+        _status.value = LoadingStatus.loaded;
+        print("✅ Datos aleatorios cargados exitosamente");
+      } else {
+        print("⚠️ No se pudieron generar datos aleatorios");
+        // Si falló, intentar con el método normal
+        await loadDashboardData(forceRefresh: true);
+      }
+      
+      // Notificar cambios
+      update();
+    } catch (e) {
+      print("❌ Error al generar datos aleatorios: $e");
+      _status.value = LoadingStatus.error;
+      _errorMessage.value = e.toString();
+      update();
+    }
   }
 
   @override

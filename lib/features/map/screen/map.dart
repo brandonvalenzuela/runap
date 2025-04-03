@@ -7,7 +7,7 @@ import 'package:runap/features/map/models/workout_goal.dart';
 import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/constants/sizes.dart';
 
-class MapScreen extends StatelessWidget {
+class MapScreen extends StatefulWidget {
   final WorkoutGoal? initialWorkoutGoal;
   final Session? sessionToUpdate;
   final Function? onMapInitialized;
@@ -23,98 +23,161 @@ class MapScreen extends StatelessWidget {
   });
 
   @override
+  State<MapScreen> createState() => _MapScreenState();
+}
+
+class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
+  late MapController controller;
+  
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    
+    // Inyectar el controlador
+    controller = Get.put(MapController(
+      initialSession: widget.sessionToUpdate,
+      initialWorkoutGoal: widget.initialWorkoutGoal,
+    ));
+    
+    // Notificar que el mapa se ha inicializado
+    if (widget.onMapInitialized != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        widget.onMapInitialized!();
+      });
+    }
+    
+    // Imprimir información de depuración
+    print("🗺️ MapScreen - Inicializado");
+    print("🗺️ MapScreen - Con sesión: ${widget.sessionToUpdate?.workoutName}");
+  }
+  
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    // No eliminar el controlador si se está usando en la página anterior
+    if (Get.isRegistered<MapController>() && !Get.previousRoute.contains("dashboard")) {
+      Get.delete<MapController>();
+    }
+    print("🗺️ MapScreen - Dispose");
+    super.dispose();
+  }
+  
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Manejar cambios en el ciclo de vida de la app
+    print("🗺️ MapScreen - Cambio de estado: $state");
+    if (state == AppLifecycleState.resumed) {
+      // La app vuelve a estar en primer plano
+      controller.resetMapIfNeeded();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     // Asegurarse de imprimir información de depuración
     print(
-        "🗺️ MapScreen - Construyendo con sessionToUpdate: ${sessionToUpdate?.workoutName}");
+        "🗺️ MapScreen - Construyendo con sessionToUpdate: ${widget.sessionToUpdate?.workoutName}");
     print(
-        "🗺️ MapScreen - initialWorkoutGoal: ${initialWorkoutGoal?.targetDistanceKm}km");
-    // Inyectar el controlador
-    final controller = Get.put(MapController(
-      initialSession: sessionToUpdate,
-      initialWorkoutGoal: initialWorkoutGoal,
-    ));
+        "🗺️ MapScreen - initialWorkoutGoal: ${widget.initialWorkoutGoal?.targetDistanceKm}km");
 
     // Añadir depuración adicional
     print("🗺️ MapScreen - Posición actual: ${controller.workoutData.value.currentPosition}");
     print("🗺️ MapScreen - Polilíneas: ${controller.workoutData.value.polylines.length}");
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Obx(() {
-          if (controller.sessionToUpdate.value != null) {
-            return Text(controller.sessionToUpdate.value!.workoutName);
-          }
-          return Text('Entrenamiento');
-        }),
-        actions: [
-          Obx(() {
-            return IconButton(
-              icon: Icon(Icons.flag),
-              onPressed: controller.workoutData.value.isWorkoutActive
-                  ? null
-                  : controller.toggleGoalSelector,
-            );
+    return WillPopScope(
+      onWillPop: () async {
+        // Lógica para manejar el evento de retroceso
+        print("🗺️ MapScreen - WillPopScope - Usuario presionó retroceder");
+        // Hacer cualquier limpieza necesaria antes de salir
+        return true; // true permite salir, false lo impide
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Obx(() {
+            if (controller.sessionToUpdate.value != null) {
+              return Text(controller.sessionToUpdate.value!.workoutName);
+            }
+            return Text('Entrenamiento');
           }),
-        ],
-      ),
-      body: Stack(
-        children: [
-          // Mapa
-          Obx(() => _buildMap(controller)),
-
-          // Panel de información inferior
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Obx(() => _buildInfoPanel(controller)),
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back),
+            onPressed: () {
+              // Código personalizado para manejar el retroceso
+              print("🗺️ MapScreen - Usuario presionó botón de retroceso");
+              // Reiniciar cualquier estado necesario antes de volver
+              Get.back();
+            },
           ),
-
-          // Selector de objetivos (condicional)
-          Obx(() {
-            if (controller.showGoalSelector.value) {
-              return _buildGoalSelector(controller);
-            }
-            return SizedBox.shrink();
-          }),
-
-          // Indicador de carga
-          Obx(() {
-            if (controller.isLoading.value) {
-              return Container(
-                color: Colors.black54,
-                child: Center(
-                  child: CircularProgressIndicator(),
-                ),
+          actions: [
+            Obx(() {
+              return IconButton(
+                icon: Icon(Icons.flag),
+                onPressed: controller.workoutData.value.isWorkoutActive
+                    ? null
+                    : controller.toggleGoalSelector,
               );
-            }
-            return SizedBox.shrink();
-          }),
+            }),
+          ],
+        ),
+        body: Stack(
+          children: [
+            // Mapa
+            Obx(() => _buildMap(controller)),
 
-          // Indicador de guardado
-          Obx(() {
-            if (controller.isSaving.value) {
-              return Container(
-                color: Colors.black54,
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircularProgressIndicator(),
-                      SizedBox(height: 16),
-                      Text(
-                        'Guardando entrenamiento...',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ],
+            // Panel de información inferior
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Obx(() => _buildInfoPanel(controller)),
+            ),
+
+            // Selector de objetivos (condicional)
+            Obx(() {
+              if (controller.showGoalSelector.value) {
+                return _buildGoalSelector(controller);
+              }
+              return SizedBox.shrink();
+            }),
+
+            // Indicador de carga
+            Obx(() {
+              if (controller.isLoading.value) {
+                return Container(
+                  color: Colors.black54,
+                  child: Center(
+                    child: CircularProgressIndicator(),
                   ),
-                ),
-              );
-            }
-            return SizedBox.shrink();
-          }),
-        ],
+                );
+              }
+              return SizedBox.shrink();
+            }),
+
+            // Indicador de guardado
+            Obx(() {
+              if (controller.isSaving.value) {
+                return Container(
+                  color: Colors.black54,
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 16),
+                        Text(
+                          'Guardando entrenamiento...',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              return SizedBox.shrink();
+            }),
+          ],
+        ),
       ),
     );
   }
@@ -417,8 +480,8 @@ class MapScreen extends StatelessWidget {
             controller.forceMapUpdate();
 
             // Notificar que el mapa está inicializado
-            if (onMapInitialized != null) {
-              onMapInitialized!();
+            if (widget.onMapInitialized != null) {
+              widget.onMapInitialized!();
             }
           },
           padding: EdgeInsets.only(
@@ -451,7 +514,7 @@ class MapScreen extends StatelessWidget {
 
   Widget _buildInfoPanel(MapController controller) {
     return Container(
-      key: infoPanelKey,
+      key: widget.infoPanelKey,
       padding: EdgeInsets.all(TSizes.defaultSpace),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -782,13 +845,14 @@ class MapScreen extends StatelessWidget {
     return "🔴"; // Mala
   }
 
-  // Y luego añade un método para obtener la altura del panel
+  // Método para obtener la altura del panel de información
   double getInfoPanelHeight() {
-    if (infoPanelKey.currentContext != null) {
-      final RenderBox box = infoPanelKey.currentContext!.findRenderObject() as RenderBox;
+    if (widget.infoPanelKey.currentContext != null) {
+      final RenderBox box = widget.infoPanelKey.currentContext!.findRenderObject() as RenderBox;
       return box.size.height;
     }
-    return 220; // Valor por defecto si no se puede medir
+    // Valor predeterminado si no podemos obtener la altura real
+    return 220.0;
   }
 
   void _showMapStyleOptions(MapController controller) {

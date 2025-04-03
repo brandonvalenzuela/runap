@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:runap/features/dashboard/models/dashboard_model.dart';
 import 'package:runap/features/map/utils/training_local_storage.dart';
 import 'package:runap/utils/http/http_client.dart';
@@ -42,88 +43,207 @@ class TrainingService {
         _lastFetchTime != null &&
         DateTime.now().difference(_lastFetchTime!).inMinutes < 5) {
       print("💡 getDashboardData - Usando caché en memoria");
-      return _cachedTrainingData!;
+      return _modificarSesionesDescansoParaHoy(_cachedTrainingData!);
     }
 
-    // Si no hay caché en memoria, verificar el almacenamiento local
+    // Verificar si es necesario actualizar desde el almacenamiento local
     if (!shouldFetchFromServer) {
-      bool isCacheValid = await TrainingLocalStorage.isCacheValid();
-      print("💡 getDashboardData - Cache local válido: $isCacheValid");
-
-      if (isCacheValid) {
+      final localCacheValid = await TrainingLocalStorage.isCacheValid();
+      if (localCacheValid) {
+        // Obtener datos del almacenamiento local
         final localData = await TrainingLocalStorage.getTrainingData();
         if (localData != null) {
-          print("💡 getDashboardData - Usando caché local");
-          final trainingData = TrainingData.fromJson(localData);
-
-          // IMPORTANTE: Verificar si las sesiones están cargadas
-          print(
-              "💡 getDashboardData - Sesiones cargadas: ${trainingData.dashboard.nextWeekSessions.length}");
-
-          // Actualizar caché en memoria
-          _cachedTrainingData = trainingData;
+          print("💡 getDashboardData - Usando caché del almacenamiento local");
+          _cachedTrainingData = TrainingData.fromJson(localData);
           _lastFetchTime = DateTime.now();
-
-          // Notificar a los listeners
-          _trainingDataController.add(trainingData);
-
-          return trainingData;
+          
+          // Aplicar modificaciones de datos aleatorios
+          _cachedTrainingData = _modificarSesionesDescansoParaHoy(_cachedTrainingData!);
+          
+          // Notificar a los oyentes sobre los datos cargados
+          _trainingDataController.add(_cachedTrainingData!);
+          return _cachedTrainingData!;
         }
       }
 
-      // Si llegamos aquí, necesitamos obtener datos del servidor
+      // Si llegamos aquí, no hay caché válida, así que refrescar desde el servidor
       shouldFetchFromServer = true;
     }
 
-    // Obtener datos del servidor
+    // Si debemos actualizar desde el servidor
     if (shouldFetchFromServer) {
       try {
         print("💡 getDashboardData - Obteniendo datos del servidor");
-        // Construimos la URL con el parámetro userId
-        final endpoint = '$_dashboardEndpoint?userId=$userId';
+        // Obtener datos del servidor
+        final data = await THttpHelper.get('$_dashboardEndpoint/$userId');
 
-        // Obtenemos los datos frescos de la API
-        final response = await THttpHelper.get(endpoint);
-        print("📡 RESPUESTA API: ${json.encode(response)}");
-        final trainingData = TrainingData.fromJson(response);
-
-        // IMPORTANTE: Verificar si las sesiones están cargadas desde el servidor
-        print(
-            "💡 getDashboardData - Sesiones cargadas desde servidor: ${trainingData.dashboard.nextWeekSessions.length}");
-
-        // Actualizar datos en el almacenamiento local
-        await TrainingLocalStorage.saveTrainingData(response);
-
-        // Actualizar caché en memoria
-        _cachedTrainingData = trainingData;
+        // Guardar en caché
+        _cachedTrainingData = TrainingData.fromJson(data);
         _lastFetchTime = DateTime.now();
 
-        // Notificar a los listeners
-        _trainingDataController.add(trainingData);
+        // Aplicar modificaciones de datos aleatorios
+        _cachedTrainingData = _modificarSesionesDescansoParaHoy(_cachedTrainingData!);
 
-        return trainingData;
+        // Guardar en el almacenamiento local
+        await TrainingLocalStorage.saveTrainingData(data);
+
+        // Notificar a los oyentes sobre los datos cargados
+        _trainingDataController.add(_cachedTrainingData!);
+
+        return _cachedTrainingData!;
       } catch (e) {
-        print("❌ getDashboardData - Error al obtener datos: $e");
-        // Si hay error y tenemos datos en caché, los devolvemos
-        if (_cachedTrainingData != null) {
-          print("💡 getDashboardData - Fallback a caché en memoria");
+        // Si hay un error al obtener del servidor, intentar usar caché local
+        print("❌ Error al obtener datos del servidor: $e");
+        final localData = await TrainingLocalStorage.getTrainingData();
+        if (localData != null) {
+          print("⚠️ Usando caché local debido a error de servidor");
+          _cachedTrainingData = TrainingData.fromJson(localData);
+          _lastFetchTime = DateTime.now();
+          
+          // Aplicar modificaciones de datos aleatorios
+          _cachedTrainingData = _modificarSesionesDescansoParaHoy(_cachedTrainingData!);
+          
+          // Notificar a los oyentes
+          _trainingDataController.add(_cachedTrainingData!);
           return _cachedTrainingData!;
         }
 
-        // Intentar obtener del almacenamiento local como último recurso
-        final localData = await TrainingLocalStorage.getTrainingData();
-        if (localData != null) {
-          print("💡 getDashboardData - Fallback a caché local");
-          return TrainingData.fromJson(localData);
-        }
-
-        // Si no hay caché, propagamos el error
-        throw Exception('Error al obtener datos del entrenamiento: $e');
+        // Si no hay caché local, propagar el error
+        throw Exception(
+            'Error al obtener datos del entrenamiento: ${e.toString()}');
       }
     }
 
-    // Este punto nunca debería alcanzarse, pero por seguridad lanzamos un error
     throw Exception('Error inesperado al obtener datos del entrenamiento');
+  }
+
+  // Método para modificar las sesiones de descanso para hoy con datos aleatorios
+  TrainingData _modificarSesionesDescansoParaHoy(TrainingData trainingData) {
+    final DateTime hoy = DateTime.now();
+    final random = math.Random();
+    
+    print("🔄 INICIO: Modificando sesiones de descanso para hoy (${hoy.day}/${hoy.month})");
+    
+    // Variable para contar modificaciones
+    int modificacionesRealizadas = 0;
+    bool haySessionesHoy = false;
+    
+    // Primero verificamos si hay alguna sesión para hoy
+    for (var session in trainingData.dashboard.nextWeekSessions) {
+      final esHoy = session.sessionDate.year == hoy.year &&
+                   session.sessionDate.month == hoy.month &&
+                   session.sessionDate.day == hoy.day;
+      
+      if (esHoy) {
+        haySessionesHoy = true;
+        print("📅 ENCONTRADA: Sesión para hoy - ${session.workoutName}");
+      }
+    }
+    
+    if (!haySessionesHoy) {
+      print("⚠️ ALERTA: No hay sesiones programadas para hoy");
+      // Si no hay sesiones para hoy, crear una sesión aleatoria
+      _agregarSesionAleatoriaParaHoy(trainingData, hoy);
+      return trainingData;
+    }
+    
+    // Comprobar si hay sesiones de descanso para hoy y modificarlas
+    for (var i = 0; i < trainingData.dashboard.nextWeekSessions.length; i++) {
+      final session = trainingData.dashboard.nextWeekSessions[i];
+      
+      // Verificar si es una sesión de hoy 
+      final esHoy = session.sessionDate.year == hoy.year &&
+                   session.sessionDate.month == hoy.month &&
+                   session.sessionDate.day == hoy.day;
+                   
+      final esDescanso = session.workoutName.toLowerCase().contains('descanso');
+      
+      if (esHoy) {
+        print("🔍 REVISANDO: Sesión de hoy - ${session.workoutName} - ¿Es descanso? $esDescanso");
+        
+        if (esDescanso) {
+          print("🔄 MODIFICANDO: Sesión de descanso para hoy");
+          
+          // Generar datos aleatorios para esta sesión
+          final tiposEntrenamiento = [
+            'Carrera ligera',
+            'Entrenamiento cruzado',
+            'Caminata recuperativa',
+            'Entrenamiento de fuerza suave',
+            'Carrera de recuperación'
+          ];
+          
+          final distanciasKm = [3, 4, 5, 6, 7];
+          final tiemposMin = [20, 25, 30, 35, 40];
+          final ritmos = ['6:00', '6:30', '7:00', '7:30', '8:00'];
+          
+          // Seleccionar valores aleatorios
+          final tipoEntrenamiento = tiposEntrenamiento[random.nextInt(tiposEntrenamiento.length)];
+          final distanciaKm = distanciasKm[random.nextInt(distanciasKm.length)];
+          final tiempoMin = tiemposMin[random.nextInt(tiemposMin.length)];
+          final ritmo = ritmos[random.nextInt(ritmos.length)];
+          
+          // Crear una nueva sesión con los datos aleatorios
+          final nuevaSesion = Session(
+            sessionDate: session.sessionDate,
+            workoutName: tipoEntrenamiento,
+            description: 'Sesión opcional (día de descanso): Correr $distanciaKm km en $tiempoMin min a ritmo $ritmo min/km',
+            completed: session.completed,
+          );
+          
+          // Reemplazar la sesión en la lista
+          trainingData.dashboard.nextWeekSessions[i] = nuevaSesion;
+          modificacionesRealizadas++;
+          
+          print("✅ ÉXITO: Sesión modificada: ${nuevaSesion.workoutName} - ${nuevaSesion.description}");
+        }
+      }
+    }
+    
+    print("✅ FIN: Proceso terminado. Sesiones modificadas: $modificacionesRealizadas");
+    
+    return trainingData;
+  }
+  
+  // Nuevo método para agregar una sesión aleatoria para hoy si no hay ninguna
+  void _agregarSesionAleatoriaParaHoy(TrainingData trainingData, DateTime hoy) {
+    final random = math.Random();
+    
+    // Generar datos aleatorios
+    final tiposEntrenamiento = [
+      'Carrera ligera',
+      'Entrenamiento cruzado',
+      'Caminata recuperativa',
+      'Entrenamiento de fuerza suave',
+      'Carrera de recuperación'
+    ];
+    
+    final distanciasKm = [3, 4, 5, 6, 7];
+    final tiemposMin = [20, 25, 30, 35, 40];
+    final ritmos = ['6:00', '6:30', '7:00', '7:30', '8:00'];
+    
+    // Seleccionar valores aleatorios
+    final tipoEntrenamiento = tiposEntrenamiento[random.nextInt(tiposEntrenamiento.length)];
+    final distanciaKm = distanciasKm[random.nextInt(distanciasKm.length)];
+    final tiempoMin = tiemposMin[random.nextInt(tiemposMin.length)];
+    final ritmo = ritmos[random.nextInt(ritmos.length)];
+    
+    // Crear sesión para hoy con hora actual
+    final DateTime fechaHoy = DateTime(hoy.year, hoy.month, hoy.day, 
+                                      DateTime.now().hour, DateTime.now().minute);
+    
+    // Crear una nueva sesión aleatoria
+    final nuevaSesion = Session(
+      sessionDate: fechaHoy,
+      workoutName: tipoEntrenamiento,
+      description: 'Sesión generada: Correr $distanciaKm km en $tiempoMin min a ritmo $ritmo min/km',
+      completed: false,
+    );
+    
+    // Agregar la sesión a la lista
+    trainingData.dashboard.nextWeekSessions.add(nuevaSesion);
+    
+    print("✅ CREADA: Nueva sesión para hoy - ${nuevaSesion.workoutName}");
   }
 
   // Método para marcar una sesión como completada o no completada
@@ -217,6 +337,89 @@ class TrainingService {
   // Método para limpiar recursos al cerrar la aplicación
   void dispose() {
     _trainingDataController.close();
+  }
+
+  // Método público para forzar la generación de datos aleatorios para hoy
+  Future<TrainingData?> generarDatosAleatoriosParaHoy() async {
+    print("🚀 TrainingService - Generando datos aleatorios para hoy");
+    
+    if (_cachedTrainingData == null) {
+      print("❌ No hay datos en caché para modificar");
+      return null;
+    }
+    
+    // Hacer una copia profunda para no afectar los datos originales
+    // hasta que estemos seguros de los cambios
+    TrainingData datosModificados = TrainingData(
+      dashboard: Dashboard(
+        raceType: _cachedTrainingData!.dashboard.raceType,
+        targetPace: _cachedTrainingData!.dashboard.targetPace,
+        goalTime: _cachedTrainingData!.dashboard.goalTime,
+        weeksToRace: _cachedTrainingData!.dashboard.weeksToRace,
+        totalSessions: _cachedTrainingData!.dashboard.totalSessions,
+        completedSessions: _cachedTrainingData!.dashboard.completedSessions,
+        completionRate: _cachedTrainingData!.dashboard.completionRate,
+        nextWeekSessions: List.from(_cachedTrainingData!.dashboard.nextWeekSessions),
+      ),
+    );
+    
+    // Aplicar la modificación
+    final DateTime hoy = DateTime.now();
+    
+    // Verificar si hay sesiones para hoy
+    bool haySessionesHoy = false;
+    for (var session in datosModificados.dashboard.nextWeekSessions) {
+      final esHoy = session.sessionDate.year == hoy.year &&
+                   session.sessionDate.month == hoy.month &&
+                   session.sessionDate.day == hoy.day;
+      
+      if (esHoy) {
+        haySessionesHoy = true;
+        break;
+      }
+    }
+    
+    if (!haySessionesHoy) {
+      // Si no hay sesiones para hoy, crear una
+      print("⚠️ No hay sesiones para hoy, creando una nueva...");
+      _agregarSesionAleatoriaParaHoy(datosModificados, hoy);
+    } else {
+      // Si hay sesiones, intentar modificar las de descanso
+      print("✅ Hay sesiones para hoy, modificando según sea necesario...");
+      bool hayDescansoHoy = false;
+      
+      // Verificar si hay sesiones de descanso para hoy
+      for (var session in datosModificados.dashboard.nextWeekSessions) {
+        final esHoy = session.sessionDate.year == hoy.year &&
+                     session.sessionDate.month == hoy.month &&
+                     session.sessionDate.day == hoy.day;
+        
+        if (esHoy && session.workoutName.toLowerCase().contains('descanso')) {
+          hayDescansoHoy = true;
+          break;
+        }
+      }
+      
+      if (hayDescansoHoy) {
+        // Si hay sesiones de descanso, modificarlas
+        print("🔄 Hay sesiones de descanso para hoy, cambiándolas...");
+        datosModificados = _modificarSesionesDescansoParaHoy(datosModificados);
+      } else {
+        // Si no hay sesiones de descanso, no hacemos nada
+        print("💡 Las sesiones para hoy no son de descanso, no es necesario modificarlas");
+      }
+    }
+    
+    // Actualizar en caché
+    _cachedTrainingData = datosModificados;
+    _lastFetchTime = DateTime.now();
+    
+    // Notificar a los listeners
+    _trainingDataController.add(datosModificados);
+    
+    print("✅ TrainingService - Datos aleatorios generados y notificados");
+    
+    return datosModificados;
   }
 
   // Sincronizar datos pendientes con el servidor

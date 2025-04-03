@@ -24,6 +24,11 @@ class TrainingDashboardScreen extends StatelessWidget {
             icon: Icon(Icons.refresh),
             onPressed: () => viewModel.loadDashboardData(forceRefresh: true),
           ),
+          // Agregar un botón para generar datos aleatorios de prueba
+          IconButton(
+            icon: Icon(Icons.sports_score),
+            onPressed: () => _generarDatosPrueba(viewModel),
+          ),
         ],
       ),
       body: Obx(() {
@@ -40,6 +45,11 @@ class TrainingDashboardScreen extends StatelessWidget {
         }
       }),
     );
+  }
+
+  // Nuevo método para generar datos de prueba aleatorios
+  void _generarDatosPrueba(TrainingViewModel viewModel) {
+    viewModel.generarDatosAleatorios();
   }
 
   Widget _buildErrorView(BuildContext context, TrainingViewModel viewModel) {
@@ -119,6 +129,19 @@ class TrainingDashboardScreen extends StatelessWidget {
   String _getSessionType(String workoutName) {
     workoutName = workoutName.toLowerCase();
 
+    // Primero buscamos coincidencias exactas con las nuevas categorías
+    if (workoutName.contains('carrera ligera') || 
+        workoutName.contains('carrera de recuperación')) {
+      return 'running';
+    } else if (workoutName.contains('entrenamiento de fuerza') || 
+               workoutName.contains('fuerza suave')) {
+      return 'strength';
+    } else if (workoutName.contains('entrenamiento cruzado') ||
+               workoutName.contains('caminata recuperativa')) {
+      return 'other';
+    }
+    
+    // Si no hay coincidencia con las nuevas categorías, usamos las originales
     if (workoutName.contains('tirada') || workoutName.contains('rodaje')) {
       return 'running';
     } else if (workoutName.contains('fuerza')) {
