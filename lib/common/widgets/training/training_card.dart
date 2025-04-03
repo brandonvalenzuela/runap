@@ -9,6 +9,8 @@ import 'package:runap/utils/constants/image_strings.dart';
 import 'package:runap/utils/constants/sizes.dart';
 import 'package:runap/utils/helpers/helper_functions.dart';
 import 'package:runap/features/dashboard/models/dashboard_model.dart';
+import 'dart:async';
+import 'dart:math' as math;
 
 class TrainingCard extends StatefulWidget {
   const TrainingCard({
@@ -202,10 +204,6 @@ class _TrainingCardState extends State<TrainingCard>
           position.dy + _tapPosition.dy,
         );
         
-        print("Posición de tarjeta: $position");
-        print("Posición de toque local: $_tapPosition");
-        print("Posición de toque global calculada: $globalTapPosition");
-        
         // Preparar datos para la navegación
         WorkoutGoal? workoutGoal = _createWorkoutGoalFromSession(widget.session);
         
@@ -214,13 +212,35 @@ class _TrainingCardState extends State<TrainingCard>
           Get.put(viewModel);
         }
         
+        // Crear un Completer para controlar cuando el mapa está listo
+        final mapReadyCompleter = Completer<bool>();
+        
+        // Crear un controlador para el tiempo mínimo de animación
+        final minAnimationDuration = Completer<bool>();
+        
+        // Guardar la hora de inicio para calcular tiempos
+        final startTime = DateTime.now();
+        
+        // Iniciar el temporizador para la duración mínima de la animación (2 segundos)
+        Future.delayed(Duration(milliseconds: 1000), () {
+          if (!minAnimationDuration.isCompleted) {
+            minAnimationDuration.complete(true);
+          }
+        });
+        
         // Crear el overlay para la animación
         OverlayEntry? overlayEntry;
         overlayEntry = OverlayEntry(
-          builder: (context) => _buildFullScreenRipple(globalTapPosition, overlayEntry),
+          builder: (context) => _buildRippleWithAnimation(
+            globalTapPosition, 
+            overlayEntry,
+            mapReadyCompleter,
+            minAnimationDuration,
+            startTime
+          ),
         );
         
-        // Añadir el overlay al final de la pila para que esté por encima de todo
+        // Obtener el overlay del contexto
         final overlay = Overlay.of(context);
         if (overlay == null) {
           print("No se pudo obtener el Overlay");
@@ -228,28 +248,26 @@ class _TrainingCardState extends State<TrainingCard>
           return;
         }
         
-        // Iniciar la navegación a MapScreen inmediatamente
-        Get.to(
-          () => MapScreen(
-            initialWorkoutGoal: workoutGoal,
-            sessionToUpdate: widget.session,
-          ),
-          transition: Transition.fadeIn,
-          duration: Duration(milliseconds: 300),
-        )!.then((_) {
-          // Una vez que la MapScreen está cargada, insertar el overlay para la animación
-          overlay.insert(overlayEntry!);
-          
-          // Remover el overlay después de 0.5 segundos de que MapScreen esté cargada
-          Future.delayed(Duration(milliseconds: 500), () {
-            try {
-              if (overlayEntry != null) {
-                overlayEntry.remove();
-              }
-            } catch (e) {
-              print("Error al remover overlay: $e");
-            }
-          });
+        // Insertar el overlay inmediatamente para mostrar la animación
+        overlay.insert(overlayEntry);
+        
+        // Iniciar la navegación a MapScreen en segundo plano
+        Future.microtask(() {
+          Get.to(
+            () => MapScreen(
+              initialWorkoutGoal: workoutGoal,
+              sessionToUpdate: widget.session,
+              onMapInitialized: () {
+                // Este callback será llamado cuando el mapa esté listo
+                print("🗺️ MapScreen inicializado correctamente");
+                if (!mapReadyCompleter.isCompleted) {
+                  mapReadyCompleter.complete(true);
+                }
+              },
+            ),
+            transition: Transition.fadeIn,
+            duration: Duration(milliseconds: 300),
+          );
         });
       } catch (e) {
         print("Error en la navegación: $e");
@@ -562,26 +580,41 @@ class _TrainingCardState extends State<TrainingCard>
     }
   }
 
-  // Construir el efecto de ripple a pantalla completa como overlay
-  Widget _buildFullScreenRipple(Offset globalTapPosition, OverlayEntry? overlayEntry) {
+  // Crear un widget separado para la animación de ripple con temporizadores
+  Widget _buildRippleWithAnimation(
+    Offset globalTapPosition, 
+    OverlayEntry? overlayEntry,
+    Completer<bool> mapReadyCompleter,
+    Completer<bool> minAnimationCompleter,
+    DateTime startTime
+  ) {
     return _FullScreenRippleAnimation(
       globalTapPosition: globalTapPosition,
       overlayEntry: overlayEntry,
       primaryColor: TColors.primaryColor,
+      mapReadyCompleter: mapReadyCompleter,
+      minAnimationCompleter: minAnimationCompleter,
+      startTime: startTime,
     );
   }
 }
 
-// Crear un widget separado para manejar la animación de forma más confiable
+// Modificar el widget de animación para manejar los Completers
 class _FullScreenRippleAnimation extends StatefulWidget {
   final Offset globalTapPosition;
   final OverlayEntry? overlayEntry;
   final Color primaryColor;
+  final Completer<bool> mapReadyCompleter;
+  final Completer<bool> minAnimationCompleter;
+  final DateTime startTime;
 
   const _FullScreenRippleAnimation({
     required this.globalTapPosition,
     this.overlayEntry,
     required this.primaryColor,
+    required this.mapReadyCompleter,
+    required this.minAnimationCompleter,
+    required this.startTime,
   });
 
   @override
@@ -592,28 +625,75 @@ class _FullScreenRippleAnimationState extends State<_FullScreenRippleAnimation>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _animation;
+  late Animation<double> _fadeAnimation;
   final double maxRadius = 2000.0;
+  bool _shouldRemove = false;
 
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500), // Reducida a 500ms
+      duration: const Duration(milliseconds: 2000), // Duración base más larga
     );
 
     _animation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _animationController,
-        curve: Curves.easeOutQuad, // Curva más rápida
+        curve: Curves.easeOutQuad,
+      ),
+    );
+    
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 0.2).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Interval(0.3, 0.8, curve: Curves.easeInOut),
       ),
     );
 
     // Iniciar la animación automáticamente
     _animationController.forward();
     
-    // Imprimir para depuración
-    print("Animación de ripple iniciada desde: ${widget.globalTapPosition}");
+    // Configurar los listeners para controlar cuándo terminar la animación
+    _setupAnimationCompletion();
+  }
+  
+  // Configurar la lógica para determinar cuándo finalizar la animación
+  void _setupAnimationCompletion() {
+    // Combinar los dos completers para saber cuándo podemos remover el overlay
+    Future.wait([
+      widget.mapReadyCompleter.future,
+      widget.minAnimationCompleter.future
+    ]).then((_) {
+      // Una vez que ambos completers están listos, continuamos la animación por 1 segundo más
+      final elapsedTime = DateTime.now().difference(widget.startTime).inMilliseconds;
+      final additionalTimeNeeded = math.max(0, 1000 - (elapsedTime - 1000));
+      
+      print("🕒 Tiempo transcurrido: ${elapsedTime}ms, tiempo adicional: ${additionalTimeNeeded}ms");
+      
+      // Agregar tiempo adicional para mantener la animación visible
+      Future.delayed(Duration(milliseconds: additionalTimeNeeded), () {
+        if (mounted) {
+          setState(() {
+            _shouldRemove = true;
+          });
+          
+          // Completar la animación rápidamente
+          _animationController.duration = Duration(milliseconds: 300);
+          _animationController.forward(from: _animationController.value)
+            .then((_) {
+              // Remover el overlay cuando la animación termina
+              if (widget.overlayEntry != null) {
+                try {
+                  widget.overlayEntry!.remove();
+                } catch (e) {
+                  print("Error al remover el overlay: $e");
+                }
+              }
+            });
+        }
+      });
+    });
   }
 
   @override
@@ -627,27 +707,32 @@ class _FullScreenRippleAnimationState extends State<_FullScreenRippleAnimation>
     return AnimatedBuilder(
       animation: _animationController,
       builder: (context, child) {
-        // La progresión del radio es más rápida
+        // La progresión del radio
         final rippleProgress = _animation.value;
         final rippleRadius = maxRadius * rippleProgress;
         
-        final fadeOpacity = rippleRadius > 200 
-          ? (rippleRadius - 200) / 1800 
-          : 0.0;
-          
+        // Calcular la opacidad del fondo en función de _shouldRemove
+        final backgroundOpacity = _shouldRemove 
+            ? (_fadeAnimation.value * (1.0 - (_animationController.value * 0.5))) // Desvanecerse al terminar
+            : _fadeAnimation.value;
+            
+        // Calcular la opacidad del círculo en función de _shouldRemove
+        final circleOpacity = _shouldRemove 
+            ? (1.0 - _animationController.value) 
+            : 1.0;
+            
         return Material(
           type: MaterialType.transparency,
           child: Stack(
             children: [
-              // Fondo que se oscurece gradualmente - más rápido
-              if (rippleRadius > 200)
-                Positioned.fill(
-                  child: AnimatedOpacity(
-                    opacity: fadeOpacity,
-                    duration: Duration(milliseconds: 500), // Reducida a 500ms
-                    child: Container(color: Colors.black12),
-                  ),
+              // Fondo que se oscurece gradualmente
+              Positioned.fill(
+                child: AnimatedOpacity(
+                  opacity: backgroundOpacity,
+                  duration: Duration(milliseconds: 300),
+                  child: Container(color: Colors.black),
                 ),
+              ),
                 
               // Efecto circular desde el punto de toque
               Positioned(
@@ -658,7 +743,7 @@ class _FullScreenRippleAnimationState extends State<_FullScreenRippleAnimation>
                 child: Container(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: widget.primaryColor
+                    color: widget.primaryColor.withOpacity(circleOpacity),
                   ),
                 ),
               ),

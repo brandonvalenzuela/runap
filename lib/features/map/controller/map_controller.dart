@@ -635,6 +635,40 @@ class MapController extends GetxController {
 
   void setMapControllerInstance(GoogleMapController controller) {
     mapController.value = controller;
+    
+    // Registrar el momento en que el controlador del mapa está disponible
+    logger.d("🗺️ MapController - Controlador de mapa inicializado");
+    
+    // Iniciar una carga asíncrona del mapa para no bloquear la UI
+    Future.microtask(() {
+      // Verificar si tenemos una posición conocida
+      if (workoutData.value.currentPosition == null) {
+        // Intentar obtener la ubicación actual primero
+        getCurrentLocationAndAnimateCamera();
+      } else {
+        // Ajustar la vista inicial con la posición conocida
+        try {
+          final padding = EdgeInsets.only(
+            top: 60,
+            bottom: 220,
+            left: 20,
+            right: 20,
+          );
+          
+          controller.moveCamera(
+            CameraUpdate.newLatLngZoom(
+              workoutData.value.currentPosition!,
+              17.0,
+            ),
+          );
+        } catch (e) {
+          logger.e("🗺️ Error al configurar vista inicial: $e");
+        }
+      }
+      
+      // Indicar que el mapa ya no está cargando
+      isLoading.value = false;
+    });
   }
 
   int getElapsedTimeSeconds() {

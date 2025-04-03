@@ -10,6 +10,7 @@ import 'package:runap/utils/constants/sizes.dart';
 class MapScreen extends StatelessWidget {
   final WorkoutGoal? initialWorkoutGoal;
   final Session? sessionToUpdate;
+  final Function? onMapInitialized;
   
   // Añadir GlobalKey para medir el panel de información
   final GlobalKey infoPanelKey = GlobalKey();
@@ -18,6 +19,7 @@ class MapScreen extends StatelessWidget {
     super.key,
     this.initialWorkoutGoal,
     this.sessionToUpdate,
+    this.onMapInitialized,
   });
 
   @override
@@ -413,6 +415,11 @@ class MapScreen extends StatelessWidget {
             
             // Forzar actualización del mapa
             controller.forceMapUpdate();
+
+            // Notificar que el mapa está inicializado
+            if (onMapInitialized != null) {
+              onMapInitialized!();
+            }
           },
           padding: EdgeInsets.only(
             top: appBarHeight,
