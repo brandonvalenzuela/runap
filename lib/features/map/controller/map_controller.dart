@@ -109,22 +109,22 @@ class MapController extends GetxController {
     // Inicializar en un futuro para no bloquear la UI
     Future.microtask(() => initialize());
 
-    // Detectar si estamos en emulador (esto es una aproximación, puedes mejorarla)
-    bool isEmulator = false;
-    try {
-      isEmulator = Platform.environment.containsKey('ANDROID_EMULATOR') || 
-                   Platform.environment.containsKey('VIRTUAL_DEVICE') ||
-                   Platform.environment.containsKey('SIMULATOR');
-    } catch (e) {
-      // Si hay error al verificar, asumir que no es emulador
-    }
+    // // Detectar si estamos en emulador (esto es una aproximación, puedes mejorarla)
+    // bool isEmulator = false;
+    // try {
+    //   isEmulator = Platform.environment.containsKey('ANDROID_EMULATOR') || 
+    //                Platform.environment.containsKey('VIRTUAL_DEVICE') ||
+    //                Platform.environment.containsKey('SIMULATOR');
+    // } catch (e) {
+    //   // Si hay error al verificar, asumir que no es emulador
+    // }
     
-    // Si es emulador o modo debug, activar simulación
-    if (isEmulator || kDebugMode) {
-      Future.delayed(Duration(seconds: 2), () {
-        simulateLocation();
-      });
-    }
+    // // Si es emulador o modo debug, activar simulación
+    // if (isEmulator || kDebugMode) {
+    //   Future.delayed(Duration(seconds: 2), () {
+    //     simulateLocation();
+    //   });
+    // }
   }
 
   void _handleLocationUpdate(LatLng position) {

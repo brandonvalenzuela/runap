@@ -3,11 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:runap/features/map/models/workout_goal.dart';
 import 'package:runap/features/map/screen/map.dart';
+import 'package:runap/features/map/controller/map_controller.dart';
 import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/constants/image_strings.dart';
 import 'package:runap/utils/constants/sizes.dart';
 import 'package:runap/utils/helpers/helper_functions.dart';
 import 'package:runap/features/dashboard/models/dashboard_model.dart';
+import 'package:runap/utils/helpers/page_transitions.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -240,6 +242,7 @@ class _TrainingCardState extends State<TrainingCard>
       // Preparar completers para coordinar la animación
       final mapReadyCompleter = Completer<bool>();
       final minAnimationCompleter = Completer<bool>();
+      final mapCenteredCompleter = Completer<bool>();
       final startTime = DateTime.now();
       
       // Crear el overlay con la animación de ripple
@@ -253,6 +256,7 @@ class _TrainingCardState extends State<TrainingCard>
           overlayEntry,
           mapReadyCompleter,
           minAnimationCompleter,
+          mapCenteredCompleter,
           startTime,
         ),
       );
@@ -282,24 +286,58 @@ class _TrainingCardState extends State<TrainingCard>
       
       // Retrasar ligeramente la navegación para ver la animación de ripple
       Future.delayed(Duration(milliseconds: 800), () {
-        // Navegar a MapScreen con callback para resetear al volver
-        Get.to(
-          () => MapScreen(
-            initialWorkoutGoal: _createWorkoutGoalFromSession(widget.session),
-            sessionToUpdate: widget.session,
-            onMapInitialized: () {
-              print("🗺️ MapScreen inicializado correctamente");
-              // Completar cuando el mapa esté listo, pero con un pequeño retraso
-              // para permitir que la animación sea visible
-              Future.delayed(Duration(milliseconds: 200), () {
-                if (!mapReadyCompleter.isCompleted) {
-                  mapReadyCompleter.complete(true);
+        // Navegar a MapScreen usando nuestra transición personalizada
+        final mapScreen = MapScreen(
+          initialWorkoutGoal: _createWorkoutGoalFromSession(widget.session),
+          sessionToUpdate: widget.session,
+          onMapInitialized: () {
+            print("🗺️ MapScreen inicializado correctamente");
+            
+            // Primero notificamos que el mapa está inicializado
+            if (!mapReadyCompleter.isCompleted) {
+              mapReadyCompleter.complete(true);
+            }
+            
+            // Añadir un timeout para el centrado del mapa para evitar esperas indefinidas
+            // Si después de 5 segundos no se ha centrado, completamos de todos modos
+            Future.delayed(Duration(milliseconds: 5000), () {
+              if (!mapCenteredCompleter.isCompleted) {
+                print("⚠️ Timeout del centrado del mapa - completando animación de todos modos");
+                mapCenteredCompleter.complete(true);
+              }
+            });
+            
+            // Esperamos un momento y luego intentamos centrar el mapa
+            Future.delayed(Duration(milliseconds: 200), () {
+              // Obtener la referencia al controlador del mapa
+              final mapController = Get.find<MapController>();
+              
+              // Intentar centrar el mapa en la ubicación del usuario
+              mapController.getCurrentLocationAndAnimateCamera().then((_) {
+                print("🗺️ Mapa centrado en la ubicación del usuario");
+                
+                // Notificar que el mapa está centrado después de un breve retraso
+                // para asegurar que la animación de la cámara haya terminado
+                Future.delayed(Duration(milliseconds: 300), () {
+                  if (!mapCenteredCompleter.isCompleted) {
+                    mapCenteredCompleter.complete(true);
+                  }
+                });
+              }).catchError((error) {
+                // Si hay error al centrar, completar de todos modos
+                print("⚠️ Error al centrar el mapa: $error");
+                if (!mapCenteredCompleter.isCompleted) {
+                  mapCenteredCompleter.complete(true);
                 }
               });
-            },
-          ),
-          transition: Transition.fadeIn,
-          duration: Duration(milliseconds: 500), // Transición más lenta
+            });
+          },
+        );
+        
+        // Usar nuestra transición personalizada en lugar de GetX
+        TPageTransitions.to(
+          mapScreen,
+          duration: Duration(milliseconds: 500),
         )?.then((_) {
           // Este callback se ejecuta cuando se vuelve de la pantalla de mapa
           _resetCardStateAfterReturn();
@@ -618,6 +656,7 @@ class _TrainingCardState extends State<TrainingCard>
     OverlayEntry? overlayEntry,
     Completer<bool> mapReadyCompleter,
     Completer<bool> minAnimationCompleter,
+    Completer<bool> mapCenteredCompleter,
     DateTime startTime
   ) {
     return _FullScreenRippleAnimation(
@@ -626,6 +665,7 @@ class _TrainingCardState extends State<TrainingCard>
       primaryColor: TColors.primaryColor,
       mapReadyCompleter: mapReadyCompleter,
       minAnimationCompleter: minAnimationCompleter,
+      mapCenteredCompleter: mapCenteredCompleter,
       startTime: startTime,
     );
   }
@@ -638,6 +678,7 @@ class _FullScreenRippleAnimation extends StatefulWidget {
   final Color primaryColor;
   final Completer<bool> mapReadyCompleter;
   final Completer<bool> minAnimationCompleter;
+  final Completer<bool> mapCenteredCompleter;
   final DateTime startTime;
 
   const _FullScreenRippleAnimation({
@@ -646,6 +687,7 @@ class _FullScreenRippleAnimation extends StatefulWidget {
     required this.primaryColor,
     required this.mapReadyCompleter,
     required this.minAnimationCompleter,
+    required this.mapCenteredCompleter,
     required this.startTime,
   });
 
@@ -695,12 +737,13 @@ class _FullScreenRippleAnimationState extends State<_FullScreenRippleAnimation>
   
   // Configurar la lógica para determinar cuándo finalizar la animación
   void _setupAnimationCompletion() {
-    // Combinar los dos completers para saber cuándo podemos remover el overlay
+    // Combinar los tres completers para saber cuándo podemos remover el overlay
     Future.wait([
       widget.mapReadyCompleter.future,
-      widget.minAnimationCompleter.future
+      widget.minAnimationCompleter.future,
+      widget.mapCenteredCompleter.future,
     ]).then((_) {
-      // Una vez que ambos completers están listos, calculamos cuánto tiempo ha pasado
+      // Una vez que todos los completers están listos, calculamos cuánto tiempo ha pasado
       final elapsedTime = DateTime.now().difference(widget.startTime).inMilliseconds;
       
       // Garantizar un tiempo mínimo de animación de 2500ms
@@ -810,11 +853,11 @@ class _FullScreenRippleAnimationState extends State<_FullScreenRippleAnimation>
                     shape: BoxShape.circle,
                     // Usar borde para que el círculo sea más definido
                     border: Border.all(
-                      color: widget.primaryColor,//.withAlpha((circleOpacity * 255).toInt()),
+                      color: widget.primaryColor,//.withOpacity(circleOpacity),
                       width: 6.0, // Borde más grueso
                     ),
                     // Color de relleno más transparente para ver el efecto circular
-                    color: widget.primaryColor//.withAlpha((circleOpacity * 100).toInt()),
+                    color: widget.primaryColor//.withOpacity(circleOpacity * 0.4), // Más transparente para el relleno
                   ),
                 ),
               ),

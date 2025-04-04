@@ -74,7 +74,7 @@ class TLoginForm extends StatelessWidget {
 
                   /// Forget Password
                   TextButton(
-                      onPressed: () => Get.to(() => const ForgetPassword()),
+                      onPressed: () => Get.to(() => const ForgetPassword(), transition: Transition.upToDown),
                       child: const Text(TTexts.forgetPassword)),
                 ],
               ),
@@ -92,7 +92,7 @@ class TLoginForm extends StatelessWidget {
               SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
-                      onPressed: () => Get.to(() => const SignupScreen()),
+                      onPressed: () => Get.to(() => const SignupScreen(), transition: Transition.upToDown),
                       child: Text(TTexts.createAccount))),
               const SizedBox(height: TSizes.spaceBtwSections),
             ],

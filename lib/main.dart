@@ -10,6 +10,7 @@ import 'package:get_storage/get_storage.dart';
 import 'package:runap/Core/service_locator.dart'; // Asegúrate que la ruta es correcta
 import 'package:runap/data/repositories/authentication/authentication_repository.dart'; // Asegúrate que la ruta es correcta
 import 'package:runap/firebase_options.dart'; // Asegúrate que la ruta es correcta
+import 'package:runap/utils/helpers/navigation_helper.dart'; // Importar helper de navegación
 import 'app.dart'; // Asegúrate que la ruta es correcta
 
 // Punto de entrada de la aplicación
@@ -39,7 +40,12 @@ Future<void> main() async {
     ),
   );
 
-  // --- 5. Inicializar Firebase y Repositorio de Autenticación ---
+  // --- 5. Configurar la Transición Personalizada ---
+  // Ya no usamos este método, ahora utilizamos nuestro sistema de navegación personalizado
+  // TNavigationHelper.setupCustomBackTransition();
+  log("Custom Page Transitions Configured");
+
+  // --- 6. Inicializar Firebase y Repositorio de Autenticación ---
   // Es crucial manejar posibles errores durante la inicialización de Firebase.
   try {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform)
@@ -61,14 +67,14 @@ Future<void> main() async {
     //   throw Exception("Firebase could not be initialized.");
   }
 
-  // --- 6. Inicializar Service Locator (si usas uno adicional a GetX) ---
+  // --- 7. Inicializar Service Locator (si usas uno adicional a GetX) ---
   // Aquí configuras otras dependencias (ej: con get_it).
   // Considera si puedes unificar tu estrategia de DI (solo GetX o solo get_it)
   // para simplificar la gestión de dependencias.
   setupServiceLocator();
   log("Service Locator Setup Complete");
 
-  // --- 7. Ejecutar la Aplicación ---
+  // --- 8. Ejecutar la Aplicación ---
   // ¡Importante! Recuerda llamar a FlutterNativeSplash.remove() dentro de tu app
   // (ej. en initState de tu primera pantalla después del login/loading)
   // para ocultar la pantalla de splash.

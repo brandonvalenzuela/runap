@@ -65,6 +65,6 @@ class NavigationController extends GetxController {
     const CalendarScreen(),
     const Test(),
     const SettingsScreen(),
-    DebugScreen(),
+    const DebugScreen(),
   ];
 }

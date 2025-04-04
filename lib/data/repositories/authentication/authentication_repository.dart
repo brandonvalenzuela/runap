@@ -35,10 +35,10 @@ class AuthenticationRepository extends GetxController {
       // If the user is logged in
       if (user.emailVerified) {
         // If the user's email is verified, navigate to the main Navigation Menu
-        Get.offAll(() => const NavigationMenu());
+        Get.offAll(() => const NavigationMenu(), transition: Transition.upToDown);
       } else {
         //If the user's email is not verified, navigate to the VerifyEmailScreen
-        Get.offAll(() => VerifyEmailScreen(email: _auth.currentUser?.email));
+        Get.offAll(() => VerifyEmailScreen(email: _auth.currentUser?.email), transition: Transition.upToDown);
       }
     } else {
       // Local Storage
@@ -47,9 +47,9 @@ class AuthenticationRepository extends GetxController {
       // Check if it's the first time launching the app
       deviceStorage.read('IsFirstTime') != true
           ? Get.offAll(() =>
-              const LoginScreen()) // Redirect to Login Screen if not the first time
+              const LoginScreen(), transition: Transition.upToDown) // Redirect to Login Screen if not the first time
           : Get.offAll(
-              const OnBoardingScreen()); // Redirect to OnBoarding Screen if it's the first time
+              const OnBoardingScreen(), transition: Transition.upToDown); // Redirect to OnBoarding Screen if it's the first time
     }
   }
 
@@ -112,7 +112,7 @@ class AuthenticationRepository extends GetxController {
     } on PlatformException catch (e) {
       throw TExceptions(e.code).message;
     } catch (e) {
-      throw 'Something went wrong. Please try again'; //const TGenericException();
+      throw 'Something went wrong. Please try again';
     }
   }
 
@@ -132,7 +132,7 @@ class AuthenticationRepository extends GetxController {
   Future<void> logout() async {
     try {
       await FirebaseAuth.instance.signOut();
-      Get.offAll(() => const LoginScreen());
+      Get.offAll(() => const LoginScreen(), transition: Transition.upToDown);
     } on FirebaseAuthException catch (e) {
       throw TFirebaseAuthException(e.code).message;
     } on FirebaseException catch (e) {
@@ -142,7 +142,7 @@ class AuthenticationRepository extends GetxController {
     } on PlatformException catch (e) {
       throw TExceptions(e.code).message;
     } catch (e) {
-      throw 'Something went wrong. Please try again'; //const TGenericException();
+      throw 'Something went wrong. Please try again';
     }
   }
 

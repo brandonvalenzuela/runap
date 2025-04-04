@@ -219,7 +219,7 @@ class _HomeScreenState extends State<HomeScreen>
                 turns: _rotateMenuAnimation,
                 child: IconButton(
                   icon: Icon(Icons.menu, color: Colors.black),
-                  onPressed: () => Get.to(() => const ProfileScreen()),
+                  onPressed: () => Get.to(() => const ProfileScreen(), transition: Transition.upToDown),
                 ),
               ),
             ],
@@ -438,7 +438,7 @@ class _HomeScreenState extends State<HomeScreen>
                   Spacer(),
                   IconButton(
                     icon: Icon(Iconsax.map_1, size: 20),
-                    onPressed: () => Get.to(() => MapScreen()),
+                    onPressed: () => Get.to(() => MapScreen(), transition: Transition.upToDown),
                   ),
                 ],
               ),

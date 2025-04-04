@@ -32,7 +32,7 @@ class OnboardingController extends GetxController {
       }
 
       storage.write('IsFirstTime', false);
-      Get.to(LoginScreen());
+      Get.to(() => LoginScreen(), transition: Transition.upToDown);
     } else {
       int page = currentPageIndex.value + 1;
       pageController.jumpToPage(page);

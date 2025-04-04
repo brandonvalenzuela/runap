@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:runap/utils/constants/sizes.dart';
 import 'package:runap/utils/device/device_utility.dart';
+import 'package:runap/utils/helpers/navigation_helper.dart';
+import 'package:runap/utils/helpers/page_transitions.dart';
 
 class TAppBar extends StatelessWidget implements PreferredSizeWidget {
   const TAppBar(
@@ -29,7 +31,7 @@ class TAppBar extends StatelessWidget implements PreferredSizeWidget {
           automaticallyImplyLeading: false,
           leading: showBackArrow
               ? IconButton(
-                  onPressed: () => Get.back(),
+                  onPressed: () => _handleBackButtonPress(context),
                   icon: const Icon(Iconsax.arrow_left))
               : leadingIcon != null
                   ? IconButton(
@@ -38,6 +40,12 @@ class TAppBar extends StatelessWidget implements PreferredSizeWidget {
           title: title,
           actions: actions,
         ));
+  }
+
+  /// Método personalizado para manejar la acción del botón de retroceso
+  void _handleBackButtonPress(BuildContext context) {
+    // Usar nuestro sistema de transiciones personalizado
+    TPageTransitions.back();
   }
 
   @override
