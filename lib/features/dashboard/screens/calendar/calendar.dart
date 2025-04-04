@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/constants/image_strings.dart';
 import 'package:runap/utils/constants/sizes.dart';
 
@@ -113,7 +114,7 @@ class DateHeader extends StatelessWidget {
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: TColors.white,
           ),
         ),
         const Text(
@@ -158,7 +159,7 @@ class WeekdayTracker extends StatelessWidget {
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color: isSelected ? Colors.white.withAlpha(64) : Colors.transparent,
+        color: isSelected ? TColors.white.withAlpha(64) : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -169,18 +170,18 @@ class WeekdayTracker extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: Colors.white.withAlpha(204),
+              color: TColors.white.withAlpha(204),
             ),
           ),
           const SizedBox(height: 4),
           isCompleted
-              ? const Icon(Icons.check, size: 16, color: Colors.white)
+              ? const Icon(Icons.check, size: 16, color: TColors.white)
               : Text(
                   label ?? '',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white.withAlpha(204),
+                    color: TColors.white.withAlpha(204),
                   ),
                 ),
         ],
@@ -204,11 +205,11 @@ class FavoritesCard extends StatelessWidget {
         Container(
           padding: const EdgeInsets.fromLTRB(20, 32, 20, 20),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: TColors.white,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withAlpha(26),
+                color: TColors.black.withAlpha(26),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -221,7 +222,7 @@ class FavoritesCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF555555), // Cambiado a gris oscuro
+                  color: TColors.darkerGrey, // Cambiado a gris oscuro
                 ),
               ),
               const SizedBox(height: 4),
@@ -229,7 +230,7 @@ class FavoritesCard extends StatelessWidget {
                 'Every Friday, share your favorite things',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey,
+                  color: TColors.darkGrey,
                 ),
               ),
               const SizedBox(height: 24),
@@ -239,7 +240,7 @@ class FavoritesCard extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFfff3e0)
+                    color: TColors.secondaryColor
                       .withAlpha(204), // Cambiado a tono claro de la paleta
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -250,12 +251,12 @@ class FavoritesCard extends StatelessWidget {
                       'Have more to share?',
                       style: TextStyle(
                         fontSize: 16,
-                        color: Color(0xFF555555), // Cambiado a gris oscuro
+                        color: TColors.darkGrey, // Cambiado a gris oscuro
                       ),
                     ),
                     Icon(
                       Icons.add,
-                      color: Color(0xFFf78314), // Cambiado a naranja
+                      color: TColors.primaryColor, // Cambiado a naranja
                       size: 24,
                     ),
                   ],
@@ -272,11 +273,11 @@ class FavoritesCard extends StatelessWidget {
             height: 48,
             width: 48,
             decoration: BoxDecoration(
-              color: const Color(0xFFf78314), // Cambiado a naranja
+              color: TColors.primaryColor, // Cambiado a naranja
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withAlpha(26),
+                  color: TColors.black.withAlpha(26),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),
@@ -284,7 +285,7 @@ class FavoritesCard extends StatelessWidget {
             ),
             child: const Icon(
               Icons.check,
-              color: Colors.white,
+              color: TColors.white,
               size: 24,
             ),
           ),
@@ -303,11 +304,11 @@ class ChallengeCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24.0),
       decoration: BoxDecoration(
-        color: const Color(0xFFf78314), // Cambiado a naranja
+        color: TColors.primaryColor, // Cambiado a naranja
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(26),
+            color: TColors.black.withAlpha(26),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -323,7 +324,7 @@ class ChallengeCard extends StatelessWidget {
                 children: const [
                   Icon(
                     Icons.flag,
-                    color: Colors.white,
+                    color: TColors.white,
                     size: 18,
                   ),
                   SizedBox(width: 8),
@@ -332,7 +333,7 @@ class ChallengeCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: Colors.white,
+                      color: TColors.white,
                     ),
                   ),
                 ],
@@ -342,12 +343,12 @@ class ChallengeCard extends StatelessWidget {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(77),
+                  color: TColors.white.withAlpha(77),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
                   Icons.flag,
-                  color: Colors.white,
+                  color: TColors.white,
                   size: 18,
                 ),
               ),
@@ -359,7 +360,7 @@ class ChallengeCard extends StatelessWidget {
             'Daily',
             style: TextStyle(
               fontSize: 18,
-              color: Colors.white,
+              color: TColors.white,
             ),
           ),
           const Text(
@@ -367,7 +368,7 @@ class ChallengeCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: TColors.white,
             ),
           ),
           const SizedBox(height: 8),
@@ -379,13 +380,13 @@ class ChallengeCard extends StatelessWidget {
               height: 80,
               // En lugar de una imagen, usamos un placeholder
               decoration: BoxDecoration(
-                color: Colors.white.withAlpha(55),
+                color: TColors.white.withAlpha(55),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Center(
                 child: Icon(
                   Icons.landscape,
-                  color: Colors.white,
+                  color: TColors.white,
                   size: 48,
                 ),
               ),
@@ -413,7 +414,7 @@ class QuoteCard extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(55),
+            color: TColors.black.withAlpha(55),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -425,7 +426,7 @@ class QuoteCard extends StatelessWidget {
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
-              color: Colors.black.withAlpha(77),
+              color: TColors.black.withAlpha(77),
             ),
           ),
 
@@ -434,7 +435,7 @@ class QuoteCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.black.withAlpha(104),
+                color: TColors.black.withAlpha(104),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const Text(
@@ -442,7 +443,7 @@ class QuoteCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: TColors.white,
                 ),
               ),
             ),
@@ -455,12 +456,12 @@ class QuoteCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: Colors.black.withAlpha(104),
+                color: TColors.black.withAlpha(104),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(
                 Icons.fullscreen,
-                color: Colors.white,
+                color: TColors.white,
                 size: 20,
               ),
             ),

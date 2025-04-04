@@ -6,6 +6,7 @@ import 'package:runap/common/widgets/training/training_card.dart';
 import 'package:runap/features/dashboard/models/dashboard_model.dart';
 import 'package:runap/features/dashboard/viewmodels/training_view_model.dart';
 import 'package:runap/features/map/screen/map.dart';
+import 'package:runap/features/personalization/controllers/user_controller.dart';
 import 'package:runap/features/personalization/screens/profile/profile.dart';
 import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/constants/image_strings.dart';
@@ -159,6 +160,9 @@ class _HomeScreenState extends State<HomeScreen>
     if (!Get.isRegistered<TrainingViewModel>()) {
       Get.put(TrainingViewModel(), permanent: true);
     }
+    
+    // Obtener el controlador de usuario
+    final userController = Get.find<UserController>();
 
     final today = DateTime.now();
 
@@ -177,29 +181,35 @@ class _HomeScreenState extends State<HomeScreen>
                     padding: const EdgeInsets.only(right: TSizes.spaceBtwItems),
                     child: Hero(
                       tag: 'profile-avatar',
-                      child: CircleAvatar(
-                        backgroundImage: AssetImage(TImages.userIcon),
+                      child: Obx(() => CircleAvatar(
+                        backgroundImage: userController.isLoading.value || userController.profilePicture.isEmpty
+                            ? AssetImage(TImages.userIcon) as ImageProvider
+                            : NetworkImage(userController.profilePicture),
                         radius: 25,
-                      ),
+                      )),
                     ),
                   ),
                 ),
-                // Información de usuario con animación
+                // Información de usuario con animación - usando datos reales
                 FadeTransition(
                   opacity: _fadeUserInfoAnimation,
-                  child: Column(
+                  child: Obx(() => Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Text(
-                        'Brandon Valenzuela',
+                        userController.isLoading.value 
+                            ? 'Cargando...' 
+                            : userController.fullName,
                         style: TextStyle(color: Colors.black),
                       ),
                       Text(
-                        'brandonvalenzuela@gmail.com',
+                        userController.isLoading.value 
+                            ? 'Cargando email...' 
+                            : userController.email,
                         style: TextStyle(color: TColors.darkGrey, fontSize: 12),
                       ),
                     ],
-                  ),
+                  )),
                 ),
               ],
             ),
