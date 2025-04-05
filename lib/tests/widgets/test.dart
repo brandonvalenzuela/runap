@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:runap/tests/widgets/skeleton_entry_card.dart';
+import 'package:runap/tests/widgets/skeleton_test_widgets.dart';
 
 class Test extends StatelessWidget {
   const Test({super.key});
@@ -17,8 +19,27 @@ class Test extends StatelessWidget {
   }
 }
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,53 +50,60 @@ class HomePage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header with title and profile button
-              const HeaderWidget(title: 'Your Entries'),
+              _isLoading ? const SkeletonHeaderWidget() : const HeaderWidget(title: 'Your Entries'),
               const SizedBox(height: 16),
 
-              // Stats Card
-              const StatsCardWidget(),
+              _isLoading ? const SkeletonStatsCardWidget() : const StatsCardWidget(),
               const SizedBox(height: 16),
 
-              // Promo Card
-              const PromoCardWidget(
-                title: 'Just For You',
-                subtitle: 'ENDS IN 11:53:59',
-              ),
+              _isLoading
+                  ? const SkeletonPromoCardWidget()
+                  : const PromoCardWidget(
+                      title: 'Just For You',
+                      subtitle: 'ENDS IN 11:53:59',
+                    ),
               const SizedBox(height: 24),
 
-              // Date Header
-              const DateHeaderWidget(
-                day: '28',
-                month: 'MAR',
-                weekday: 'FRIDAY',
-                label: 'Today',
-              ),
+              _isLoading
+                  ? const SkeletonDateHeaderWidget()
+                  : const DateHeaderWidget(
+                      day: '28',
+                      month: 'MAR',
+                      weekday: 'FRIDAY',
+                      label: 'Today',
+                    ),
               const SizedBox(height: 16),
 
-              // Entries List
               Expanded(
-                child: ListView(
-                  children: const [
-                    EntryCardWidget(
-                      iconBackgroundColor: Color(0xFFfff3e0),
-                      iconColor: Color(0xFFfdd884),
-                      title: 'Daily Reflection',
-                      time: '11:26 AM',
-                      content:
-                          'My signature flavor of ice cream would be melon.',
-                    ),
-                    SizedBox(height: 16),
-                    EntryCardWidget(
-                      iconBackgroundColor: Color(0xFFF2F3F7),
-                      iconColor: Color(0xFF8E8E93),
-                      title: 'Nota de prueba 2',
-                      time: '11:24 AM',
-                      content: 'Nota de prueba 2',
-                      tags: ['weather', 'blessed'],
-                    ),
-                  ],
-                ),
+                child: _isLoading
+                    ? ListView.builder(
+                        itemCount: 3,
+                        itemBuilder: (context, index) => Padding(
+                          padding: const EdgeInsets.only(bottom: 16.0),
+                          child: const SkeletonEntryCardWidget(),
+                        ),
+                      )
+                    : ListView(
+                        children: const [
+                          EntryCardWidget(
+                            iconBackgroundColor: Color(0xFFfff3e0),
+                            iconColor: Color(0xFFfdd884),
+                            title: 'Daily Reflection',
+                            time: '11:26 AM',
+                            content:
+                                'My signature flavor of ice cream would be melon.',
+                          ),
+                          SizedBox(height: 16),
+                          EntryCardWidget(
+                            iconBackgroundColor: Color(0xFFF2F3F7),
+                            iconColor: Color(0xFF8E8E93),
+                            title: 'Nota de prueba 2',
+                            time: '11:24 AM',
+                            content: 'Nota de prueba 2',
+                            tags: ['weather', 'blessed'],
+                          ),
+                        ],
+                      ),
               ),
             ],
           ),
@@ -91,7 +119,6 @@ class HomePage extends StatelessWidget {
   }
 }
 
-// Widget para el encabezado
 class HeaderWidget extends StatelessWidget {
   final String title;
 
@@ -131,7 +158,6 @@ class HeaderWidget extends StatelessWidget {
   }
 }
 
-// Widget para la tarjeta de estadísticas
 class StatsCardWidget extends StatelessWidget {
   const StatsCardWidget({super.key});
 
@@ -162,7 +188,6 @@ class StatsCardWidget extends StatelessWidget {
   }
 }
 
-// Widget para el elemento de estadística individual
 class StatItemWidget extends StatelessWidget {
   final String number;
   final String label;
@@ -198,7 +223,6 @@ class StatItemWidget extends StatelessWidget {
   }
 }
 
-// Widget para la tarjeta promocional
 class PromoCardWidget extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -218,7 +242,7 @@ class PromoCardWidget extends StatelessWidget {
           colors: [
             Color(0xFFf78314),
             Color(0xFFfbc05e),
-          ], //[Color(0xFFEF7A85), Color(0xFFEC6B76)],
+          ],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
@@ -284,7 +308,6 @@ class PromoCardWidget extends StatelessWidget {
   }
 }
 
-// Widget para el encabezado de fecha
 class DateHeaderWidget extends StatelessWidget {
   final String day;
   final String month;
@@ -364,7 +387,6 @@ class DateHeaderWidget extends StatelessWidget {
   }
 }
 
-// Widget para la tarjeta de entrada
 class EntryCardWidget extends StatelessWidget {
   final Color iconBackgroundColor;
   final Color iconColor;
@@ -463,7 +485,6 @@ class EntryCardWidget extends StatelessWidget {
   }
 }
 
-// Widget para las etiquetas
 class TagWidget extends StatelessWidget {
   final String label;
 

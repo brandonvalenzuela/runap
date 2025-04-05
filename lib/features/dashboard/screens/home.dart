@@ -11,6 +11,9 @@ import 'package:runap/features/personalization/screens/profile/profile.dart';
 import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/constants/image_strings.dart';
 import 'package:runap/utils/constants/sizes.dart';
+import 'package:runap/common/widgets/loaders/skeleton_loader.dart';
+import 'package:runap/common/widgets/training/skeleton_training_card.dart';
+import 'package:shimmer/shimmer.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -181,12 +184,15 @@ class _HomeScreenState extends State<HomeScreen>
                     padding: const EdgeInsets.only(right: TSizes.spaceBtwItems),
                     child: Hero(
                       tag: 'profile-avatar',
-                      child: Obx(() => CircleAvatar(
-                        backgroundImage: userController.isLoading.value || userController.profilePicture.isEmpty
-                            ? AssetImage(TImages.userIcon) as ImageProvider
-                            : NetworkImage(userController.profilePicture),
-                        radius: 25,
-                      )),
+                      child: Obx(() => userController.isLoading.value
+                        ? const SkeletonCircle(radius: 25)
+                        : CircleAvatar(
+                          backgroundImage: userController.profilePicture.isEmpty
+                              ? AssetImage(TImages.userIcon) as ImageProvider
+                              : NetworkImage(userController.profilePicture),
+                          radius: 25,
+                        )
+                      ),
                     ),
                   ),
                 ),
@@ -196,18 +202,19 @@ class _HomeScreenState extends State<HomeScreen>
                   child: Obx(() => Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(
-                        userController.isLoading.value 
-                            ? 'Cargando...' 
-                            : userController.fullName,
-                        style: TextStyle(color: Colors.black),
-                      ),
-                      Text(
-                        userController.isLoading.value 
-                            ? 'Cargando email...' 
-                            : userController.email,
-                        style: TextStyle(color: TColors.darkGrey, fontSize: 12),
-                      ),
+                      userController.isLoading.value
+                          ? const SkeletonWidget(height: 16, width: 150)
+                          : Text(
+                              userController.fullName,
+                              style: TextStyle(color: Colors.black),
+                            ),
+                      const SizedBox(height: 4),
+                      userController.isLoading.value
+                          ? const SkeletonWidget(height: 12, width: 200)
+                          : Text(
+                              userController.email,
+                              style: TextStyle(color: TColors.darkGrey, fontSize: 12),
+                            ),
                     ],
                   )),
                 ),
@@ -229,26 +236,42 @@ class _HomeScreenState extends State<HomeScreen>
         ),
       ),
       body: GetBuilder<TrainingViewModel>(
+        init: TrainingViewModel(),
         builder: (viewModel) {
-          final todaySessions = viewModel
-                  .trainingData?.dashboard.nextWeekSessions
-                  .where((session) => isSameDay(session.sessionDate, today))
-                  .toList() ??
-              [];
+          final today = DateTime.now();
+          // Obtener sesiones para hoy (opcional, si solo quieres mostrar las de hoy)
+          // final todaySessions = viewModel
+          //         .trainingData?.dashboard.nextWeekSessions
+          //         .where((session) => isSameDay(session.sessionDate, today))
+          //         .toList() ??
+          //     [];
 
-          if (viewModel.status == LoadingStatus.loading &&
-              viewModel.trainingData == null) {
-            return const Center(child: CircularProgressIndicator());
+          if (viewModel.status == LoadingStatus.loading && viewModel.trainingData == null) {
+            // Mostrar skeleton loader para la lista de tarjetas
+            return _buildSkeletonList();
           } else if (viewModel.status == LoadingStatus.error) {
             return _buildErrorView(context, viewModel);
-          } else if (viewModel.trainingData != null) {
+          } else if (viewModel.trainingData != null && viewModel.trainingData!.dashboard.nextWeekSessions.isNotEmpty) {
+            // Construir la lista de tarjetas reales si hay datos
             return _buildHomeContent(context, viewModel);
           } else {
+            // Mensaje cuando no hay datos o la lista está vacía
             return const Center(
-                child: Text('No hay datos de entrenamiento disponibles'));
+              child: Text('No hay entrenamientos programados.'),
+            );
           }
         },
       ),
+    );
+  }
+
+  Widget _buildSkeletonList() {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: TSizes.spaceBtwItems),
+      itemCount: 5, // Mostrar 5 esqueletos mientras carga
+      itemBuilder: (context, index) {
+        return const SkeletonTrainingCard();
+      },
     );
   }
 
@@ -271,22 +294,10 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildHomeContent(BuildContext context, TrainingViewModel viewModel) {
     final dashboard = viewModel.trainingData!.dashboard;
     List<Session> sessions = List.from(dashboard.nextWeekSessions);
-    if (sessions.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('No hay sesiones programadas para esta semana'),
-            SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => viewModel.loadDashboardData(forceRefresh: true),
-              child: Text('Actualizar'),
-            ),
-          ],
-        ),
-      );
-    }
+    final userController = Get.find<UserController>(); // Obtener userController aquí si es necesario
 
+    // No es necesario verificar si sessions está vacía aquí porque ya se hizo en el builder principal
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -305,6 +316,11 @@ class _HomeScreenState extends State<HomeScreen>
                 duration: const Duration(milliseconds: 900),
                 curve: Curves.easeOutSine,
                 builder: (context, value, child) {
+                  // Skeleton para el Header si viewModel está cargando
+                  if (viewModel.status == LoadingStatus.loading) {
+                    return _buildHeaderSkeleton(context);
+                  }
+                  // Contenido real del Header
                   return Container(
                     padding: const EdgeInsets.all(TSizes.md),
                     decoration: BoxDecoration(
@@ -457,6 +473,7 @@ class _HomeScreenState extends State<HomeScreen>
               final isPast = session.sessionDate.isBefore(DateTime.now());
               final isToday = isSameDay(session.sessionDate, DateTime.now());
 
+              // Aquí usamos la TrainingCard real
               return SlideTransition(
                 position: index < _slideAnimations.length
                     ? _slideAnimations[index]
@@ -502,6 +519,50 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildHeaderSkeleton(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: Container(
+        padding: const EdgeInsets.all(TSizes.md),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const SkeletonCircle(radius: 12),
+                    const SizedBox(width: TSizes.sm),
+                    const SkeletonWidget(height: 16, width: 100),
+                  ],
+                ),
+                const SkeletonWidget(height: 28, width: 80, borderRadius: 16),
+              ],
+            ),
+            const SizedBox(height: TSizes.sm),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const SkeletonWidget(height: 14, width: 120),
+                const SkeletonWidget(height: 14, width: 100),
+              ],
+            ),
+            const SizedBox(height: TSizes.sm),
+            const SkeletonWidget(height: 8, width: double.infinity),
+            const SizedBox(height: TSizes.xs),
+            const SkeletonWidget(height: 12, width: 250),
+          ],
+        ),
+      ),
     );
   }
 

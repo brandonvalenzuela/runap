@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:runap/features/dashboard/screens/calendar/widgets/skeleton_calendar_widgets.dart';
 import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/constants/image_strings.dart';
 import 'package:runap/utils/constants/sizes.dart';
@@ -19,8 +20,28 @@ class CalendarScreen extends StatelessWidget {
   }
 }
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Simular carga con 1.5 segundos
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,42 +56,60 @@ class HomePage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Sección "Today" con fecha
-              const Padding(
-                padding: EdgeInsets.symmetric(
+              Padding(
+                padding: const EdgeInsets.symmetric(
                   horizontal: TSizes.defaultSpace,
                   vertical: TSizes.spaceBtwItems,
                 ),
-                child: DateHeader(),
+                child: _isLoading ? const SkeletonDateHeader() : const DateHeader(),
               ),
 
               // Días de la semana con checkmarks
-              const WeekdayTracker(),
+              _isLoading ? const SkeletonWeekdayTracker() : const WeekdayTracker(),
 
               // Contenido desplazable (tarjetas)
               Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.all(TSizes.defaultSpace),
-                  children: const [
-                    SizedBox(height: TSizes.spaceBtwItems),
+                child: _isLoading
+                    ? _buildCalendarSkeletonList()
+                    : ListView(
+                        padding: const EdgeInsets.all(TSizes.defaultSpace),
+                        children: const [
+                          SizedBox(height: TSizes.spaceBtwItems),
 
-                    // Tarjeta de Favoritos
-                    FavoritesCard(),
-                    SizedBox(height: TSizes.spaceBtwItems),
+                          // Tarjeta de Favoritos
+                          FavoritesCard(),
+                          SizedBox(height: TSizes.spaceBtwItems),
 
-                    // Tarjeta de Desafío Diario
-                    ChallengeCard(),
-                    SizedBox(height: TSizes.spaceBtwItems),
+                          // Tarjeta de Desafío Diario
+                          ChallengeCard(),
+                          SizedBox(height: TSizes.spaceBtwItems),
 
-                    // Tarjeta de Imagen con Cita
-                    QuoteCard(),
-                    SizedBox(height: TSizes.spaceBtwItems),
-                  ],
-                ),
+                          // Tarjeta de Imagen con Cita
+                          QuoteCard(),
+                          SizedBox(height: TSizes.spaceBtwItems),
+                        ],
+                      ),
               ),
             ],
           ),
         ],
       ),
+    );
+  }
+
+  // Widget para mostrar la lista de esqueletos
+  Widget _buildCalendarSkeletonList() {
+    return ListView(
+      padding: const EdgeInsets.all(TSizes.defaultSpace),
+      children: const [
+        SizedBox(height: TSizes.spaceBtwItems),
+        SkeletonFavoritesCard(),
+        SizedBox(height: TSizes.spaceBtwItems),
+        SkeletonChallengeCard(),
+        SizedBox(height: TSizes.spaceBtwItems),
+        SkeletonQuoteCard(),
+        SizedBox(height: TSizes.spaceBtwItems),
+      ],
     );
   }
 }
@@ -190,7 +229,6 @@ class WeekdayTracker extends StatelessWidget {
   }
 }
 
-// Widget de la tarjeta de Favoritos
 // Widget de la tarjeta de Favoritos
 class FavoritesCard extends StatelessWidget {
   const FavoritesCard({super.key});

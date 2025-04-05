@@ -53,6 +53,7 @@ dependencies:
 
   # Local Storage
   shared_preferences: ^2.5.2
+  shimmer: ^3.0.0
 
   #----------------- ./ PACKAGES END ---------------------#
   

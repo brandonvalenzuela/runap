@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:runap/common/widgets/loaders/skeleton_loader.dart';
 import 'package:runap/utils/constants/sizes.dart';
 
 class TProfileMenu extends StatelessWidget {
@@ -9,16 +10,18 @@ class TProfileMenu extends StatelessWidget {
     required this.title,
     required this.value,
     this.icon = Iconsax.arrow_right_34,
+    this.skeleton = false,
   });
 
   final IconData icon;
   final VoidCallback onPressed;
   final String title, value;
+  final bool skeleton;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onPressed,
+      onTap: skeleton ? null : onPressed,
       child: Padding(
         padding:
             const EdgeInsets.symmetric(vertical: TSizes.spaceBtwItems / 1.5),
@@ -31,10 +34,14 @@ class TProfileMenu extends StatelessWidget {
                     overflow: TextOverflow.ellipsis)),
             Expanded(
                 flex: 5,
-                child: Text(value,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    overflow: TextOverflow.ellipsis)),
-            Expanded(child: Icon(icon, size: 18)),
+                child: skeleton
+                    ? const SkeletonWidget(height: 16, width: double.infinity)
+                    : Text(value,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                        overflow: TextOverflow.ellipsis)),
+            skeleton
+                ? const SizedBox(width: 18) // Placeholder for icon
+                : Expanded(child: Icon(icon, size: 18)),
           ],
         ),
       ),
