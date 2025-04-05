@@ -9,10 +9,10 @@ import 'package:runap/features/map/screen/map.dart';
 import 'package:runap/features/personalization/controllers/user_controller.dart';
 import 'package:runap/features/personalization/screens/profile/profile.dart';
 import 'package:runap/utils/constants/colors.dart';
-import 'package:runap/utils/constants/image_strings.dart';
 import 'package:runap/utils/constants/sizes.dart';
 import 'package:runap/common/widgets/loaders/skeleton_loader.dart';
 import 'package:runap/common/widgets/training/skeleton_training_card.dart';
+import 'package:runap/common/widgets/headers/user_profile_header.dart';
 import 'package:shimmer/shimmer.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -175,61 +175,15 @@ class _HomeScreenState extends State<HomeScreen>
         child: FadeTransition(
           opacity: _fadeAppBarAnimation,
           child: AppBar(
-            title: Row(
-              children: <Widget>[
-                // Avatar con animación
-                SlideTransition(
-                  position: _slideAvatarAnimation,
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: TSizes.spaceBtwItems),
-                    child: Hero(
-                      tag: 'profile-avatar',
-                      child: Obx(() => userController.isLoading.value
-                        ? const SkeletonCircle(radius: 25)
-                        : CircleAvatar(
-                          backgroundImage: userController.profilePicture.isEmpty
-                              ? AssetImage(TImages.userIcon) as ImageProvider
-                              : NetworkImage(userController.profilePicture),
-                          radius: 25,
-                        )
-                      ),
-                    ),
-                  ),
-                ),
-                // Información de usuario con animación - usando datos reales
-                FadeTransition(
-                  opacity: _fadeUserInfoAnimation,
-                  child: Obx(() => Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      userController.isLoading.value
-                          ? const SkeletonWidget(height: 16, width: 150)
-                          : Text(
-                              userController.fullName,
-                              style: TextStyle(color: Colors.black),
-                            ),
-                      const SizedBox(height: 4),
-                      userController.isLoading.value
-                          ? const SkeletonWidget(height: 12, width: 200)
-                          : Text(
-                              userController.email,
-                              style: TextStyle(color: TColors.darkGrey, fontSize: 12),
-                            ),
-                    ],
-                  )),
-                ),
-              ],
-            ),
-            actions: <Widget>[
-              // Botón de menú con animación
-              RotationTransition(
-                turns: _rotateMenuAnimation,
-                child: IconButton(
-                  icon: Icon(Icons.menu, color: Colors.black),
-                  onPressed: () => Get.to(() => const ProfileScreen(), transition: Transition.upToDown),
+            title: SlideTransition(
+              position: _slideAvatarAnimation,
+              child: FadeTransition(
+                opacity: _fadeUserInfoAnimation,
+                child: UserProfileHeader(
+                  onAvatarTap: () => Get.to(() => const ProfileScreen(), transition: Transition.upToDown),
                 ),
               ),
-            ],
+            ),
             backgroundColor: Colors.transparent,
             elevation: 0,
           ),

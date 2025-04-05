@@ -19,8 +19,14 @@ class LoginController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    email.text = localStorage.read('REMEMBER_ME_EMAIL') ?? '';
-    password.text = localStorage.read('REMEMBER_ME_PASSWORD') ?? '';
+    // Recuperar el estado de rememberMe
+    rememberMe.value = localStorage.read('REMEMBER_ME_STATUS') ?? false;
+    
+    // Solo cargar credenciales si rememberMe está activado
+    if (rememberMe.value) {
+      email.text = localStorage.read('REMEMBER_ME_EMAIL') ?? '';
+      password.text = localStorage.read('REMEMBER_ME_PASSWORD') ?? '';
+    }
   }
 
   /// -- Email and Password SignIn
@@ -48,10 +54,17 @@ class LoginController extends GetxController {
         return;
       }
 
+      // Guardar el estado de Remember Me
+      localStorage.write('REMEMBER_ME_STATUS', rememberMe.value);
+      
       // Save Data if Remember Me is selected
       if (rememberMe.value) {
         localStorage.write('REMEMBER_ME_EMAIL', email.text.trim());
         localStorage.write('REMEMBER_ME_PASSWORD', password.text.trim());
+      } else {
+        // Eliminar datos guardados si Remember Me no está seleccionado
+        localStorage.remove('REMEMBER_ME_EMAIL');
+        localStorage.remove('REMEMBER_ME_PASSWORD');
       }
 
       // Login user using EMail & Password Authentication

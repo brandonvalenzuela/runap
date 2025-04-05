@@ -15,7 +15,7 @@ class TLoginForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(LoginController());
+    final controller = Get.find<LoginController>();
     return Form(
         key: controller.loginFormKey,
         child: Padding(
@@ -65,8 +65,16 @@ class TLoginForm extends StatelessWidget {
                       Obx(
                         () => Checkbox(
                             value: controller.rememberMe.value,
-                            onChanged: (value) => controller.rememberMe.value =
-                                !controller.rememberMe.value),
+                            onChanged: (value) {
+                              controller.rememberMe.value = !controller.rememberMe.value;
+                              // Guardar el estado actual de Remember Me
+                              controller.localStorage.write('REMEMBER_ME_STATUS', controller.rememberMe.value);
+                              // Si se desactiva, eliminar datos guardados
+                              if (!controller.rememberMe.value) {
+                                controller.localStorage.remove('REMEMBER_ME_EMAIL');
+                                controller.localStorage.remove('REMEMBER_ME_PASSWORD');
+                              }
+                            }),
                       ),
                       const Text(TTexts.rememberMe),
                     ],

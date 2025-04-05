@@ -132,6 +132,10 @@ class AuthenticationRepository extends GetxController {
   Future<void> logout() async {
     try {
       await FirebaseAuth.instance.signOut();
+      
+      // No eliminar credenciales guardadas al cerrar sesión
+      // Si el usuario tiene rememberMe desactivado, ya se habrán eliminado en login_controller
+      
       Get.offAll(() => const LoginScreen(), transition: Transition.upToDown);
     } on FirebaseAuthException catch (e) {
       throw TFirebaseAuthException(e.code).message;

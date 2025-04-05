@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:runap/common/styles/spacing_styles.dart';
 import 'package:runap/common/widgets/login_signup/form_divider.dart';
 import 'package:runap/common/widgets/login_signup/social_buttons.dart';
+import 'package:runap/features/authentication/controllers/login/login_controller.dart';
 import 'package:runap/features/authentication/screens/login/widgets/login_form.dart';
 import 'package:runap/features/authentication/screens/login/widgets/login_header.dart';
 import 'package:runap/utils/constants/sizes.dart';
@@ -23,6 +25,10 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
+    
+    // Inicializar el controlador de inicio de sesión
+    Get.put(LoginController());
+    
     _controller = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
@@ -51,6 +57,7 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void dispose() {
     _controller.dispose();
+    Get.delete<LoginController>();
     super.dispose();
   }
 

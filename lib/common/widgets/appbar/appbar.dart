@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:runap/utils/constants/sizes.dart';
 import 'package:runap/utils/device/device_utility.dart';
-import 'package:runap/utils/helpers/navigation_helper.dart';
 import 'package:runap/utils/helpers/page_transitions.dart';
 
 class TAppBar extends StatelessWidget implements PreferredSizeWidget {
