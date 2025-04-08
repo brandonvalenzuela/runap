@@ -14,6 +14,7 @@ import 'package:runap/common/widgets/loaders/skeleton_loader.dart';
 import 'package:runap/common/widgets/training/skeleton_training_card.dart';
 import 'package:runap/common/widgets/headers/user_profile_header.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -35,8 +36,6 @@ class _HomeScreenState extends State<HomeScreen>
   late Animation<Offset> _slideHeaderAnimation;
   late Animation<double> _fadeProgressAnimation;
   late Animation<double> _fadeTitleAnimation;
-  late List<Animation<double>> _animations;
-  late List<Animation<Offset>> _slideAnimations;
 
   @override
   void initState() {
@@ -112,42 +111,6 @@ class _HomeScreenState extends State<HomeScreen>
       ),
     );
 
-    // Crear animaciones para cada tarjeta con efecto de desvanecimiento más suave
-    _animations = List.generate(10, (index) {
-      final double startValue = 0.4 + (index * 0.05);
-      final double endValue = min(startValue + 0.2, 1.0);
-
-      return Tween<double>(begin: 0.0, end: 1.0).animate(
-        CurvedAnimation(
-          parent: _controller,
-          curve: Interval(
-            startValue,
-            endValue,
-            curve: Curves.easeInOut,
-          ),
-        ),
-      );
-    });
-
-    _slideAnimations = List.generate(10, (index) {
-      final double startValue = 0.4 + (index * 0.05);
-      final double endValue = min(startValue + 0.2, 1.0);
-
-      return Tween<Offset>(
-        begin: const Offset(0.3, 0.0),
-        end: Offset.zero,
-      ).animate(
-        CurvedAnimation(
-          parent: _controller,
-          curve: Interval(
-            startValue,
-            endValue,
-            curve: Curves.easeOutQuad,
-          ),
-        ),
-      );
-    });
-
     // Iniciar la animación
     _controller.forward();
   }
@@ -160,14 +123,8 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    if (!Get.isRegistered<TrainingViewModel>()) {
-      Get.put(TrainingViewModel(), permanent: true);
-    }
-    
     // Obtener el controlador de usuario
     final userController = Get.find<UserController>();
-
-    final today = DateTime.now();
 
     return Scaffold(
       appBar: PreferredSize(
@@ -180,7 +137,8 @@ class _HomeScreenState extends State<HomeScreen>
               child: FadeTransition(
                 opacity: _fadeUserInfoAnimation,
                 child: UserProfileHeader(
-                  onAvatarTap: () => Get.to(() => const ProfileScreen(), transition: Transition.upToDown),
+                  onAvatarTap: () => Get.to(() => const ProfileScreen(),
+                      transition: Transition.upToDown),
                 ),
               ),
             ),
@@ -200,12 +158,14 @@ class _HomeScreenState extends State<HomeScreen>
           //         .toList() ??
           //     [];
 
-          if (viewModel.status == LoadingStatus.loading && viewModel.trainingData == null) {
+          if (viewModel.status == LoadingStatus.loading &&
+              viewModel.trainingData == null) {
             // Mostrar skeleton loader para la lista de tarjetas
-            return _buildSkeletonList();
+            return _buildSkeletonList(context);
           } else if (viewModel.status == LoadingStatus.error) {
             return _buildErrorView(context, viewModel);
-          } else if (viewModel.trainingData != null && viewModel.trainingData!.dashboard.nextWeekSessions.isNotEmpty) {
+          } else if (viewModel.trainingData != null &&
+              viewModel.trainingData!.dashboard.nextWeekSessions.isNotEmpty) {
             // Construir la lista de tarjetas reales si hay datos
             return _buildHomeContent(context, viewModel);
           } else {
@@ -219,10 +179,25 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildSkeletonList() {
+  Widget _buildSkeletonList(BuildContext context) {
+    // Estimación de la altura de cada skeleton + margen inferior
+    const double estimatedItemHeight = 118.0; // Ajusta este valor si es necesario (ej: altura SkeletonTrainingCard + TSizes.sm)
+
+    // Obtener la altura disponible (altura pantalla - altura AppBar - padding superior/inferior)
+    final screenHeight = MediaQuery.of(context).size.height;
+    final appBarHeight = kToolbarHeight; // Altura estándar del AppBar
+    final paddingTop = MediaQuery.of(context).padding.top;
+    final paddingBottom = MediaQuery.of(context).padding.bottom;
+    // Considerar también el padding horizontal del ListView y el espacio sobre la lista si aplica.
+    // Por simplicidad, calculamos basado en la altura vertical principal.
+    final availableHeight = screenHeight - appBarHeight - paddingTop - paddingBottom;
+
+    // Calcular cuántos items caben, asegurando al menos 1
+    final itemCount = max(1, (availableHeight / estimatedItemHeight).ceil());
+
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: TSizes.spaceBtwItems),
-      itemCount: 5, // Mostrar 5 esqueletos mientras carga
+      itemCount: itemCount, // Usar el valor calculado
       itemBuilder: (context, index) {
         return const SkeletonTrainingCard();
       },
@@ -248,231 +223,234 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildHomeContent(BuildContext context, TrainingViewModel viewModel) {
     final dashboard = viewModel.trainingData!.dashboard;
     List<Session> sessions = List.from(dashboard.nextWeekSessions);
-    final userController = Get.find<UserController>(); // Obtener userController aquí si es necesario
-
     // No es necesario verificar si sessions está vacía aquí porque ya se hizo en el builder principal
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header con información de entrenamiento - con animación
-        SlideTransition(
-          position: _slideHeaderAnimation,
-          child: FadeTransition(
-            opacity: _fadeHeaderAnimation,
-            child: Padding(
-              padding: const EdgeInsets.only(
-                  top: TSizes.defaultSpace,
-                  right: TSizes.spaceBtwItems,
-                  left: TSizes.spaceBtwItems),
-              child: TweenAnimationBuilder<double>(
-                tween: Tween<double>(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 900),
-                curve: Curves.easeOutSine,
-                builder: (context, value, child) {
-                  // Skeleton para el Header si viewModel está cargando
-                  if (viewModel.status == LoadingStatus.loading) {
-                    return _buildHeaderSkeleton(context);
-                  }
-                  // Contenido real del Header
-                  return Container(
-                    padding: const EdgeInsets.all(TSizes.md),
-                    decoration: BoxDecoration(
-                      color: TColors.primaryColor.withAlpha(25),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05 * value),
-                          blurRadius: 15 * value,
-                          offset: Offset(0, 5 * value),
-                          spreadRadius: 3 * value,
-                        ),
-                      ],
+        _buildDashboardHeader(context, viewModel),
+        _buildUpcomingSessionsTitle(context),
+        _buildSessionsList(context, sessions),
+      ],
+    );
+  }
+
+  Widget _buildDashboardHeader(BuildContext context, TrainingViewModel viewModel) {
+    final dashboard = viewModel.trainingData!.dashboard;
+    
+    return SlideTransition(
+      position: _slideHeaderAnimation,
+      child: FadeTransition(
+        opacity: _fadeHeaderAnimation,
+        child: Padding(
+          padding: const EdgeInsets.only(
+              top: TSizes.defaultSpace,
+              right: TSizes.spaceBtwItems,
+              left: TSizes.spaceBtwItems),
+          child: TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0.0, end: 1.0),
+            duration: const Duration(milliseconds: 900),
+            curve: Curves.easeOutSine,
+            builder: (context, value, child) {
+              // Skeleton para el Header si viewModel está cargando
+              if (viewModel.status == LoadingStatus.loading) {
+                return _buildHeaderSkeleton(context);
+              }
+              // Contenido real del Header
+              return Container(
+                padding: const EdgeInsets.all(TSizes.md),
+                decoration: BoxDecoration(
+                  color: TColors.primaryColor.withAlpha(25),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05 * value),
+                      blurRadius: 15 * value,
+                      offset: Offset(0, 5 * value),
+                      spreadRadius: 3 * value,
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Tipo de carrera y semanas restantes
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Tipo de carrera y semanas restantes
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.directions_run,
-                                    color: TColors.primaryColor),
-                                const SizedBox(width: TSizes.sm),
-                                Text(
-                                  dashboard.raceType,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                ),
-                              ],
-                            ),
-                            Container(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: TColors.primaryColor,
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Text(
-                                '${dashboard.weeksToRace} semanas',
-                                style: TextStyle(
-                                    color: TColors.white, fontSize: 12),
-                              ),
+                            const Icon(Icons.directions_run,
+                                color: TColors.primaryColor),
+                            const SizedBox(width: TSizes.sm),
+                            Text(
+                              dashboard.raceType,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: TSizes.sm),
-
-                        // Ritmo objetivo y tiempo meta
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            _buildInfoItem(context, 'Ritmo objetivo:',
-                                dashboard.targetPace),
-                            _buildInfoItem(
-                                context, 'Tiempo meta:', dashboard.goalTime),
-                          ],
-                        ),
-                        const SizedBox(height: TSizes.sm),
-
-                        // Barra de progreso con animación propia
-                        FadeTransition(
-                          opacity: _fadeProgressAnimation,
-                          child: TweenAnimationBuilder<double>(
-                            tween: Tween<double>(
-                                begin: 0.0,
-                                end: dashboard.completionRate / 100),
-                            duration: const Duration(milliseconds: 1800),
-                            curve: Curves.easeOutQuad,
-                            builder: (context, value, child) {
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  LinearProgressIndicator(
-                                    value: value,
-                                    minHeight: 8,
-                                    backgroundColor: TColors.grey,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                        TColors.primaryColor),
-                                  ),
-                                  const SizedBox(height: TSizes.xs),
-                                  Text(
-                                    '${dashboard.completedSessions} de ${dashboard.totalSessions} sesiones completadas (${dashboard.completionRate}%)',
-                                    style: TextStyle(
-                                        fontSize: 12, color: TColors.darkGrey),
-                                  ),
-                                ],
-                              );
-                            },
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: TColors.primaryColor,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            '${dashboard.weeksToRace} semanas',
+                            style: TextStyle(
+                                color: TColors.white, fontSize: 12),
                           ),
                         ),
                       ],
                     ),
-                  );
-                },
-              ),
-            ),
-          ),
-        ),
+                    const SizedBox(height: TSizes.sm),
 
-        // Título de sección con animación
-        FadeTransition(
-          opacity: _fadeTitleAnimation,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(1.0, 0.0),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(
-                parent: _controller,
-                curve: const Interval(0.3, 0.4, curve: Curves.easeOut),
-              ),
-            ),
-            child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: TSizes.spaceBtwItems),
-              child: Row(
-                children: [
-                  Text(
-                    "Próximos entrenamientos",
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  Spacer(),
-                  IconButton(
-                    icon: Icon(Iconsax.map_1, size: 20),
-                    onPressed: () => Get.to(() => MapScreen(), transition: Transition.upToDown),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+                    // Ritmo objetivo y tiempo meta
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildInfoItem(context, 'Ritmo objetivo:',
+                            dashboard.targetPace),
+                        _buildInfoItem(
+                            context, 'Tiempo meta:', dashboard.goalTime),
+                      ],
+                    ),
+                    const SizedBox(height: TSizes.sm),
 
-        // Lista de sesiones con animaciones
-        Expanded(
-          child: ListView.builder(
-            padding:
-                const EdgeInsets.symmetric(horizontal: TSizes.spaceBtwItems),
-            itemCount: sessions.length,
-            itemBuilder: (context, index) {
-              final session = sessions[index];
-              final isPast = session.sessionDate.isBefore(DateTime.now());
-              final isToday = isSameDay(session.sessionDate, DateTime.now());
-
-              // Aquí usamos la TrainingCard real
-              return SlideTransition(
-                position: index < _slideAnimations.length
-                    ? _slideAnimations[index]
-                    : _slideAnimations.last,
-                child: FadeTransition(
-                  opacity: index < _animations.length
-                      ? _animations[index]
-                      : _animations.last,
-                  child: TweenAnimationBuilder<double>(
-                    tween: Tween<double>(begin: 0.0, end: 1.0),
-                    duration: const Duration(milliseconds: 900),
-                    curve: Curves.easeOutSine,
-                    builder: (context, value, child) {
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: TSizes.sm),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.08 * value),
-                              blurRadius: 15 * value,
-                              offset: Offset(0, 5 * value),
-                              spreadRadius: 2 * value,
-                            ),
-                          ],
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.only(
-                            bottom: TSizes.sm,
-                          ),
-                          child: TrainingCard(
-                            session: session,
-                            showBorder: true,
-                            isPast: isPast,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                    // Barra de progreso con animación propia
+                    FadeTransition(
+                      opacity: _fadeProgressAnimation,
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween<double>(
+                            begin: 0.0,
+                            end: dashboard.completionRate / 100),
+                        duration: const Duration(milliseconds: 1800),
+                        curve: Curves.easeOutQuad,
+                        builder: (context, value, child) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              LinearProgressIndicator(
+                                value: value,
+                                minHeight: 8,
+                                backgroundColor: TColors.grey,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    TColors.primaryColor),
+                              ),
+                              const SizedBox(height: TSizes.xs),
+                              Text(
+                                '${dashboard.completedSessions} de ${dashboard.totalSessions} sesiones completadas (${dashboard.completionRate}%)',
+                                style: TextStyle(
+                                    fontSize: 12, color: TColors.darkGrey),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               );
             },
           ),
         ),
-      ],
+      ),
+    );
+  }
+
+  Widget _buildUpcomingSessionsTitle(BuildContext context) {
+    return FadeTransition(
+      opacity: _fadeTitleAnimation,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(1.0, 0.0),
+          end: Offset.zero,
+        ).animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: const Interval(0.3, 0.4, curve: Curves.easeOut),
+          ),
+        ),
+        child: Padding(
+          padding:
+              const EdgeInsets.symmetric(horizontal: TSizes.spaceBtwItems),
+          child: Row(
+            children: [
+              Text(
+                "Próximos entrenamientos",
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              Spacer(),
+              IconButton(
+                icon: Icon(Iconsax.map_1, size: 20),
+                onPressed: () => Get.to(() => MapScreen(), transition: Transition.upToDown),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSessionsList(BuildContext context, List<Session> sessions) {
+    return Expanded(
+      child: AnimationLimiter(
+        child: ListView.builder(
+          padding:
+              const EdgeInsets.symmetric(horizontal: TSizes.spaceBtwItems),
+          itemCount: sessions.length,
+          itemBuilder: (context, index) {
+            final session = sessions[index];
+            final isPast = session.sessionDate.isBefore(DateTime.now());
+            final isToday = isSameDay(session.sessionDate, DateTime.now());
+
+            return AnimationConfiguration.staggeredList(
+              position: index,
+              duration: const Duration(milliseconds: 500), // Duración de la animación individual
+              child: SlideAnimation(
+                verticalOffset: 50.0, // Desplazamiento vertical inicial
+                child: FadeInAnimation(
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: TSizes.sm),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      // No es necesario el TweenAnimationBuilder para el shadow aquí,
+                      // ya que la tarjeta entera aparece con FadeIn.
+                      // Podrías añadir un shadow estático si lo deseas.
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 15,
+                          offset: Offset(0, 5),
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.only(
+                        bottom: TSizes.sm,
+                      ),
+                      child: TrainingCard(
+                        session: session,
+                        showBorder: true,
+                        isPast: isPast,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 

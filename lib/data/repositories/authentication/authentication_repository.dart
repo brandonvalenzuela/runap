@@ -11,6 +11,7 @@ import 'package:runap/utils/exceptions/exceptions.dart';
 import 'package:runap/utils/exceptions/firebase_auth_exceptions.dart';
 import 'package:runap/utils/exceptions/firebase_exceptions.dart';
 import 'package:runap/utils/exceptions/format_exceptions.dart';
+import 'package:runap/features/dashboard/bindings/home_binding.dart';
 
 class AuthenticationRepository extends GetxController {
   static AuthenticationRepository get instance => Get.find();
@@ -34,8 +35,8 @@ class AuthenticationRepository extends GetxController {
     if (user != null) {
       // If the user is logged in
       if (user.emailVerified) {
-        // If the user's email is verified, navigate to the main Navigation Menu
-        Get.offAll(() => const NavigationMenu(), transition: Transition.upToDown);
+        // If the user's email is verified, navigate to the main Navigation Menu with the binding
+        Get.offAll(() => const NavigationMenu(), binding: HomeBinding(), transition: Transition.upToDown);
       } else {
         //If the user's email is not verified, navigate to the VerifyEmailScreen
         Get.offAll(() => VerifyEmailScreen(email: _auth.currentUser?.email), transition: Transition.upToDown);
