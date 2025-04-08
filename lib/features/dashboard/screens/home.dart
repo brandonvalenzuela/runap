@@ -15,6 +15,9 @@ import 'package:runap/common/widgets/training/skeleton_training_card.dart';
 import 'package:runap/common/widgets/headers/user_profile_header.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:collection/collection.dart';
+import 'package:runap/features/dashboard/widgets/date_header.dart';
+import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -37,11 +40,40 @@ class _HomeScreenState extends State<HomeScreen>
   late Animation<double> _fadeProgressAnimation;
   late Animation<double> _fadeTitleAnimation;
 
+  // Constantes para las alturas estimadas
+  static const double _estimatedHeaderHeight = 60.0;
+  static const double _estimatedCardHeight = 118.0;
+  static const double _dashboardHeaderHeight = 150.0;
+  static const double _upcomingTitleHeight = 50.0;
+
+  // Formateadores de fecha
+  final _dayFormatter = DateFormat('d', 'es_ES');
+  final _monthFormatter = DateFormat('MMM', 'es_ES');
+  final _weekdayFormatter = DateFormat('EEEE', 'es_ES');
+
+  // Constantes de animación
+  static const Duration _appBarAnimationDuration = Duration(milliseconds: 2500);
+  static const Duration _headerAnimationDuration = Duration(milliseconds: 900);
+  static const Duration _progressAnimationDuration = Duration(milliseconds: 1800);
+  static const Duration _listItemAnimationDuration = Duration(milliseconds: 400);
+  static const Duration _cardAnimationDuration = Duration(milliseconds: 500);
+
+  // Constantes de estilo
+  static const double _cardBorderRadius = 16.0;
+  static const double _cardShadowOpacity = 0.05;
+  static const double _cardShadowBlur = 15.0;
+  static const double _cardShadowSpread = 3.0;
+  static const double _cardShadowOffset = 5.0;
+  static const double _listItemShadowOpacity = 0.2;
+  static const double _listItemShadowBlur = 15.0;
+  static const double _listItemShadowSpread = 2.0;
+  static const double _listItemShadowOffset = 5.0;
+
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 2500),
+      duration: _appBarAnimationDuration,
       vsync: this,
     );
 
@@ -121,6 +153,21 @@ class _HomeScreenState extends State<HomeScreen>
     super.dispose();
   }
 
+  List<Session> _getCurrentWeekSessions(List<Session> allSessions) {
+    final now = DateTime.now();
+    // Calcular inicio de semana (Lunes)
+    final startOfWeek = now.subtract(Duration(days: now.weekday - 1)); 
+    final startOfWeekDateOnly = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
+    // Calcular fin de semana (Domingo)
+    final endOfWeek = now.add(Duration(days: DateTime.daysPerWeek - now.weekday));
+    final endOfWeekDateOnly = DateTime(endOfWeek.year, endOfWeek.month, endOfWeek.day);
+
+    return allSessions.where((session) {
+      final sessionDateOnly = DateTime(session.sessionDate.year, session.sessionDate.month, session.sessionDate.day);
+      return !sessionDateOnly.isBefore(startOfWeekDateOnly) && !sessionDateOnly.isAfter(endOfWeekDateOnly);
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     // Obtener el controlador de usuario
@@ -150,26 +197,26 @@ class _HomeScreenState extends State<HomeScreen>
       body: GetBuilder<TrainingViewModel>(
         init: TrainingViewModel(),
         builder: (viewModel) {
-          final today = DateTime.now();
-          // Obtener sesiones para hoy (opcional, si solo quieres mostrar las de hoy)
-          // final todaySessions = viewModel
-          //         .trainingData?.dashboard.nextWeekSessions
-          //         .where((session) => isSameDay(session.sessionDate, today))
-          //         .toList() ??
-          //     [];
-
           if (viewModel.status == LoadingStatus.loading &&
               viewModel.trainingData == null) {
-            // Mostrar skeleton loader para la lista de tarjetas
             return _buildSkeletonList(context);
           } else if (viewModel.status == LoadingStatus.error) {
             return _buildErrorView(context, viewModel);
           } else if (viewModel.trainingData != null &&
               viewModel.trainingData!.dashboard.nextWeekSessions.isNotEmpty) {
-            // Construir la lista de tarjetas reales si hay datos
-            return _buildHomeContent(context, viewModel);
+            
+            final currentWeekSessions = _getCurrentWeekSessions(
+              viewModel.trainingData!.dashboard.nextWeekSessions
+            );
+            
+            if (currentWeekSessions.isNotEmpty) {
+              return _buildHomeContent(context, viewModel, currentWeekSessions);
+            } else {
+              return const Center(
+                child: Text('No hay entrenamientos programados para esta semana.'),
+              );
+            }
           } else {
-            // Mensaje cuando no hay datos o la lista está vacía
             return const Center(
               child: Text('No hay entrenamientos programados.'),
             );
@@ -180,26 +227,41 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildSkeletonList(BuildContext context) {
-    // Estimación de la altura de cada skeleton + margen inferior
-    const double estimatedItemHeight = 118.0; // Ajusta este valor si es necesario (ej: altura SkeletonTrainingCard + TSizes.sm)
+    // Estimación de la altura combinada de un header + una tarjeta (aproximado)
+    final estimatedGroupHeight = _estimatedHeaderHeight + 
+        TSizes.spaceBtwSections * 0.8 + 
+        TSizes.spaceBtwItems + 
+        _estimatedCardHeight;
 
-    // Obtener la altura disponible (altura pantalla - altura AppBar - padding superior/inferior)
     final screenHeight = MediaQuery.of(context).size.height;
-    final appBarHeight = kToolbarHeight; // Altura estándar del AppBar
+    final appBarHeight = kToolbarHeight;
     final paddingTop = MediaQuery.of(context).padding.top;
     final paddingBottom = MediaQuery.of(context).padding.bottom;
-    // Considerar también el padding horizontal del ListView y el espacio sobre la lista si aplica.
-    // Por simplicidad, calculamos basado en la altura vertical principal.
-    final availableHeight = screenHeight - appBarHeight - paddingTop - paddingBottom;
+    
+    final availableHeight = screenHeight - 
+        appBarHeight - 
+        paddingTop - 
+        paddingBottom - 
+        _dashboardHeaderHeight - 
+        _upcomingTitleHeight;
 
-    // Calcular cuántos items caben, asegurando al menos 1
-    final itemCount = max(1, (availableHeight / estimatedItemHeight).ceil());
+    // Calcular cuántos grupos (header + card) caben
+    final groupCount = max(1, (availableHeight / estimatedGroupHeight).ceil());
+    // El itemCount será el doble porque cada grupo tiene un header y una card
+    final itemCount = groupCount * 2; 
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: TSizes.spaceBtwItems),
-      itemCount: itemCount, // Usar el valor calculado
+      itemCount: itemCount, 
       itemBuilder: (context, index) {
-        return const SkeletonTrainingCard();
+        // Alternar entre skeleton de header y skeleton de card
+        if (index % 2 == 0) {
+          // Es un índice par, mostrar skeleton de header
+          return const SkeletonDashboardDateHeader();
+        } else {
+          // Es un índice impar, mostrar skeleton de card
+          return const SkeletonTrainingCard();
+        }
       },
     );
   }
@@ -220,9 +282,8 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildHomeContent(BuildContext context, TrainingViewModel viewModel) {
+  Widget _buildHomeContent(BuildContext context, TrainingViewModel viewModel, List<Session> sessions) {
     final dashboard = viewModel.trainingData!.dashboard;
-    List<Session> sessions = List.from(dashboard.nextWeekSessions);
     // No es necesario verificar si sessions está vacía aquí porque ya se hizo en el builder principal
 
     return Column(
@@ -249,7 +310,7 @@ class _HomeScreenState extends State<HomeScreen>
               left: TSizes.spaceBtwItems),
           child: TweenAnimationBuilder<double>(
             tween: Tween<double>(begin: 0.0, end: 1.0),
-            duration: const Duration(milliseconds: 900),
+            duration: _headerAnimationDuration,
             curve: Curves.easeOutSine,
             builder: (context, value, child) {
               // Skeleton para el Header si viewModel está cargando
@@ -261,13 +322,13 @@ class _HomeScreenState extends State<HomeScreen>
                 padding: const EdgeInsets.all(TSizes.md),
                 decoration: BoxDecoration(
                   color: TColors.primaryColor.withAlpha(25),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(_cardBorderRadius),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05 * value),
-                      blurRadius: 15 * value,
-                      offset: Offset(0, 5 * value),
-                      spreadRadius: 3 * value,
+                      color: Colors.black.withOpacity(_cardShadowOpacity * value),
+                      blurRadius: _cardShadowBlur * value,
+                      offset: Offset(0, _cardShadowOffset * value),
+                      spreadRadius: _cardShadowSpread * value,
                     ),
                   ],
                 ),
@@ -330,7 +391,7 @@ class _HomeScreenState extends State<HomeScreen>
                         tween: Tween<double>(
                             begin: 0.0,
                             end: dashboard.completionRate / 100),
-                        duration: const Duration(milliseconds: 1800),
+                        duration: _progressAnimationDuration,
                         curve: Curves.easeOutQuad,
                         builder: (context, value, child) {
                           return Column(
@@ -383,7 +444,7 @@ class _HomeScreenState extends State<HomeScreen>
           child: Row(
             children: [
               Text(
-                "Próximos entrenamientos",
+                "Entrenamientos de la semana",
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -401,52 +462,102 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildSessionsList(BuildContext context, List<Session> sessions) {
-    return Expanded(
-      child: AnimationLimiter(
-        child: ListView.builder(
-          padding:
-              const EdgeInsets.symmetric(horizontal: TSizes.spaceBtwItems),
-          itemCount: sessions.length,
-          itemBuilder: (context, index) {
-            final session = sessions[index];
-            final isPast = session.sessionDate.isBefore(DateTime.now());
-            final isToday = isSameDay(session.sessionDate, DateTime.now());
+    // Ordenar sesiones por fecha (asegurarse de que estén ordenadas)
+    sessions.sort((a, b) => a.sessionDate.compareTo(b.sessionDate));
 
-            return AnimationConfiguration.staggeredList(
-              position: index,
-              duration: const Duration(milliseconds: 500), // Duración de la animación individual
-              child: SlideAnimation(
-                verticalOffset: 50.0, // Desplazamiento vertical inicial
-                child: FadeInAnimation(
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: TSizes.sm),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      // No es necesario el TweenAnimationBuilder para el shadow aquí,
-                      // ya que la tarjeta entera aparece con FadeIn.
-                      // Podrías añadir un shadow estático si lo deseas.
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 15,
-                          offset: Offset(0, 5),
-                          spreadRadius: 2,
-                        ),
-                      ],
+    // Agrupar sesiones por día (ignorando la hora)
+    final groupedSessions = groupBy<Session, DateTime>(
+      sessions,
+      (session) => DateTime(session.sessionDate.year, session.sessionDate.month, session.sessionDate.day),
+    );
+
+    // Crear la lista de widgets (headers y cards)
+    List<Widget> listItems = [];
+    int animationIndex = 0; // Índice para la animación escalonada
+
+    final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final tomorrow = DateTime(today.year, today.month, today.day + 1);
+
+    groupedSessions.forEach((date, sessionsOnDate) {
+      // Determinar etiqueta: "Hoy", "Mañana" o vacía
+      String label = '';
+      if (date == today) {
+        label = 'Hoy';
+      } else if (date == tomorrow) {
+        label = 'Mañana';
+      }
+
+      // Añadir el Header para este día
+      listItems.add(
+        AnimationConfiguration.staggeredList(
+          position: animationIndex++,
+          duration: _listItemAnimationDuration,
+          child: SlideAnimation(
+            verticalOffset: 30.0,
+            child: FadeInAnimation(
+              child: DashboardDateHeader(
+                day: _dayFormatter.format(date),
+                month: _monthFormatter.format(date).replaceAll('.', ''),
+                weekday: _weekdayFormatter.format(date).capitalizeFirst ?? _weekdayFormatter.format(date),
+                label: label,
+              ),
+            ),
+          ),
+        )
+      );
+
+      // Añadir las TrainingCards para este día
+      for (var session in sessionsOnDate) {
+        final isPast = session.sessionDate.isBefore(DateTime.now()); // Considerar hora aquí
+         final isTodaySession = isSameDay(session.sessionDate, DateTime.now()); // Ya teníamos esta función
+
+        listItems.add(
+          AnimationConfiguration.staggeredList(
+            position: animationIndex++,
+            duration: _cardAnimationDuration,
+            child: SlideAnimation(
+              verticalOffset: 50.0,
+              child: FadeInAnimation(
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: TSizes.sm),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(_cardBorderRadius),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha((_listItemShadowOpacity * 255).round()),
+                        blurRadius: _listItemShadowBlur,
+                        offset: Offset(0, _listItemShadowOffset),
+                        spreadRadius: _listItemShadowSpread,
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.only(
+                      bottom: TSizes.sm,
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.only(
-                        bottom: TSizes.sm,
-                      ),
-                      child: TrainingCard(
-                        session: session,
-                        showBorder: true,
-                        isPast: isPast,
-                      ),
+                    child: TrainingCard(
+                      session: session,
+                      showBorder: true,
+                      isPast: isPast, 
                     ),
                   ),
                 ),
               ),
+            ),
+          )
+        );
+      }
+    });
+
+    return Expanded(
+      child: AnimationLimiter(
+        child: ListView.builder(
+          padding: EdgeInsets.zero, // El padding ahora está en los headers/cards
+          itemCount: listItems.length,
+          itemBuilder: (context, index) {
+            return Padding( // Añadir padding horizontal aquí
+               padding: const EdgeInsets.symmetric(horizontal: TSizes.spaceBtwItems),
+               child: listItems[index],
             );
           },
         ),
