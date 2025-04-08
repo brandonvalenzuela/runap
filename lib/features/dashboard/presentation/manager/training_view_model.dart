@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'package:get/get.dart';
 import 'package:runap/features/dashboard/domain/entities/dashboard_model.dart';
 import '../../domain/entities/training_data.dart';

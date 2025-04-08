@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:runap/common/widgets/loaders/skeleton_loader.dart';
+import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/constants/sizes.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -19,7 +20,7 @@ class SkeletonTrainingCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: TColors.colorBlack.withAlpha(13),
               blurRadius: 5,
               offset: Offset(0, 2),
               spreadRadius: 0,

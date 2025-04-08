@@ -5,17 +5,15 @@ import 'dart:math';
 import 'package:runap/common/widgets/training/training_card.dart';
 import 'package:runap/features/dashboard/domain/entities/dashboard_model.dart';
 import 'package:runap/features/dashboard/presentation/manager/training_view_model.dart';
+import 'package:runap/features/dashboard/widgets/date_header.dart';
 import 'package:runap/features/map/screen/map.dart';
 import 'package:runap/features/personalization/screens/profile/profile.dart';
 import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/constants/sizes.dart';
-import 'package:runap/common/widgets/loaders/skeleton_loader.dart';
 import 'package:runap/common/widgets/training/skeleton_training_card.dart';
 import 'package:runap/common/widgets/headers/user_profile_header.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:collection/collection.dart';
-import 'package:runap/features/dashboard/presentation/widgets/date_header.dart';
 import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -27,16 +25,17 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+  late final TrainingViewModel viewModel;
+  late final AnimationController _controller;
+  late final Animation<Offset> slideHeaderAnimation;
+  late final Animation<double> fadeHeaderAnimation;
+  late final Animation<double> fadeProgressAnimation;
   // Animaciones para el AppBar
   late Animation<double> _fadeAppBarAnimation;
   late Animation<Offset> _slideAvatarAnimation;
   late Animation<double> _fadeUserInfoAnimation;
   late Animation<double> _rotateMenuAnimation;
   // Animaciones para el contenido principal (pasadas a _HomeContentWidget)
-  late Animation<Offset> _slideHeaderAnimation;
-  late Animation<double> _fadeHeaderAnimation;
-  late Animation<double> _fadeProgressAnimation;
   late Animation<double> _fadeTitleAnimation;
 
   // Formateadores de fecha (podrían moverse a utils si se usan en otro lugar)
@@ -66,14 +65,38 @@ class _HomeScreenState extends State<HomeScreen>
   static const double _dashboardHeaderHeight = 150.0;
   static const double _upcomingTitleHeight = 50.0;
 
-
   @override
   void initState() {
     super.initState();
+    viewModel = Get.find<TrainingViewModel>();
     _controller = AnimationController(
-      duration: _appBarAnimationDuration,
       vsync: this,
+      duration: const Duration(milliseconds: 2500),
     );
+
+    slideHeaderAnimation = Tween<Offset>(
+      begin: const Offset(0.0, -0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.0, 0.3, curve: Curves.easeOut),
+    ));
+
+    fadeHeaderAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.0, 0.3, curve: Curves.easeOut),
+    ));
+
+    fadeProgressAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.3, 0.6, curve: Curves.easeOut),
+    ));
 
     // Animaciones para el AppBar
     _fadeAppBarAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -107,32 +130,6 @@ class _HomeScreenState extends State<HomeScreen>
       ),
     );
 
-    // Animación para el encabezado del dashboard
-    _fadeHeaderAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.2, 0.4, curve: Curves.easeOut),
-      ),
-    );
-
-    _slideHeaderAnimation = Tween<Offset>(
-      begin: const Offset(0.0, -0.3),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.2, 0.4, curve: Curves.easeOutQuint),
-      ),
-    );
-
-    // Animación para la barra de progreso
-    _fadeProgressAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.25, 0.35, curve: Curves.easeOut),
-      ),
-    );
-
     // Animación para el título de sección
     _fadeTitleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
@@ -141,7 +138,6 @@ class _HomeScreenState extends State<HomeScreen>
       ),
     );
 
-    // Iniciar la animación
     _controller.forward();
   }
 
@@ -220,9 +216,9 @@ class _HomeScreenState extends State<HomeScreen>
                   return _HomeContentWidget(
                     viewModel: viewModel,
                     sessions: currentWeekSessions,
-                    slideHeaderAnimation: _slideHeaderAnimation,
-                    fadeHeaderAnimation: _fadeHeaderAnimation,
-                    fadeProgressAnimation: _fadeProgressAnimation,
+                    slideHeaderAnimation: slideHeaderAnimation,
+                    fadeHeaderAnimation: fadeHeaderAnimation,
+                    fadeProgressAnimation: fadeProgressAnimation,
                     fadeTitleAnimation: _fadeTitleAnimation,
                     controller: _controller, // Pasar el controlador para animaciones internas
                     dayFormatter: _dayFormatter,
@@ -336,7 +332,7 @@ class _HomeScreenState extends State<HomeScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildDashboardHeader(context, viewModel),
+        _buildDashboardHeader(context),
         _buildUpcomingSessionsTitle(context),
         _buildSessionsList(context, sessions),
       ],
@@ -347,41 +343,45 @@ class _HomeScreenState extends State<HomeScreen>
   // (buildSkeletonList, buildErrorView, buildHomeContent se reemplazan por los widgets)
 
   // Widget para el header del dashboard (usado dentro de _HomeContentWidget)
-  Widget _buildDashboardHeader(BuildContext context, TrainingViewModel viewModel) {
+  Widget _buildDashboardHeader(BuildContext context) {
     final dashboard = viewModel.trainingData!.dashboard;
 
     return SlideTransition(
-      position: _slideHeaderAnimation,
+      position: slideHeaderAnimation,
       child: FadeTransition(
-        opacity: _fadeHeaderAnimation,
+        opacity: fadeHeaderAnimation,
         child: Padding(
           padding: const EdgeInsets.only(
-              top: TSizes.defaultSpace,
-              right: TSizes.spaceBtwItems,
-              left: TSizes.spaceBtwItems),
+              top: TSizes.space,
+              right: TSizes.defaultSpace,
+              left: TSizes.defaultSpace),
           child: TweenAnimationBuilder<double>(
             tween: Tween<double>(begin: 0.0, end: 1.0),
             duration: _headerAnimationDuration,
             curve: Curves.easeOutSine,
             builder: (context, value, child) {
-              // Skeleton para el Header si viewModel está cargando
-              if (viewModel.status == LoadingStatus.loading) {
-                return _buildHeaderSkeleton(context);
-              }
-              // Contenido real del Header
               return Container(
                 padding: const EdgeInsets.all(TSizes.md),
                 decoration: BoxDecoration(
-                  color: TColors.primaryColor.withAlpha(25),
-                  borderRadius: BorderRadius.circular(_cardBorderRadius),
+                  // Aplicar gradiente y sombra del archivo de prueba
+                  gradient: const LinearGradient(
+                    colors: [
+                      TColors.primaryColor, // Naranjo oscuro (inicio)
+                      TColors.gradientColor, // Naranjo claro (fin)
+                    ],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                  borderRadius: BorderRadius.circular(TSizes.borderRadiusXl), // Ajustar radio
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(_cardShadowOpacity * value),
-                      blurRadius: _cardShadowBlur * value,
-                      offset: Offset(0, _cardShadowOffset * value),
-                      spreadRadius: _cardShadowSpread * value,
+                      color: TColors.gradientColor.withAlpha(104), // Sombra del archivo de prueba
+                      blurRadius: 20 * value, // Animar desenfoque
+                      offset: Offset(0, 8 * value), // Animar desplazamiento
+                      // spreadRadius no está en el archivo de prueba, lo eliminamos
                     ),
                   ],
+                  // color: TColors.primaryColor.withAlpha(25), // Eliminar color sólido
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -392,8 +392,17 @@ class _HomeScreenState extends State<HomeScreen>
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.directions_run,
-                                color: TColors.primaryColor),
+                            Container(
+                              padding: const EdgeInsets.all(TSizes.sm),
+                              decoration: BoxDecoration(
+                                // Usar blanco con transparencia para el fondo del icono
+                                color: Colors.white.withAlpha(104),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(Icons.directions_run,
+                                  color: Colors.white, // Icono blanco
+                                  size: 20),
+                            ),
                             const SizedBox(width: TSizes.sm),
                             Text(
                               dashboard.raceType,
@@ -402,42 +411,67 @@ class _HomeScreenState extends State<HomeScreen>
                                   .titleMedium
                                   ?.copyWith(
                                     fontWeight: FontWeight.bold,
+                                    color: Colors.white, // Texto blanco
                                   ),
                             ),
                           ],
                         ),
                         Container(
-                          padding: EdgeInsets.symmetric(
+                          padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: TColors.primaryColor,
+                            // Mantener color primario o ajustar si es necesario
+                            color: TColors.white, // Cambiar a blanco para contraste
                             borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: TColors.darkGrey.withAlpha(51), // Sombra sutil
+                                blurRadius: 5,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
                           ),
                           child: Text(
                             '${dashboard.weeksToRace} semanas',
-                            style: TextStyle(
-                                color: TColors.white, fontSize: 12),
+                            style: const TextStyle(
+                                color: TColors.primaryColor, // Texto primario
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: TSizes.sm),
+                    const SizedBox(height: TSizes.md),
 
                     // Ritmo objetivo y tiempo meta
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _buildInfoItem(context, 'Ritmo objetivo:',
-                            dashboard.targetPace),
                         _buildInfoItem(
-                            context, 'Tiempo meta:', dashboard.goalTime),
+                          context,
+                          'Ritmo objetivo:',
+                          dashboard.targetPace,
+                          Icons.speed,
+                          textColor: Colors.white, // Texto blanco
+                          iconBackgroundColor: Colors.white.withAlpha(104), // Fondo blanco transp.
+                          iconColor: Colors.white, // Icono blanco
+                        ),
+                        _buildInfoItem(
+                          context,
+                          'Tiempo meta:',
+                          dashboard.goalTime,
+                          Icons.timer,
+                          textColor: Colors.white, // Texto blanco
+                          iconBackgroundColor: Colors.white.withAlpha(104), // Fondo blanco transp.
+                          iconColor: Colors.white, // Icono blanco
+                        ),
                       ],
                     ),
-                    const SizedBox(height: TSizes.sm),
+                    const SizedBox(height: TSizes.md),
 
                     // Barra de progreso con animación propia
                     FadeTransition(
-                      opacity: _fadeProgressAnimation,
+                      opacity: fadeProgressAnimation,
                       child: TweenAnimationBuilder<double>(
                         tween: Tween<double>(
                             begin: 0.0,
@@ -448,18 +482,46 @@ class _HomeScreenState extends State<HomeScreen>
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              LinearProgressIndicator(
-                                value: value,
-                                minHeight: 8,
-                                backgroundColor: TColors.grey,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                    TColors.primaryColor),
+                              Container(
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  // Fondo de la barra de progreso más claro
+                                  color: Colors.white.withAlpha(77),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: LinearProgressIndicator(
+                                    value: value,
+                                    backgroundColor: Colors.transparent,
+                                    // Usar blanco para la barra de progreso
+                                    valueColor: const AlwaysStoppedAnimation<Color>(
+                                        Colors.white),
+                                  ),
+                                ),
                               ),
                               const SizedBox(height: TSizes.xs),
                               Text(
-                                '${dashboard.completedSessions} de ${dashboard.totalSessions} sesiones completadas (${dashboard.completionRate}%)',
-                                style: TextStyle(
-                                    fontSize: 12, color: TColors.darkGrey),
+                                '${dashboard.completedSessions} de ${dashboard.totalSessions} sesiones completadas',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      // Texto blanco con transparencia
+                                      color: Colors.white.withAlpha(230),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                              ),
+                              Text(
+                                '${dashboard.completionRate.toStringAsFixed(0)}% completado',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      // Texto blanco
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                               ),
                             ],
                           );
@@ -562,7 +624,15 @@ class _HomeScreenState extends State<HomeScreen>
       // Añadir las TrainingCards para este día
       for (var session in sessionsOnDate) {
         final isPast = session.sessionDate.isBefore(DateTime.now()); // Considerar hora aquí
-        final isTodaySession = isSameDay(session.sessionDate, DateTime.now()); // Usar helper local
+        final isTodaySession = DateTime(
+          session.sessionDate.year,
+          session.sessionDate.month,
+          session.sessionDate.day
+        ) == DateTime(
+          DateTime.now().year,
+          DateTime.now().month,
+          DateTime.now().day
+        ); // Comparación directa de fechas
 
         listItems.add(
           AnimationConfiguration.staggeredList(
@@ -577,7 +647,7 @@ class _HomeScreenState extends State<HomeScreen>
                     borderRadius: BorderRadius.circular(_cardBorderRadius),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withAlpha((_listItemShadowOpacity * 255).round()),
+                        color: TColors.colorBlack.withAlpha((_listItemShadowOpacity * 255).round()),
                         blurRadius: _listItemShadowBlur,
                         offset: Offset(0, _listItemShadowOffset),
                         spreadRadius: _listItemShadowSpread,
@@ -618,63 +688,45 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // Widget para el esqueleto del header (usado dentro de _buildDashboardHeader -> ahora en _HomeContentWidget)
-  Widget _buildHeaderSkeleton(BuildContext context) {
-    return Shimmer.fromColors(
-      baseColor: Colors.grey[300]!,
-      highlightColor: Colors.grey[100]!,
-      child: Container(
-        padding: const EdgeInsets.all(TSizes.md),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const SkeletonCircle(radius: 12),
-                    const SizedBox(width: TSizes.sm),
-                    const SkeletonWidget(height: 16, width: 100),
-                  ],
-                ),
-                const SkeletonWidget(height: 28, width: 80, borderRadius: 16),
-              ],
-            ),
-            const SizedBox(height: TSizes.sm),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const SkeletonWidget(height: 14, width: 120),
-                const SkeletonWidget(height: 14, width: 100),
-              ],
-            ),
-            const SizedBox(height: TSizes.sm),
-            const SkeletonWidget(height: 8, width: double.infinity),
-            const SizedBox(height: TSizes.xs),
-            const SkeletonWidget(height: 12, width: 250),
-          ],
-        ),
-      ),
-    );
-  }
-
   // Widget para mostrar elementos de información (usado dentro de _buildDashboardHeader -> ahora en _HomeContentWidget)
-  Widget _buildInfoItem(BuildContext context, String label, String value) {
+  Widget _buildInfoItem(BuildContext context, String label, String value, IconData icon, {Color textColor = TColors.dark, Color iconBackgroundColor = TColors.primaryColor, Color iconColor = TColors.primaryColor}) {
+    // Ajustar colores por defecto si es necesario o quitar los parámetros opcionales si siempre serán blancos
+    iconBackgroundColor = iconBackgroundColor == TColors.primaryColor ? TColors.primaryColor.withAlpha(30) : iconBackgroundColor; // Mantener lógica original si no se sobreescribe
+
     return Row(
       children: [
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: TColors.darkGrey), // Usar Theme
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: iconBackgroundColor, // Usar color de fondo pasado
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            size: 16,
+            color: iconColor, // Usar color de icono pasado
+          ),
         ),
-        const SizedBox(width: 4),
-        Text(
-          value,
-           style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold), // Usar Theme
+        const SizedBox(width: 8),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    // Usar color de texto pasado con opacidad
+                    color: textColor.withAlpha(204),
+                    fontWeight: FontWeight.w500,
+                  ),
+            ),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: textColor, // Usar color de texto pasado
+                  ),
+            ),
+          ],
         ),
       ],
     );
@@ -789,7 +841,7 @@ class _HomeContentWidget extends StatelessWidget {
   final Animation<double> fadeHeaderAnimation;
   final Animation<double> fadeProgressAnimation;
   final Animation<double> fadeTitleAnimation;
-  final AnimationController controller; // Para animaciones internas como la del título
+  final AnimationController controller;
   final DateFormat dayFormatter;
   final DateFormat monthFormatter;
   final DateFormat weekdayFormatter;
@@ -806,7 +858,6 @@ class _HomeContentWidget extends StatelessWidget {
   final Duration cardAnimationDuration;
   final Duration headerAnimationDuration;
   final Duration progressAnimationDuration;
-
 
   const _HomeContentWidget({
     required this.viewModel,
@@ -839,137 +890,18 @@ class _HomeContentWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildDashboardHeader(context),
+        _DashboardHeaderCard(
+          dashboard: viewModel.trainingData!.dashboard,
+          slideHeaderAnimation: slideHeaderAnimation,
+          fadeHeaderAnimation: fadeHeaderAnimation,
+          fadeProgressAnimation: fadeProgressAnimation,
+          headerAnimationDuration: headerAnimationDuration,
+          progressAnimationDuration: progressAnimationDuration,
+          cardBorderRadius: cardBorderRadius,
+        ),
         _buildUpcomingSessionsTitle(context),
         _buildSessionsList(context),
       ],
-    );
-  }
-
-  // --- Métodos de construcción internos para _HomeContentWidget ---
-
-  Widget _buildDashboardHeader(BuildContext context) {
-    final dashboard = viewModel.trainingData!.dashboard;
-
-    return SlideTransition(
-      position: slideHeaderAnimation,
-      child: FadeTransition(
-        opacity: fadeHeaderAnimation,
-        child: Padding(
-          padding: const EdgeInsets.only(
-              top: TSizes.defaultSpace,
-              right: TSizes.spaceBtwItems,
-              left: TSizes.spaceBtwItems),
-          child: TweenAnimationBuilder<double>(
-            tween: Tween<double>(begin: 0.0, end: 1.0),
-            duration: headerAnimationDuration,
-            curve: Curves.easeOutSine,
-            builder: (context, value, child) {
-              // El skeleton ahora se maneja fuera de este widget
-              return Container(
-                padding: const EdgeInsets.all(TSizes.md),
-                decoration: BoxDecoration(
-                  color: TColors.primaryColor.withAlpha(25),
-                  borderRadius: BorderRadius.circular(cardBorderRadius),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(cardShadowOpacity * value),
-                      blurRadius: cardShadowBlur * value,
-                      offset: Offset(0, cardShadowOffset * value),
-                      spreadRadius: cardShadowSpread * value,
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Tipo de carrera y semanas restantes
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.directions_run,
-                                color: TColors.primaryColor),
-                            const SizedBox(width: TSizes.sm),
-                            Text(
-                              dashboard.raceType,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                            ),
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: TColors.primaryColor,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Text(
-                            '${dashboard.weeksToRace} semanas',
-                            style: const TextStyle(
-                                color: TColors.white, fontSize: 12),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: TSizes.sm),
-
-                    // Ritmo objetivo y tiempo meta
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildInfoItem(context, 'Ritmo objetivo:',
-                            dashboard.targetPace),
-                        _buildInfoItem(
-                            context, 'Tiempo meta:', dashboard.goalTime),
-                      ],
-                    ),
-                    const SizedBox(height: TSizes.sm),
-
-                    // Barra de progreso con animación propia
-                    FadeTransition(
-                      opacity: fadeProgressAnimation,
-                      child: TweenAnimationBuilder<double>(
-                        tween: Tween<double>(
-                            begin: 0.0,
-                            end: dashboard.completionRate / 100),
-                        duration: progressAnimationDuration,
-                        curve: Curves.easeOutQuad,
-                        builder: (context, value, child) {
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              LinearProgressIndicator(
-                                value: value,
-                                minHeight: 8,
-                                backgroundColor: TColors.grey.withOpacity(0.3), // Slightly lighter grey
-                                valueColor: const AlwaysStoppedAnimation<Color>(
-                                    TColors.primaryColor),
-                                borderRadius: BorderRadius.circular(4), // Rounded corners
-                              ),
-                              const SizedBox(height: TSizes.xs),
-                              Text(
-                                '${dashboard.completedSessions} de ${dashboard.totalSessions} sesiones completadas (${dashboard.completionRate.toStringAsFixed(0)}%)', // No decimals needed
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: TColors.darkGrey), // Use theme text style
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-      ),
     );
   }
 
@@ -1059,7 +991,15 @@ class _HomeContentWidget extends StatelessWidget {
       // Añadir las TrainingCards para este día
       for (var session in sessionsOnDate) {
         final isPast = session.sessionDate.isBefore(DateTime.now()); // Considerar hora aquí
-        final isTodaySession = _isSameDay(session.sessionDate, DateTime.now()); // Usar helper local
+        final isTodaySession = DateTime(
+          session.sessionDate.year,
+          session.sessionDate.month,
+          session.sessionDate.day
+        ) == DateTime(
+          DateTime.now().year,
+          DateTime.now().month,
+          DateTime.now().day
+        ); // Comparación directa de fechas
 
         listItems.add(
           AnimationConfiguration.staggeredList(
@@ -1075,7 +1015,7 @@ class _HomeContentWidget extends StatelessWidget {
                     borderRadius: BorderRadius.circular(cardBorderRadius),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withAlpha((listItemShadowOpacity * 255).round()),
+                        color: TColors.colorBlack.withAlpha((listItemShadowOpacity * 255).round()),
                         blurRadius: listItemShadowBlur,
                         offset: Offset(0, listItemShadowOffset),
                         spreadRadius: listItemShadowSpread,
@@ -1131,73 +1071,311 @@ class _HomeContentWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildHeaderSkeleton(BuildContext context) {
-     // Este método ahora es parte de _HomeContentWidget, pero podría ser estático o un widget separado
-    return Shimmer.fromColors(
-      baseColor: Colors.grey[300]!,
-      highlightColor: Colors.grey[100]!,
-      child: Container(
-        padding: const EdgeInsets.all(TSizes.md),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const SkeletonCircle(radius: 12),
-                    const SizedBox(width: TSizes.sm),
-                    const SkeletonWidget(height: 16, width: 100),
+  // Helper local para _HomeContentWidget si es necesario
+  bool _isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year &&
+        date1.month == date2.month &&
+        date1.day == date2.day;
+  }
+}
+
+// --- NUEVO WIDGET: Encabezado del Dashboard Expandible ---
+
+class _DashboardHeaderCard extends StatefulWidget {
+  final Dashboard dashboard;
+  final Animation<Offset> slideHeaderAnimation;
+  final Animation<double> fadeHeaderAnimation;
+  final Animation<double> fadeProgressAnimation;
+  final Duration headerAnimationDuration;
+  final Duration progressAnimationDuration;
+  final double cardBorderRadius;
+
+  const _DashboardHeaderCard({
+    required this.dashboard,
+    required this.slideHeaderAnimation,
+    required this.fadeHeaderAnimation,
+    required this.fadeProgressAnimation,
+    required this.headerAnimationDuration,
+    required this.progressAnimationDuration,
+    required this.cardBorderRadius,
+  });
+
+  @override
+  State<_DashboardHeaderCard> createState() => _DashboardHeaderCardState();
+}
+
+class _DashboardHeaderCardState extends State<_DashboardHeaderCard> with SingleTickerProviderStateMixin {
+  bool _isExpanded = false;
+  late AnimationController _rotationController;
+  late Animation<double> _rotationAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _rotationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _rotationAnimation = Tween<double>(begin: 0.0, end: 0.5).animate(
+      CurvedAnimation(parent: _rotationController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _rotationController.dispose();
+    super.dispose();
+  }
+
+  void _toggleExpansion() {
+    setState(() {
+      _isExpanded = !_isExpanded;
+      if (_isExpanded) {
+        _rotationController.forward();
+      } else {
+        _rotationController.reverse();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Usar las animaciones pasadas desde _HomeScreenState
+    return SlideTransition(
+      position: widget.slideHeaderAnimation,
+      child: FadeTransition(
+        opacity: widget.fadeHeaderAnimation,
+        child: Padding(
+          padding: const EdgeInsets.only(
+              top: TSizes.defaultSpace,
+              right: TSizes.spaceBtwItems,
+              left: TSizes.spaceBtwItems),
+          child: TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0.0, end: 1.0),
+            duration: widget.headerAnimationDuration,
+            curve: Curves.easeOutSine,
+            builder: (context, value, child) {
+              // Contenedor principal con gradiente y sombra
+              return Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [TColors.primaryColor, TColors.gradientColor],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                  borderRadius: BorderRadius.circular(widget.cardBorderRadius), // Usar valor pasado
+                  boxShadow: [
+                    BoxShadow(
+                      color: TColors.gradientColor.withAlpha(50), // Opacidad aún más baja
+                      blurRadius: 5 * value,  // Desenfoque mínimo
+                      offset: Offset(0, 3 * value), // Desplazamiento vertical muy corto
+                      spreadRadius: 0,        // Sin expansión
+                    ),
                   ],
                 ),
-                const SkeletonWidget(height: 28, width: 80, borderRadius: 16),
-              ],
-            ),
-            const SizedBox(height: TSizes.sm),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const SkeletonWidget(height: 14, width: 120),
-                const SkeletonWidget(height: 14, width: 100),
-              ],
-            ),
-            const SizedBox(height: TSizes.sm),
-            const SkeletonWidget(height: 8, width: double.infinity),
-            const SizedBox(height: TSizes.xs),
-            const SkeletonWidget(height: 12, width: 250),
-          ],
+                child: Material( // Necesario para InkWell y ClipRRect
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(widget.cardBorderRadius),
+                  child: InkWell(
+                    onTap: _toggleExpansion,
+                    borderRadius: BorderRadius.circular(widget.cardBorderRadius),
+                    child: Padding(
+                      // Aumentar el padding vertical para más altura inicial
+                      padding: const EdgeInsets.symmetric(vertical: TSizes.defaultSpace - 2, horizontal: TSizes.defaultSpace),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // --- Sección Superior (Siempre visible) ---
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              // Icono y Tipo de carrera
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(TSizes.sm),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withAlpha(104),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(Icons.directions_run, color: Colors.white, size: TSizes.iconSm + 4),
+                                  ),
+                                  const SizedBox(width: TSizes.sm),
+                                  Text(
+                                    widget.dashboard.raceType,
+                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold, color: Colors.white, fontSize: TSizes.fontSizeLg),
+                                  ),
+                                ],
+                              ),
+                              // Semanas restantes e Icono de expansión
+                              Row(
+                                children: [
+                                  Container(
+                                     padding: const EdgeInsets.symmetric(horizontal: TSizes.smallSpace, vertical: TSizes.xSmallSpace),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(16),
+                                        boxShadow: [
+                                          BoxShadow(color: TColors.darkGrey.withAlpha(51), blurRadius: 5, offset: const Offset(0, 1)),
+                                        ],
+                                      ),
+                                      child: Text(
+                                        '${widget.dashboard.weeksToRace} semanas',
+                                        style: const TextStyle(color: TColors.primaryColor, fontSize: TSizes.fontSizeXs, fontWeight: FontWeight.w600),
+                                      ),
+                                  ),
+                                  const SizedBox(width: TSizes.sm),
+                                  RotationTransition(
+                                    turns: _rotationAnimation,
+                                    child: const Icon(Icons.expand_more, color: Colors.white, size: TSizes.iconMd),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+
+                          // --- Sección Detallada (Expandible) ---
+                          AnimatedCrossFade(
+                            firstChild: Container(), // Vacío cuando está colapsado
+                            secondChild: _buildDetailsSection(context), // Contenido detallado
+                            crossFadeState: _isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+                            duration: const Duration(milliseconds: 300),
+                            firstCurve: Curves.easeOut,
+                            secondCurve: Curves.easeIn,
+                            sizeCurve: Curves.easeInOut,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildInfoItem(BuildContext context, String label, String value) {
-     // Este método ahora es parte de _HomeContentWidget, pero podría ser estático o un widget separado
-    return Row(
+  // Widget para la sección de detalles
+  Widget _buildDetailsSection(BuildContext context) {
+    return Padding(
+      // Añadir padding superior para separar de la sección siempre visible
+      padding: const EdgeInsets.only(top: TSizes.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+           // Ritmo objetivo y tiempo meta (Usando el helper _buildInfoItem)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildInfoItem(
+                context,
+                'Ritmo objetivo:',
+                widget.dashboard.targetPace,
+                Icons.speed,
+                textColor: Colors.white,
+                iconBackgroundColor: Colors.white.withAlpha(104),
+                iconColor: Colors.white,
+              ),
+              _buildInfoItem(
+                context,
+                'Tiempo meta:',
+                widget.dashboard.goalTime,
+                Icons.timer,
+                textColor: Colors.white,
+                iconBackgroundColor: Colors.white.withAlpha(104),
+                iconColor: Colors.white,
+              ),
+            ],
+          ),
+          const SizedBox(height: TSizes.md),
+
+          // Barra de progreso con animación propia
+          FadeTransition(
+            // Usar la animación de progreso pasada
+            opacity: widget.fadeProgressAnimation,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(
+                  begin: 0.0,
+                  end: widget.dashboard.completionRate / 100),
+              // Usar la duración de progreso pasada
+              duration: widget.progressAnimationDuration,
+              curve: Curves.easeOutQuad,
+              builder: (context, value, child) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withAlpha(77),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: value,
+                          backgroundColor: Colors.transparent,
+                          valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: TSizes.xs),
+                    Text(
+                      '${widget.dashboard.completedSessions} de ${widget.dashboard.totalSessions} sesiones completadas',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.white.withAlpha(230),
+                            fontWeight: FontWeight.w500),
+                    ),
+                    Text(
+                      '${widget.dashboard.completionRate.toStringAsFixed(0)}% completado',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper para mostrar elementos de información (movido aquí)
+  Widget _buildInfoItem(BuildContext context, String label, String value, IconData icon, {required Color textColor, required Color iconBackgroundColor, required Color iconColor}) {
+     return Row(
       children: [
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: TColors.darkGrey), // Usar Theme
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: iconBackgroundColor,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 16, color: iconColor),
         ),
-        const SizedBox(width: 4),
-        Text(
-          value,
-           style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold), // Usar Theme
+        const SizedBox(width: 8),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: textColor.withAlpha(204),
+                    fontWeight: FontWeight.w500),
+            ),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.bold, color: textColor),
+            ),
+          ],
         ),
       ],
     );
   }
 
-  // Helper local para _HomeContentWidget si es necesario
-   bool _isSameDay(DateTime date1, DateTime date2) {
-    return date1.year == date2.year &&
-        date1.month == date2.month &&
-        date1.day == date2.day;
-  }
-
-}
+} // Fin de _DashboardHeaderCardState

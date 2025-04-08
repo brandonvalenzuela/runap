@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:runap/utils/constants/colors.dart';
 
 class TCheckboxTheme {
   TCheckboxTheme._();
@@ -11,11 +12,11 @@ class TCheckboxTheme {
       if (states.contains(WidgetState.selected)) {
         return Colors.white;
       }
-      return Colors.black;
+      return TColors.colorBlack;
     }),
     fillColor: WidgetStateProperty.resolveWith((states) {
       if (states.contains(WidgetState.selected)) {
-        return Colors.orange;
+        return TColors.primaryColor;
       }
       return Colors.transparent;
     }),
@@ -27,13 +28,13 @@ class TCheckboxTheme {
     ),
     checkColor: WidgetStateProperty.resolveWith((states) {
       if (states.contains(WidgetState.selected)) {
-        return Colors.black;
+        return TColors.colorBlack;
       }
       return Colors.white;
     }),
     fillColor: WidgetStateProperty.resolveWith((states) {
       if (states.contains(WidgetState.selected)) {
-        return Colors.orange;
+        return TColors.primaryColor;
       }
       return Colors.transparent;
     }),

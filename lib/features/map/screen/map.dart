@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -504,8 +506,8 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
           child: FloatingActionButton(
             mini: true,
             backgroundColor: Colors.white,
-            child: Icon(Icons.my_location, color: TColors.primaryColor),
             onPressed: controller.resetMapView,
+            child: Icon(Icons.my_location, color: TColors.primaryColor),
           ),
         ),
       ],
@@ -801,7 +803,7 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
         padding: EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: isSelected
-              ? TColors.primaryColor.withOpacity(0.1)
+              ? TColors.primaryColor.withAlpha(26)
               : Colors.grey[100],
           borderRadius: BorderRadius.circular(8),
           border: Border.all(

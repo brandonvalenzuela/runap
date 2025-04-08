@@ -9,7 +9,6 @@ import 'package:runap/features/map/controller/map_controller.dart';
 import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/constants/image_strings.dart';
 import 'package:runap/utils/constants/sizes.dart';
-import 'package:runap/utils/helpers/helper_functions.dart';
 import 'package:runap/features/dashboard/domain/entities/dashboard_model.dart';
 import 'package:runap/utils/helpers/page_transitions.dart';
 import 'dart:async';
@@ -128,7 +127,15 @@ class _TrainingCardState extends State<TrainingCard>
     _controller.reset();
     _controller.forward();
 
-    HapticFeedback.lightImpact();
+    // Vibrar solo si la sesión es de hoy
+    final now = DateTime.now();
+    final isToday = now.year == widget.session.sessionDate.year &&
+        now.month == widget.session.sessionDate.month &&
+        now.day == widget.session.sessionDate.day;
+
+    if (isToday) {
+      HapticFeedback.lightImpact();
+    }
   }
 
   void _handleTapUp(TapUpDetails details) {
@@ -385,7 +392,7 @@ class _TrainingCardState extends State<TrainingCard>
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black
+                          color: TColors.colorBlack
                               // ignore: deprecated_member_use
                               .withOpacity(0.05 * _controller.value + 0.05),
                           blurRadius: 10 * _controller.value + 5,
@@ -851,7 +858,7 @@ class _FullScreenRippleAnimationState extends State<_FullScreenRippleAnimation>
                   opacity: backgroundOpacity,
                   duration: Duration(milliseconds: 800),
                   curve: Curves.easeInOut,
-                  child: Container(color: Colors.black),
+                  child: Container(color: TColors.colorBlack),
                 ),
               ),
 

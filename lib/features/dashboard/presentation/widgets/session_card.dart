@@ -7,10 +7,10 @@ class SessionCard extends StatelessWidget {
   final VoidCallback onToggleCompletion;
 
   const SessionCard({
-    Key? key,
+    super.key,
     required this.session,
     required this.onToggleCompletion,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

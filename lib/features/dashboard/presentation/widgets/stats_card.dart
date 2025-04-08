@@ -4,7 +4,7 @@ import 'package:runap/features/dashboard/domain/entities/dashboard_model.dart';
 class StatsCard extends StatelessWidget {
   final Dashboard dashboard;
 
-  const StatsCard({Key? key, required this.dashboard}) : super(key: key);
+  const StatsCard({super.key, required this.dashboard});
 
   @override
   Widget build(BuildContext context) {

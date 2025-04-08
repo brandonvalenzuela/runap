@@ -30,6 +30,7 @@ dependencies:
   connectivity_plus: ^5.0.1
   provider: ^6.1.2
   get_it: ^8.0.3
+  flutter_launcher_icons: ^0.14.3
 
 
   # Icons
@@ -103,3 +104,13 @@ fonts:
         weight: 600
       - asset: assets/fonts/Poppins-Bold.ttf
         weight: 800
+
+ #------------- ICON -------------------# 
+
+flutter_launcher_icons:
+  android: "launcher_icon" # Nombre del icono para Android (predeterminado)
+  ios: true                # Habilitar para iOS
+  image_path: "assets/icons/logo_runap.png" # La ruta a tu icono principal
+  min_sdk_android: 21 # Opcional: versión mínima de SDK para iconos adaptativos
+  # adaptive_icon_background: "#ffffff" # Opcional: Color de fondo para iconos adaptativos Android
+  # adaptive_icon_foreground: "assets/icons/logo_runap_foreground.png" # Opcional: Imagen frontal para iconos adaptativos

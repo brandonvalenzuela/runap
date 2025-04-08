@@ -60,5 +60,9 @@ class TImages {
   static const String restIcon = 'assets/icons/workout/rest.png';
   static const String workoutIcon = 'assets/icons/workout/workout.png';
 
+
+  // -- Principal Icon
+  static const String principalIcon = 'assets/icons/logo_runap.png';
+
   TImages(userIcon);
 }

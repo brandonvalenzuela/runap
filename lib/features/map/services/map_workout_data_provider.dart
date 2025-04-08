@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'package:runap/features/map/models/workout_goal.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 

@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'dart:convert';
 import 'package:runap/features/dashboard/domain/entities/dashboard_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -59,7 +61,7 @@ class TrainingLocalStorage {
       final difference = now.difference(lastFetch).inMinutes;
 
       if (difference >= cacheValidityMinutes) {
-        print("⚠️ Caché expirado (${difference} minutos)");
+        print("⚠️ Caché expirado ($difference minutos)");
         return null;
       }
 
@@ -69,7 +71,7 @@ class TrainingLocalStorage {
         return null;
       }
 
-      print("📥 Datos recuperados del almacenamiento local (${difference} minutos)");
+      print("📥 Datos recuperados del almacenamiento local ($difference minutos)");
       return json.decode(jsonData) as Map<String, dynamic>;
     } catch (e) {
       print("❌ Error al obtener datos del almacenamiento local: $e");

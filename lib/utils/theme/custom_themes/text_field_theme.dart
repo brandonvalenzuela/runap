@@ -10,12 +10,12 @@ class TTextFormFieldTheme {
     prefixIconColor: TColors.darkGrey,
     suffixIconColor: TColors.darkGrey,
     labelStyle: const TextStyle()
-        .copyWith(fontSize: TSizes.fontSizeMd, color: TColors.black),
+        .copyWith(fontSize: TSizes.fontSizeMd, color: TColors.colorBlack),
     hintStyle: const TextStyle()
-        .copyWith(fontSize: TSizes.fontSizeMd, color: TColors.black),
+        .copyWith(fontSize: TSizes.fontSizeMd, color: TColors.colorBlack),
     errorStyle: const TextStyle().copyWith(fontStyle: FontStyle.normal),
     floatingLabelStyle:
-        const TextStyle().copyWith(color: TColors.black.withAlpha(180)),
+        const TextStyle().copyWith(color: TColors.colorBlack.withAlpha(180)),
     border: const OutlineInputBorder().copyWith(
       borderRadius: BorderRadius.circular(TSizes.inputFieldRadius),
       borderSide: const BorderSide(width: 1.0, color: TColors.darkGrey),
@@ -26,7 +26,7 @@ class TTextFormFieldTheme {
     ),
     focusedBorder: const OutlineInputBorder().copyWith(
       borderRadius: BorderRadius.circular(TSizes.inputFieldRadius),
-      borderSide: const BorderSide(width: 1.0, color: TColors.dark),
+      borderSide: const BorderSide(width: 1.0, color: TColors.colorBlack),
     ),
     errorBorder: const OutlineInputBorder().copyWith(
       borderRadius: BorderRadius.circular(TSizes.inputFieldRadius),

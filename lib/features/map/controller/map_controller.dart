@@ -1,5 +1,6 @@
+// ignore_for_file: avoid_print
+
 import 'dart:async';
-import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -13,7 +14,6 @@ import 'package:runap/features/map/services/location_service.dart';
 import 'package:runap/features/map/services/map_workout_data_provider.dart';
 import 'package:runap/features/map/utils/location_permission_helper.dart';
 import 'package:flutter/foundation.dart';
-import 'package:runap/features/map/screen/map.dart';
 import 'package:logger/logger.dart';
 
 class MapController extends GetxController {
@@ -672,8 +672,9 @@ class MapController extends GetxController {
   }
 
   int getElapsedTimeSeconds() {
-    if (!workoutData.value.isWorkoutActive || workoutStartTime.value == null)
+    if (!workoutData.value.isWorkoutActive || workoutStartTime.value == null) {
       return 0;
+    }
     return DateTime.now().difference(workoutStartTime.value!).inSeconds;
   }
 

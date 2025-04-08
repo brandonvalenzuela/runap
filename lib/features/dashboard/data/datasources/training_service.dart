@@ -1,5 +1,6 @@
+// ignore_for_file: avoid_print
+
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math' as math;
 import 'package:runap/features/dashboard/domain/entities/dashboard_model.dart';
 import 'package:runap/features/map/utils/training_local_storage.dart';
@@ -38,7 +39,7 @@ class TrainingService {
     if (!forceRefresh && _cachedTrainingData != null && _lastFetchTime != null) {
       final minutesSinceLastFetch = DateTime.now().difference(_lastFetchTime!).inMinutes;
       if (minutesSinceLastFetch < TrainingLocalStorage.cacheValidityMinutes) {
-        print("💡 getDashboardData - Usando caché en memoria (${minutesSinceLastFetch} minutos)");
+        print("💡 getDashboardData - Usando caché en memoria ($minutesSinceLastFetch minutos)");
         return _modificarSesionesDescansoParaHoy(_cachedTrainingData!);
       }
     }

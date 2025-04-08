@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:runap/tests/widgets/skeleton_entry_card.dart';
 import 'package:runap/tests/widgets/skeleton_test_widgets.dart';
+import 'package:runap/utils/constants/colors.dart';
 
 class Test extends StatelessWidget {
   const Test({super.key});
@@ -170,7 +171,7 @@ class StatsCardWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(13),
+            color: TColors.colorBlack.withAlpha(13),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -240,8 +241,8 @@ class PromoCardWidget extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [
-            Color(0xFFf78314),
-            Color(0xFFfbc05e),
+            TColors.primaryColor,
+            TColors.gradientColor,
           ],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
@@ -334,7 +335,7 @@ class DateHeaderWidget extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withAlpha(13),
+                color: TColors.colorBlack.withAlpha(13),
                 blurRadius: 5,
                 offset: const Offset(0, 2),
               ),
@@ -414,7 +415,7 @@ class EntryCardWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(13),
+            color: TColors.colorBlack.withAlpha(13),
             blurRadius: 5,
             offset: const Offset(0, 2),
           ),

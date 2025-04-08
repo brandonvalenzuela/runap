@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'package:flutter/material.dart';
 
 /// Un NavigatorObserver personalizado para interceptar y modificar las transiciones de navegación

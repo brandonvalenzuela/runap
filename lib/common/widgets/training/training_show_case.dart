@@ -43,7 +43,7 @@ class TrainingShowcase extends StatelessWidget {
                     session: session,
                     showBorder: false,
                   ))
-              .toList(),
+              ,
         ],
       ),
     );

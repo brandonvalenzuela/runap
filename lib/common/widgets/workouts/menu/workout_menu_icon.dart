@@ -20,27 +20,7 @@ class TTrainigMenuIcon extends StatelessWidget {
             icon: Icon(
               Iconsax.menu_1,
               color: iconColor,
-            )),
-
-        /// NOTIFICATION COUNTER
-        /*Positioned(
-          right: 0,
-          child: Container(
-            width: 18,
-            height: 18,
-            decoration: BoxDecoration(
-              color: TColors.black,
-              borderRadius: BorderRadius.circular(100),
-            ),
-            child: Center(
-              child: Text('2',
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelLarge!
-                      .apply(color: TColors.white, fontSizeFactor: 0.8)),
-            ),
-          ),
-        )*/
+            ),),
       ],
     );
   }

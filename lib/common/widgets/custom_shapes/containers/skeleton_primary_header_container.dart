@@ -11,8 +11,8 @@ class SkeletonPrimaryHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Shimmer.fromColors(
-       baseColor: TColors.primaryColor.withOpacity(0.5),
-       highlightColor: TColors.primaryColor.withOpacity(0.8),
+       baseColor: TColors.primaryColor.withAlpha(128),
+       highlightColor: TColors.primaryColor.withAlpha(204),
       child: Container(
         color: TColors.primaryColor, // Fondo base
         padding: const EdgeInsets.all(0),
@@ -23,11 +23,11 @@ class SkeletonPrimaryHeader extends StatelessWidget {
               Positioned(
                   top: -150,
                   right: -250,
-                  child: TCircleContainer(backgroundColor: TColors.textWhite.withOpacity(0.1))),
+                  child: TCircleContainer(backgroundColor: TColors.textWhite.withAlpha(26))),
               Positioned(
                   top: 100,
                   right: -300,
-                  child: TCircleContainer(backgroundColor: TColors.textWhite.withOpacity(0.1))),
+                  child: TCircleContainer(backgroundColor: TColors.textWhite.withAlpha(26))),
               // Contenido del esqueleto
               Column(
                 children: [

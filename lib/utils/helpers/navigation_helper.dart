@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:runap/utils/helpers/custom_navigator_observer.dart';
 
 /// Clase para extender la funcionalidad de navegación de GetX
 class TNavigationHelper {

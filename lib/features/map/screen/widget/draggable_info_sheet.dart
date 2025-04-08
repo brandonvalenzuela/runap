@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:runap/features/map/models/workout_data.dart';
+import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/constants/sizes.dart';
 import 'workout_metrics_panel.dart';
 import 'workout_goal_panel.dart';
@@ -36,7 +37,7 @@ class DraggableInfoSheet extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withAlpha(25),
+                color: TColors.colorBlack.withAlpha(25),
                 blurRadius: 10,
                 spreadRadius: 2,
               ),

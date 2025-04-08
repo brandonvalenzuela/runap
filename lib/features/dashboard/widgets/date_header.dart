@@ -21,23 +21,22 @@ class DashboardDateHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool isToday = label == 'Hoy';
-    final bool isTomorrow = label == 'Mañana';
+    //final bool isToday = label == 'Hoy';
+    //final bool isTomorrow = label == 'Mañana';
 
     return Padding(
-      padding: const EdgeInsets.only(top: TSizes.spaceBtwSections * 0.8, bottom: TSizes.spaceBtwItems),
+      padding: const EdgeInsets.only(top: TSizes.spaceBtwItems, bottom: TSizes.spaceBtwItems),
       child: Row(
         children: [
           Container(
             width: 60, // Slightly smaller
             height: 60,
             decoration: BoxDecoration(
-              color: isToday ? TColors.primaryColor.withAlpha(26) : TColors.white,//.withAlpha(128),
-              borderRadius: BorderRadius.circular(16),
-              border: isToday ? Border.all(color: TColors.primaryColor, width: 1.5) : null,
+              color: TColors.white,//.withAlpha(128),
+              borderRadius: BorderRadius.circular(TSizes.borderRadiusLx),
                boxShadow: [
                  BoxShadow(
-                   color: Colors.black.withAlpha(13),
+                   color: TColors.colorBlack.withAlpha(13),
                    blurRadius: 5,
                    offset: const Offset(0, 2),
                  ),
@@ -50,7 +49,8 @@ class DashboardDateHeader extends StatelessWidget {
                   day,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: isToday ? TColors.primaryColor : Theme.of(context).textTheme.bodyLarge?.color,
+                        fontSize: TSizes.fontSizeLx,
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
                         height: 1.1
                       ),
                 ),
@@ -58,7 +58,9 @@ class DashboardDateHeader extends StatelessWidget {
                   month.toUpperCase(),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.w500,
-                        color: isToday ? TColors.primaryColor.withAlpha(204) : Theme.of(context).textTheme.bodySmall?.color?.withAlpha(153),
+                        fontSize: TSizes.fontSizeSm - 1,
+
+                        color: Theme.of(context).textTheme.bodySmall?.color?.withAlpha(153),
                         height: 1.1
                       ),
                 ),
@@ -73,7 +75,8 @@ class DashboardDateHeader extends StatelessWidget {
                 label.isNotEmpty ? label : weekday, // Show label if available, otherwise weekday
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: isToday ? TColors.primaryColor : Theme.of(context).textTheme.titleMedium?.color,
+                      fontSize: TSizes.fontSizeLx,
+                      color: Theme.of(context).textTheme.titleMedium?.color,
                     ),
               ),
               // Show weekday as subtitle if label is shown
@@ -82,6 +85,7 @@ class DashboardDateHeader extends StatelessWidget {
                   weekday,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: Theme.of(context).textTheme.labelMedium?.color?.withAlpha(179),
+                        fontSize: TSizes.fontSizeSm, 
                       ),
                 ),
             ],

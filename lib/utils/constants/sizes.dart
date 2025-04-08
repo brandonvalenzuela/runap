@@ -14,9 +14,11 @@ class TSizes {
   static const double iconXl = 40.0;
 
   // Font sizes
+  static const double fontSizeXs = 12.0;
   static const double fontSizeSm = 14.0;
   static const double fontSizeMd = 16.0;
   static const double fontSizeLg = 18.0;
+  static const double fontSizeLx = 22.0;
   static const double fontSizeXl = 50.0;
 
   // Button sizes
@@ -32,14 +34,18 @@ class TSizes {
   static const double imageThumbSize = 80.0;
 
   // Default spacing between sections
+  static const double xSmallSpace = 6.0;
+  static const double smallSpace = 12.0;
   static const double defaultSpace = 24.0;
   static const double spaceBtwItems = 16.0;
+  static const double space = 20.0;
   static const double spaceBtwSections = 32.0;
 
   // Border radius
   static const double borderRadiusSm = 4.0;
   static const double borderRadiusMd = 8.0;
   static const double borderRadiusLg = 16.0;
+  static const double borderRadiusLx = 20.0;
   static const double borderRadiusXl = 24.0;
 
   // Divider height
