@@ -11,7 +11,7 @@ import 'package:runap/utils/exceptions/exceptions.dart';
 import 'package:runap/utils/exceptions/firebase_auth_exceptions.dart';
 import 'package:runap/utils/exceptions/firebase_exceptions.dart';
 import 'package:runap/utils/exceptions/format_exceptions.dart';
-import 'package:runap/features/dashboard/bindings/home_binding.dart';
+import 'package:runap/features/dashboard/presentation/manager/binding/home_binding.dart';
 
 class AuthenticationRepository extends GetxController {
   static AuthenticationRepository get instance => Get.find();

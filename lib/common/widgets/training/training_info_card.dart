@@ -1,7 +1,7 @@
 // Widget para mostrar información general del entrenamiento
 import 'package:flutter/material.dart';
 import 'package:runap/common/widgets/custom_shapes/containers/ronuded_container.dart';
-import 'package:runap/features/dashboard/models/dashboard_model.dart';
+import 'package:runap/features/dashboard/domain/entities/dashboard_model.dart';
 import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/constants/sizes.dart';
 

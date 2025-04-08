@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:runap/common/widgets/training/training_info_card.dart';
 import 'package:runap/common/widgets/training/training_show_case.dart';
-import 'package:runap/features/dashboard/models/dashboard_model.dart';
+import 'package:runap/features/dashboard/domain/entities/dashboard_model.dart';
 import 'package:runap/utils/constants/sizes.dart';
-import '../viewmodels/training_view_model.dart';
+import '../manager/training_view_model.dart';
 
 class TrainingDashboardScreen extends StatelessWidget {
   const TrainingDashboardScreen({super.key});

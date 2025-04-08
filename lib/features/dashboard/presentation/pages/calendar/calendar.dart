@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:runap/features/dashboard/screens/calendar/widgets/skeleton_calendar_widgets.dart';
+import 'package:runap/features/dashboard/presentation/pages/calendar/widgets/skeleton_calendar_widgets.dart';
 import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/constants/image_strings.dart';
 import 'package:runap/utils/constants/sizes.dart';

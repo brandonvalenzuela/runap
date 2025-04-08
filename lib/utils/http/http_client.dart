@@ -3,8 +3,7 @@ import 'package:http/http.dart' as http;
 
 class THttpHelper {
   static const String _baseUrl =
-      'https://runapi-gwfuaxbuc7gbfacu.canadacentral-01.azurewebsites.net'; // Replace with your API base URL
-
+      'https://runapi-gwfuaxbuc7gbfacu.canadacentral-01.azurewebsites.net'; // Replace with your API base URL 
   // Helper method to make GET requests
   static Future<Map<String, dynamic>> get(String endpoint) async {
     final response = await http.get(Uri.parse('$_baseUrl/$endpoint'));

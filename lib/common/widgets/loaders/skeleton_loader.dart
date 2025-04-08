@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:runap/utils/constants/colors.dart';
 
 class SkeletonWidget extends StatelessWidget {
   final double height;
@@ -8,11 +7,11 @@ class SkeletonWidget extends StatelessWidget {
   final double borderRadius;
 
   const SkeletonWidget({
-    Key? key,
+    super.key,
     required this.height,
     required this.width,
     this.borderRadius = 8.0,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +33,7 @@ class SkeletonWidget extends StatelessWidget {
 class SkeletonCircle extends StatelessWidget {
   final double radius;
 
-  const SkeletonCircle({Key? key, required this.radius}) : super(key: key);
+  const SkeletonCircle({super.key, required this.radius});
 
   @override
   Widget build(BuildContext context) {
@@ -43,8 +42,8 @@ class SkeletonCircle extends StatelessWidget {
       highlightColor: Colors.grey[100]!,
       child: CircleAvatar(
         radius: radius,
-        backgroundColor: Colors.white, 
+        backgroundColor: Colors.white,
       ),
     );
   }
-} 
+}

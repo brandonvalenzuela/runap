@@ -1,4 +1,4 @@
-import 'package:runap/features/dashboard/models/dashboard_model.dart';
+import 'package:runap/features/dashboard/domain/entities/dashboard_model.dart';
 
 class TrainingData {
   final Dashboard dashboard;

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:runap/features/dashboard/models/dashboard_model.dart';
+import 'package:runap/features/dashboard/domain/entities/dashboard_model.dart';
 import 'package:runap/features/map/controller/map_controller.dart';
 import 'package:runap/features/map/models/workout_goal.dart';
 import 'package:runap/utils/constants/colors.dart';

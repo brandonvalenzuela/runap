@@ -1,7 +1,7 @@
 import 'package:get/get.dart';
-import 'package:runap/features/dashboard/models/dashboard_model.dart';
-import '../models/training_data.dart';
-import '../controllers/training_service.dart';
+import 'package:runap/features/dashboard/domain/entities/dashboard_model.dart';
+import '../../domain/entities/training_data.dart';
+import '../../data/datasources/training_service.dart';
 
 enum LoadingStatus { initial, loading, loaded, error }
 

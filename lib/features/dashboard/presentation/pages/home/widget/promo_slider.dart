@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:runap/common/widgets/custom_shapes/containers/circular_container.dart';
 import 'package:runap/common/widgets/images/t_rounded_image.dart';
-import 'package:runap/features/dashboard/controllers/home_controller.dart';
+import 'package:runap/features/dashboard/presentation/manager/home_controller.dart';
 import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/constants/sizes.dart';
 

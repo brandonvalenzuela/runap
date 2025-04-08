@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
-import 'package:runap/features/dashboard/models/dashboard_model.dart';
+import 'package:runap/features/dashboard/domain/entities/dashboard_model.dart';
 import 'package:runap/features/map/utils/training_local_storage.dart';
 import 'package:runap/utils/http/http_client.dart';
 
-import '../models/training_data.dart';
+import '../../domain/entities/training_data.dart';
 
 class TrainingService {
   // Singleton pattern
@@ -16,7 +16,7 @@ class TrainingService {
   TrainingService._internal();
 
   // Endpoint para obtener los datos del dashboard
-  static const String _dashboardEndpoint = 'api/dashboard/obtener-plan';
+  static const String _dashboardEndpoint = 'api/dashboard/obtener-plan?userId=';
   // Endpoint para actualizar una sesión
   static const String _sessionEndpoint = 'api/sessions';
 
@@ -32,52 +32,41 @@ class TrainingService {
   // Método para obtener los datos del dashboard
   Future<TrainingData> getDashboardData(
       {bool forceRefresh = false, int userId = 1}) async {
-    // Verificar si es necesario actualizar desde el servidor
-    bool shouldFetchFromServer = forceRefresh;
+    print("💡 getDashboardData - Iniciando obtención de datos");
 
-    print("💡 getDashboardData - ForceRefresh: $forceRefresh");
-
-    // Si no es forzado, comprobar si hay caché en memoria
-    if (!shouldFetchFromServer &&
-        _cachedTrainingData != null &&
-        _lastFetchTime != null &&
-        DateTime.now().difference(_lastFetchTime!).inMinutes < 5) {
-      print("💡 getDashboardData - Usando caché en memoria");
-      return _modificarSesionesDescansoParaHoy(_cachedTrainingData!);
-    }
-
-    // Verificar si es necesario actualizar desde el almacenamiento local
-    if (!shouldFetchFromServer) {
-      final localCacheValid = await TrainingLocalStorage.isCacheValid();
-      if (localCacheValid) {
-        // Obtener datos del almacenamiento local
-        final localData = await TrainingLocalStorage.getTrainingData();
-        if (localData != null) {
-          print("💡 getDashboardData - Usando caché del almacenamiento local");
-          _cachedTrainingData = TrainingData.fromJson(localData);
-          _lastFetchTime = DateTime.now();
-          
-          // Aplicar modificaciones de datos aleatorios
-          _cachedTrainingData = _modificarSesionesDescansoParaHoy(_cachedTrainingData!);
-          
-          // Notificar a los oyentes sobre los datos cargados
-          _trainingDataController.add(_cachedTrainingData!);
-          return _cachedTrainingData!;
-        }
+    // 1. Verificar caché en memoria si no es forzado
+    if (!forceRefresh && _cachedTrainingData != null && _lastFetchTime != null) {
+      final minutesSinceLastFetch = DateTime.now().difference(_lastFetchTime!).inMinutes;
+      if (minutesSinceLastFetch < TrainingLocalStorage.cacheValidityMinutes) {
+        print("💡 getDashboardData - Usando caché en memoria (${minutesSinceLastFetch} minutos)");
+        return _modificarSesionesDescansoParaHoy(_cachedTrainingData!);
       }
-
-      // Si llegamos aquí, no hay caché válida, así que refrescar desde el servidor
-      shouldFetchFromServer = true;
     }
 
-    // Si debemos actualizar desde el servidor
-    if (shouldFetchFromServer) {
+    // 2. Verificar almacenamiento local si no es forzado
+    if (!forceRefresh) {
+      final localData = await TrainingLocalStorage.getTrainingData();
+      if (localData != null) {
+        print("💡 getDashboardData - Usando caché del almacenamiento local");
+        _cachedTrainingData = TrainingData.fromJson(localData);
+        _lastFetchTime = DateTime.now();
+        
+        // Aplicar modificaciones de datos aleatorios
+        _cachedTrainingData = _modificarSesionesDescansoParaHoy(_cachedTrainingData!);
+        
+        // Notificar a los oyentes
+        _trainingDataController.add(_cachedTrainingData!);
+        return _cachedTrainingData!;
+      }
+    }
+
+    // 3. Solo si no hay datos en caché o es forzado, obtener de la API
+    if (forceRefresh || _cachedTrainingData == null) {
       try {
         print("💡 getDashboardData - Obteniendo datos del servidor");
-        // Obtener datos del servidor
-        final data = await THttpHelper.get('$_dashboardEndpoint/$userId');
+        final data = await THttpHelper.get('$_dashboardEndpoint$userId');
 
-        // Guardar en caché
+        // Procesar y guardar los datos
         _cachedTrainingData = TrainingData.fromJson(data);
         _lastFetchTime = DateTime.now();
 
@@ -87,34 +76,26 @@ class TrainingService {
         // Guardar en el almacenamiento local
         await TrainingLocalStorage.saveTrainingData(data);
 
-        // Notificar a los oyentes sobre los datos cargados
+        // Notificar a los oyentes
         _trainingDataController.add(_cachedTrainingData!);
 
         return _cachedTrainingData!;
       } catch (e) {
-        // Si hay un error al obtener del servidor, intentar usar caché local
         print("❌ Error al obtener datos del servidor: $e");
-        final localData = await TrainingLocalStorage.getTrainingData();
-        if (localData != null) {
-          print("⚠️ Usando caché local debido a error de servidor");
-          _cachedTrainingData = TrainingData.fromJson(localData);
-          _lastFetchTime = DateTime.now();
-          
-          // Aplicar modificaciones de datos aleatorios
-          _cachedTrainingData = _modificarSesionesDescansoParaHoy(_cachedTrainingData!);
-          
-          // Notificar a los oyentes
-          _trainingDataController.add(_cachedTrainingData!);
-          return _cachedTrainingData!;
+        
+        // Si hay error con la API y no hay datos en caché, propagar el error
+        if (_cachedTrainingData == null) {
+          throw Exception('Error al obtener datos del entrenamiento: ${e.toString()}');
         }
-
-        // Si no hay caché local, propagar el error
-        throw Exception(
-            'Error al obtener datos del entrenamiento: ${e.toString()}');
+        
+        // Si hay error pero tenemos datos en caché, usarlos
+        print("⚠️ Usando caché en memoria debido a error de servidor");
+        return _modificarSesionesDescansoParaHoy(_cachedTrainingData!);
       }
     }
 
-    throw Exception('Error inesperado al obtener datos del entrenamiento');
+    // Si llegamos aquí, significa que tenemos datos en caché y no es forzado
+    return _modificarSesionesDescansoParaHoy(_cachedTrainingData!);
   }
 
   // Método para modificar las sesiones de descanso para hoy con datos aleatorios
@@ -427,5 +408,41 @@ class TrainingService {
     // Implementar lógica para sincronizar cambios pendientes
     // Por ejemplo, verificar sesiones marcadas como completadas localmente
     // pero que aún no se han enviado al servidor
+  }
+
+  // Método para actualizar una sesión
+  Future<void> updateSession(Session session) async {
+    try {
+      final response = await THttpHelper.put(
+        '$_sessionEndpoint/${session.sessionDate.millisecondsSinceEpoch}',
+        session.toJson(),
+      );
+
+      if (response == null) {
+        throw Exception('Error al actualizar la sesión');
+      }
+    } catch (e) {
+      throw Exception('Error al actualizar la sesión: $e');
+    }
+  }
+
+  // Método para guardar los datos en el almacenamiento local
+  Future<void> saveLocalDashboardData(TrainingData data) async {
+    try {
+      await TrainingLocalStorage.saveTrainingData(data.toJson());
+    } catch (e) {
+      throw Exception('Error al guardar los datos localmente: $e');
+    }
+  }
+
+  // Método para obtener los datos del almacenamiento local
+  Future<TrainingData?> getLocalDashboardData() async {
+    try {
+      final jsonData = await TrainingLocalStorage.getTrainingData();
+      if (jsonData == null) return null;
+      return TrainingData.fromJson(jsonData);
+    } catch (e) {
+      throw Exception('Error al obtener los datos locales: $e');
+    }
   }
 }

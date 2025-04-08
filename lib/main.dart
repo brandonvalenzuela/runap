@@ -7,10 +7,9 @@ import 'package:flutter/services.dart'; // Necesario para SystemChrome (barra de
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:runap/Core/service_locator.dart'; // Asegúrate que la ruta es correcta
+// import 'package:runap/Core/service_locator.dart'; // Eliminado: Ya no se usa
 import 'package:runap/data/repositories/authentication/authentication_repository.dart'; // Asegúrate que la ruta es correcta
 import 'package:runap/firebase_options.dart'; // Asegúrate que la ruta es correcta
-import 'package:runap/utils/helpers/navigation_helper.dart'; // Importar helper de navegación
 import 'app.dart'; // Asegúrate que la ruta es correcta
 
 // Punto de entrada de la aplicación
@@ -35,8 +34,10 @@ Future<void> main() async {
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent, // Transparente en Android
-      statusBarIconBrightness: Brightness.dark, // Iconos oscuros (para fondos claros) - Android
-      statusBarBrightness: Brightness.light, // Íconos oscuros (para fondos claros) - iOS
+      statusBarIconBrightness:
+          Brightness.dark, // Iconos oscuros (para fondos claros) - Android
+      statusBarBrightness:
+          Brightness.light, // Íconos oscuros (para fondos claros) - iOS
     ),
   );
 
@@ -48,7 +49,8 @@ Future<void> main() async {
   // --- 6. Inicializar Firebase y Repositorio de Autenticación ---
   // Es crucial manejar posibles errores durante la inicialización de Firebase.
   try {
-    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform)
+    await Firebase.initializeApp(
+            options: DefaultFirebaseOptions.currentPlatform)
         .then(
       (FirebaseApp value) {
         // Una vez Firebase está listo, inicializamos y registramos el repositorio
@@ -71,8 +73,8 @@ Future<void> main() async {
   // Aquí configuras otras dependencias (ej: con get_it).
   // Considera si puedes unificar tu estrategia de DI (solo GetX o solo get_it)
   // para simplificar la gestión de dependencias.
-  setupServiceLocator();
-  log("Service Locator Setup Complete");
+  // setupServiceLocator(); // Eliminado: Ya no se usa
+  // log("Service Locator Setup Complete"); // Eliminado: Ya no se usa
 
   // --- 8. Ejecutar la Aplicación ---
   // ¡Importante! Recuerda llamar a FlutterNativeSplash.remove() dentro de tu app

@@ -1,61 +1,118 @@
 import 'dart:convert';
-import 'package:runap/features/dashboard/models/dashboard_model.dart';
+import 'package:runap/features/dashboard/domain/entities/dashboard_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class TrainingLocalStorage {
   static const String _trainingDataKey = 'training_data';
   static const String _lastFetchTimeKey = 'last_fetch_time';
+  static const String _cacheVersionKey = 'cache_version';
 
-  // Tiempo de caché en minutos
-  static const int _cacheValidityMinutes = 15; // 1 hora
+  // Tiempo de caché en minutos (consistente en toda la app)
+  static const int cacheValidityMinutes = 15;
+
+  // Versión del caché para manejar migraciones
+  static const int _currentCacheVersion = 1;
 
   // Guardar los datos de entrenamiento en el almacenamiento local
   static Future<void> saveTrainingData(Map<String, dynamic> data) async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonData = json.encode(data);
-    await prefs.setString(_trainingDataKey, jsonData);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Guardar datos
+      final jsonData = json.encode(data);
+      await prefs.setString(_trainingDataKey, jsonData);
 
-    // Guardar el tiempo de la última actualización
-    await prefs.setInt(
-        _lastFetchTimeKey, DateTime.now().millisecondsSinceEpoch);
+      // Guardar tiempo de actualización
+      await prefs.setInt(_lastFetchTimeKey, DateTime.now().millisecondsSinceEpoch);
+      
+      // Guardar versión del caché
+      await prefs.setInt(_cacheVersionKey, _currentCacheVersion);
+      
+      print("💾 Datos guardados en almacenamiento local");
+    } catch (e) {
+      print("❌ Error al guardar datos en almacenamiento local: $e");
+      throw Exception('Error al guardar datos en almacenamiento local: $e');
+    }
   }
 
   // Obtener los datos de entrenamiento del almacenamiento local
   static Future<Map<String, dynamic>?> getTrainingData() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonData = prefs.getString(_trainingDataKey);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Verificar versión del caché
+      final cacheVersion = prefs.getInt(_cacheVersionKey);
+      if (cacheVersion != _currentCacheVersion) {
+        print("⚠️ Versión de caché desactualizada, limpiando...");
+        await clearTrainingData();
+        return null;
+      }
 
-    if (jsonData != null) {
+      // Verificar validez del caché
+      final lastFetchTime = prefs.getInt(_lastFetchTimeKey);
+      if (lastFetchTime == null) {
+        return null;
+      }
+
+      final now = DateTime.now();
+      final lastFetch = DateTime.fromMillisecondsSinceEpoch(lastFetchTime);
+      final difference = now.difference(lastFetch).inMinutes;
+
+      if (difference >= cacheValidityMinutes) {
+        print("⚠️ Caché expirado (${difference} minutos)");
+        return null;
+      }
+
+      // Obtener datos
+      final jsonData = prefs.getString(_trainingDataKey);
+      if (jsonData == null) {
+        return null;
+      }
+
+      print("📥 Datos recuperados del almacenamiento local (${difference} minutos)");
       return json.decode(jsonData) as Map<String, dynamic>;
+    } catch (e) {
+      print("❌ Error al obtener datos del almacenamiento local: $e");
+      return null;
     }
-
-    return null;
   }
 
-  // Verificar si los datos en caché son válidos o si deberían actualizarse
+  // Verificar si los datos en caché son válidos
   static Future<bool> isCacheValid() async {
-    final prefs = await SharedPreferences.getInstance();
-    final lastFetchTime = prefs.getInt(_lastFetchTimeKey);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lastFetchTime = prefs.getInt(_lastFetchTimeKey);
 
-    if (lastFetchTime == null) {
+      if (lastFetchTime == null) {
+        return false;
+      }
+
+      final now = DateTime.now();
+      final lastFetch = DateTime.fromMillisecondsSinceEpoch(lastFetchTime);
+      final difference = now.difference(lastFetch).inMinutes;
+
+      return difference < cacheValidityMinutes;
+    } catch (e) {
+      print("❌ Error al verificar validez del caché: $e");
       return false;
     }
-
-    final now = DateTime.now();
-    final lastFetch = DateTime.fromMillisecondsSinceEpoch(lastFetchTime);
-    final difference = now.difference(lastFetch).inMinutes;
-
-    return difference < _cacheValidityMinutes;
   }
 
-  // Limpiar datos de entrenamiento (útil para logout)
+  // Limpiar datos de entrenamiento
   static Future<void> clearTrainingData() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_trainingDataKey);
-    await prefs.remove(_lastFetchTimeKey);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_trainingDataKey);
+      await prefs.remove(_lastFetchTimeKey);
+      await prefs.remove(_cacheVersionKey);
+      print("🧹 Datos de entrenamiento limpiados");
+    } catch (e) {
+      print("❌ Error al limpiar datos de entrenamiento: $e");
+      throw Exception('Error al limpiar datos de entrenamiento: $e');
+    }
   }
 
-  // Actualizar una sesión específica (por ejemplo, marcarla como completada)
+  // Actualizar una sesión específica
   static Future<bool> updateSession(Session updatedSession) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -72,15 +129,14 @@ class TrainingLocalStorage {
         return false;
       }
 
-      // Encontrar y actualizar la sesión en la lista
+      // Encontrar y actualizar la sesión
       List<dynamic> sessions = data['dashboard']['nextWeekSessions'];
       for (int i = 0; i < sessions.length; i++) {
-        // Comparar por fecha (que usamos como identificador único)
         if (sessions[i]['sessionDate'] ==
             updatedSession.sessionDate.toIso8601String()) {
           sessions[i]['completed'] = updatedSession.completed;
 
-          // Actualizar la tasa de completado y sesiones completadas
+          // Actualizar estadísticas
           int completedCount = 0;
           for (var session in sessions) {
             if (session['completed'] == true) {
@@ -95,15 +151,15 @@ class TrainingLocalStorage {
                     .round();
           }
 
-          // Guardar los datos actualizados
-          await prefs.setString(_trainingDataKey, json.encode(data));
+          // Guardar datos actualizados
+          await saveTrainingData(data);
           return true;
         }
       }
 
       return false;
     } catch (e) {
-      print('Error al actualizar la sesión en el almacenamiento local: $e');
+      print("❌ Error al actualizar sesión en almacenamiento local: $e");
       return false;
     }
   }
