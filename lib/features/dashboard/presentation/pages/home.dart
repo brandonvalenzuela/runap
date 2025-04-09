@@ -51,7 +51,7 @@ class _HomeScreenState extends State<HomeScreen>
   static const Duration _cardAnimationDuration = Duration(milliseconds: 500);
 
   // Constantes de estilo y altura (usadas por el state y widgets internos)
-  static const double _cardBorderRadius = 16.0;
+  static const double _cardBorderRadius = TSizes.borderRadiusXl;
   static const double _cardShadowOpacity = 0.05;
   static const double _cardShadowBlur = 15.0;
   static const double _cardShadowSpread = 3.0;
@@ -381,7 +381,6 @@ class _HomeScreenState extends State<HomeScreen>
                       // spreadRadius no está en el archivo de prueba, lo eliminamos
                     ),
                   ],
-                  // color: TColors.primaryColor.withAlpha(25), // Eliminar color sólido
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -401,7 +400,7 @@ class _HomeScreenState extends State<HomeScreen>
                               ),
                               child: const Icon(Icons.directions_run,
                                   color: Colors.white, // Icono blanco
-                                  size: 20),
+                                  size: 20.0),
                             ),
                             const SizedBox(width: TSizes.sm),
                             Text(
@@ -900,7 +899,19 @@ class _HomeContentWidget extends StatelessWidget {
           cardBorderRadius: cardBorderRadius,
         ),
         _buildUpcomingSessionsTitle(context),
-        _buildSessionsList(context),
+        _SessionsListView(
+          sessions: sessions,
+          dayFormatter: dayFormatter,
+          monthFormatter: monthFormatter,
+          weekdayFormatter: weekdayFormatter,
+          listItemAnimationDuration: listItemAnimationDuration,
+          cardAnimationDuration: cardAnimationDuration,
+          cardBorderRadius: cardBorderRadius,
+          listItemShadowOpacity: listItemShadowOpacity,
+          listItemShadowBlur: listItemShadowBlur,
+          listItemShadowSpread: listItemShadowSpread,
+          listItemShadowOffset: listItemShadowOffset,
+        ),
       ],
     );
   }
@@ -940,142 +951,6 @@ class _HomeContentWidget extends StatelessWidget {
         ),
       ),
     );
-  }
-
-   Widget _buildSessionsList(BuildContext context) {
-    // Ordenar sesiones por fecha (asegurarse de que estén ordenadas)
-    // La lista 'sessions' ya viene filtrada por la semana actual
-    final sortedSessions = List<Session>.from(sessions)..sort((a, b) => a.sessionDate.compareTo(b.sessionDate));
-
-    // Agrupar sesiones por día (ignorando la hora)
-    final groupedSessions = groupBy<Session, DateTime>(
-      sortedSessions,
-      (session) => DateTime(session.sessionDate.year, session.sessionDate.month, session.sessionDate.day),
-    );
-
-    // Crear la lista de widgets (headers y cards)
-    List<Widget> listItems = [];
-    int animationIndex = 0; // Índice para la animación escalonada
-
-    final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
-    final tomorrow = DateTime(today.year, today.month, today.day + 1);
-
-    groupedSessions.forEach((date, sessionsOnDate) {
-      // Determinar etiqueta: "Hoy", "Mañana" o vacía
-      String label = '';
-      if (date == today) {
-        label = 'Hoy';
-      } else if (date == tomorrow) {
-        label = 'Mañana';
-      }
-
-      // Añadir el Header para este día
-      listItems.add(
-        AnimationConfiguration.staggeredList(
-          position: animationIndex++,
-          duration: listItemAnimationDuration,
-          child: SlideAnimation(
-            verticalOffset: 30.0,
-            child: FadeInAnimation(
-              child: DashboardDateHeader(
-                day: dayFormatter.format(date),
-                month: monthFormatter.format(date).replaceAll('.', '').capitalizeFirst ?? monthFormatter.format(date),
-                weekday: weekdayFormatter.format(date).capitalizeFirst ?? weekdayFormatter.format(date),
-                label: label,
-              ),
-            ),
-          ),
-        )
-      );
-
-      // Añadir las TrainingCards para este día
-      for (var session in sessionsOnDate) {
-        final isPast = session.sessionDate.isBefore(DateTime.now()); // Considerar hora aquí
-        final isTodaySession = DateTime(
-          session.sessionDate.year,
-          session.sessionDate.month,
-          session.sessionDate.day
-        ) == DateTime(
-          DateTime.now().year,
-          DateTime.now().month,
-          DateTime.now().day
-        ); // Comparación directa de fechas
-
-        listItems.add(
-          AnimationConfiguration.staggeredList(
-            position: animationIndex++,
-            duration: cardAnimationDuration,
-            child: SlideAnimation(
-              verticalOffset: 50.0,
-              child: FadeInAnimation(
-                child: Container(
-                  // Quitar margen inferior del container, añadirlo al Padding exterior del ListView
-                  // margin: const EdgeInsets.only(bottom: TSizes.sm),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(cardBorderRadius),
-                    boxShadow: [
-                      BoxShadow(
-                        color: TColors.colorBlack.withAlpha((listItemShadowOpacity * 255).round()),
-                        blurRadius: listItemShadowBlur,
-                        offset: Offset(0, listItemShadowOffset),
-                        spreadRadius: listItemShadowSpread,
-                      ),
-                    ],
-                  ),
-                   // ClipRRect para asegurar que el contenido respete el borde redondeado
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(cardBorderRadius),
-                    child: TrainingCard(
-                      session: session,
-                      showBorder: false, // El borde ahora está implícito por el ClipRRect y la sombra
-                      isPast: isPast,
-                      // Podrías pasar isToday aquí si TrainingCard lo necesita
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          )
-        );
-      }
-       // Añadir un SizedBox después de cada grupo de tarjetas del día para espaciado
-      listItems.add(const SizedBox(height: TSizes.spaceBtwSections * 0.8));
-    });
-
-    // Remover el último SizedBox si existe
-    if (listItems.isNotEmpty && listItems.last is SizedBox) {
-      listItems.removeLast();
-    }
-
-    return Expanded(
-      child: AnimationLimiter(
-        child: ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: TSizes.spaceBtwItems).copyWith(bottom: TSizes.defaultSpace), // Añadir padding horizontal y bottom
-          itemCount: listItems.length,
-          itemBuilder: (context, index) {
-            // El padding horizontal ya está en el ListView
-            // Añadir padding inferior solo a las TrainingCard (o a los SizedBox)
-            // En lugar de eso, añadimos SizedBox entre grupos
-            return listItems[index];
-            /*
-            // Ejemplo si quisiéramos padding solo en las cards:
-            final item = listItems[index];
-            return Padding(
-               padding: EdgeInsets.only(bottom: item is Container ? TSizes.spaceBtwItems : 0),
-               child: item,
-            );
-            */
-          },
-        ),
-      ),
-    );
-  }
-
-  // Helper local para _HomeContentWidget si es necesario
-  bool _isSameDay(DateTime date1, DateTime date2) {
-    return date1.year == date2.year &&
-        date1.month == date2.month &&
-        date1.day == date2.day;
   }
 }
 
@@ -1262,11 +1137,11 @@ class _DashboardHeaderCardState extends State<_DashboardHeaderCard> with SingleT
   Widget _buildDetailsSection(BuildContext context) {
     return Padding(
       // Añadir padding superior para separar de la sección siempre visible
-      padding: const EdgeInsets.only(top: TSizes.md),
+      padding: const EdgeInsets.only(top: TSizes.spaceBtwItems),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-           // Ritmo objetivo y tiempo meta (Usando el helper _buildInfoItem)
+          // Ritmo objetivo y tiempo meta (Usando el helper _buildInfoItem)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -1290,7 +1165,7 @@ class _DashboardHeaderCardState extends State<_DashboardHeaderCard> with SingleT
               ),
             ],
           ),
-          const SizedBox(height: TSizes.md),
+          const SizedBox(height: TSizes.spaceBtwItemsSm),
 
           // Barra de progreso con animación propia
           FadeTransition(
@@ -1308,7 +1183,7 @@ class _DashboardHeaderCardState extends State<_DashboardHeaderCard> with SingleT
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      height: 8,
+                      height: TSizes.smx,
                       decoration: BoxDecoration(
                         color: Colors.white.withAlpha(77),
                         borderRadius: BorderRadius.circular(4),
@@ -1322,18 +1197,22 @@ class _DashboardHeaderCardState extends State<_DashboardHeaderCard> with SingleT
                         ),
                       ),
                     ),
-                    const SizedBox(height: TSizes.xs),
+                    const SizedBox(height: TSizes.spaceBtwItemsSm),
                     Text(
                       '${widget.dashboard.completedSessions} de ${widget.dashboard.totalSessions} sesiones completadas',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Colors.white.withAlpha(230),
-                            fontWeight: FontWeight.w500),
+                            fontWeight: FontWeight.w500,
+                            fontSize: TSizes.fontSizeMd,
+                            ),
                     ),
                     Text(
                       '${widget.dashboard.completionRate.toStringAsFixed(0)}% completado',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Colors.white,
-                            fontWeight: FontWeight.bold),
+                            fontWeight: FontWeight.bold,
+                            fontSize: TSizes.fontSizeMd,
+                            ),
                     ),
                   ],
                 );
@@ -1350,14 +1229,14 @@ class _DashboardHeaderCardState extends State<_DashboardHeaderCard> with SingleT
      return Row(
       children: [
         Container(
-          padding: const EdgeInsets.all(6),
+          padding: const EdgeInsets.all(TSizes.xSmallSpace),
           decoration: BoxDecoration(
             color: iconBackgroundColor,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(TSizes.borderRadiusMd),
           ),
-          child: Icon(icon, size: 16, color: iconColor),
+          child: Icon(icon, size: TSizes.iconMx, color: iconColor),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: TSizes.xSmallSpace),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1365,12 +1244,15 @@ class _DashboardHeaderCardState extends State<_DashboardHeaderCard> with SingleT
               label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: textColor.withAlpha(204),
-                    fontWeight: FontWeight.w500),
+                    fontWeight: FontWeight.w500,
+                    fontSize: TSizes.fontSizeMd),
             ),
             Text(
               value,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.bold, color: textColor),
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                    fontSize: TSizes.fontSizeSm),
             ),
           ],
         ),
@@ -1379,3 +1261,155 @@ class _DashboardHeaderCardState extends State<_DashboardHeaderCard> with SingleT
   }
 
 } // Fin de _DashboardHeaderCardState
+
+// --- NUEVO WIDGET: Lista de Sesiones con Animaciones ---
+class _SessionsListView extends StatelessWidget {
+  final List<Session> sessions;
+  final DateFormat dayFormatter;
+  final DateFormat monthFormatter;
+  final DateFormat weekdayFormatter;
+  final Duration listItemAnimationDuration;
+  final Duration cardAnimationDuration;
+  final double cardBorderRadius;
+  final double listItemShadowOpacity;
+  final double listItemShadowBlur;
+  final double listItemShadowSpread;
+  final double listItemShadowOffset;
+
+  const _SessionsListView({
+    required this.sessions,
+    required this.dayFormatter,
+    required this.monthFormatter,
+    required this.weekdayFormatter,
+    required this.listItemAnimationDuration,
+    required this.cardAnimationDuration,
+    required this.cardBorderRadius,
+    required this.listItemShadowOpacity,
+    required this.listItemShadowBlur,
+    required this.listItemShadowSpread,
+    required this.listItemShadowOffset,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Ordenar sesiones por fecha (asegurarse de que estén ordenadas)
+    final sortedSessions = List<Session>.from(sessions)..sort((a, b) => a.sessionDate.compareTo(b.sessionDate));
+
+    // Agrupar sesiones por día (ignorando la hora)
+    final groupedSessions = groupBy<Session, DateTime>(
+      sortedSessions,
+      (session) => DateTime(session.sessionDate.year, session.sessionDate.month, session.sessionDate.day),
+    );
+
+    // Crear la lista de widgets (headers y cards)
+    List<Widget> listItems = [];
+    int animationIndex = 0; // Índice para la animación escalonada
+
+    final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final tomorrow = DateTime(today.year, today.month, today.day + 1);
+
+    groupedSessions.forEach((date, sessionsOnDate) {
+      // Determinar etiqueta: "Hoy", "Mañana" o vacía
+      String label = '';
+      if (date == today) {
+        label = 'Hoy';
+      } else if (date == tomorrow) {
+        label = 'Mañana';
+      }
+
+      // Añadir el Header para este día
+      listItems.add(
+        _buildAnimatedListItem(
+          index: animationIndex++,
+          duration: listItemAnimationDuration,
+          verticalOffset: 30.0,
+          child: DashboardDateHeader(
+            day: dayFormatter.format(date),
+            month: monthFormatter.format(date).replaceAll('.', '').capitalizeFirst ?? monthFormatter.format(date),
+            weekday: weekdayFormatter.format(date).capitalizeFirst ?? weekdayFormatter.format(date),
+            label: label,
+          ),
+        )
+      );
+
+      // Añadir las TrainingCards para este día
+      for (var session in sessionsOnDate) {
+        final isPast = session.sessionDate.isBefore(DateTime.now()); // Considerar hora aquí
+
+        listItems.add(
+          _buildAnimatedListItem(
+            index: animationIndex++,
+            duration: cardAnimationDuration,
+            verticalOffset: 50.0,
+            child: _buildTrainingCardItem(session, isPast),
+          )
+        );
+      }
+      // Añadir un SizedBox después de cada grupo de tarjetas del día para espaciado
+      listItems.add(SizedBox(height: TSizes.spaceBtwSections * 0.8));
+    });
+
+    // Remover el último SizedBox si existe y si la lista no está vacía
+    if (listItems.isNotEmpty && listItems.last is SizedBox) {
+      listItems.removeLast();
+    }
+
+    // Devolver el ListView animado
+    return Expanded(
+      child: AnimationLimiter(
+        child: ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: TSizes.spaceBtwItems)
+                   .copyWith(bottom: TSizes.defaultSpace), // Añadir padding
+          itemCount: listItems.length,
+          itemBuilder: (context, index) {
+            return listItems[index];
+          },
+        ),
+      ),
+    );
+  }
+
+  // Helper para construir un item de lista animado
+  Widget _buildAnimatedListItem({
+    required int index,
+    required Duration duration,
+    required double verticalOffset,
+    required Widget child,
+  }) {
+    return AnimationConfiguration.staggeredList(
+      position: index,
+      duration: duration,
+      child: SlideAnimation(
+        verticalOffset: verticalOffset,
+        child: FadeInAnimation(
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  // Helper para construir el contenedor y la TrainingCard
+  Widget _buildTrainingCardItem(Session session, bool isPast) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(cardBorderRadius),
+        boxShadow: [
+          BoxShadow(
+            color: TColors.colorBlack.withAlpha((listItemShadowOpacity * 255).round()),
+            blurRadius: listItemShadowBlur,
+            offset: Offset(0, listItemShadowOffset),
+            spreadRadius: listItemShadowSpread,
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(cardBorderRadius),
+        child: TrainingCard(
+          session: session,
+          showBorder: false,
+          isPast: isPast,
+        ),
+      ),
+    );
+  }
+}
