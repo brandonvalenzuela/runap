@@ -24,33 +24,31 @@ class TrainingViewModel extends GetxController {
   LoadingStatus get status => _status.value;
   String get errorMessage => _errorMessage.value;
 
+  // final _storage = GetStorage(); // Solo si usas GetStorage directamente aquí
+
   // Constructor - llamado cuando GetX instancia este controller
   @override
   void onInit() {
     super.onInit();
     print("🚀 TrainingViewModel - onInit");
 
-    // Suscribirnos al stream de datos de entrenamiento
+    // La suscripción al stream es importante para actualizaciones post-carga inicial
     _trainingService.trainingDataStream.listen((data) {
       print("📡 TrainingViewModel - Recibiendo datos del stream");
-      _trainingData.value = data;
-      _status.value = LoadingStatus.loaded;
-
-      // IMPORTANTE: Llamar a update() para notificar a GetBuilder
-      update();
-
-      // Verificar si hay datos y sesiones
-      if (data != null && data.dashboard.nextWeekSessions.isNotEmpty) {
-        print(
-            "✅ TrainingViewModel (stream) - Datos recibidos con ${data.dashboard.nextWeekSessions.length} sesiones");
+      if (data != null) {
+        _trainingData.value = data;
+        // Solo cambiar a 'loaded' si no estaba ya en 'error'
+        if (_status.value != LoadingStatus.error) {
+          _status.value = LoadingStatus.loaded;
+        }
+        update(); // Notificar a GetBuilder
+        print("✅ TrainingViewModel (stream) - Datos procesados");
+         if (!_isUpdatingPastSessions) {
+             _updatePastSessions();
+         }
       } else {
-        print(
-            "⚠️ TrainingViewModel (stream) - Datos recibidos sin sesiones o nulos");
-      }
-
-      // Solo llamar a actualizar sesiones pasadas si no estamos ya en ese proceso
-      if (!_isUpdatingPastSessions) {
-        _updatePastSessions();
+         print("⚠️ TrainingViewModel (stream) - Stream devolvió datos nulos");
+         // Decide si quieres manejar nulls del stream como error
       }
     });
 
@@ -61,61 +59,77 @@ class TrainingViewModel extends GetxController {
   // Método para cargar los datos del dashboard
   Future<void> loadDashboardData(
       {bool forceRefresh = false, int? userId}) async {
-    try {
-      print(
-          "🔄 TrainingViewModel - Iniciando carga de datos. ForceRefresh: $forceRefresh");
+    print("🔄 TrainingViewModel - Iniciando carga. ForceRefresh: $forceRefresh");
+    final userIdToUse = userId ?? _userId;
+    bool loadedFromCache = false;
 
-      // Actualizar estado
+    // 1. Intentar cargar desde caché local SIN mostrar loading si no es forceRefresh
+    if (!forceRefresh) {
+      try {
+        // Usamos el método del servicio que lee la caché local
+        final cachedData = await _trainingService.getLocalDashboardData();
+        if (cachedData != null) {
+          print("💾 TrainingViewModel - Datos encontrados en caché local del servicio.");
+          _trainingData.value = cachedData;
+          _status.value = LoadingStatus.loaded;
+          loadedFromCache = true;
+          update(); // ¡Actualizar UI INMEDIATAMENTE con la caché!
+          print("✅ TrainingViewModel - UI actualizada con caché local.");
+        }
+      } catch (e) {
+        print("⚠️ TrainingViewModel - Error leyendo caché local del servicio: $e");
+        // Continuar para intentar cargar desde la red/Firestore
+      }
+    }
+
+    // 2. Si no se cargó de caché O se forzó el refresco, mostrar loading
+    if (!loadedFromCache) {
+      print("⏳ TrainingViewModel - No hay caché / Forzado. Mostrando loading.");
       _status.value = LoadingStatus.loading;
-      update(); // IMPORTANTE: Notificar a GetBuilder
+      update();
+    }
 
-      // Usamos el userId proporcionado o el valor por defecto
-      final userIdToUse = userId ?? _userId;
-
-      // Cargar datos
+    // 3. Intentar obtener datos del servicio (red/Firestore)
+    // Si se cargó de caché, esto actúa como un refresco en segundo plano.
+    // Si no, es la carga principal.
+    try {
+      print("☁️ TrainingViewModel - Obteniendo datos del servicio...");
       final data = await _trainingService.getDashboardData(
           forceRefresh: forceRefresh, userId: userIdToUse);
 
-      // Actualizar estado
-      _trainingData.value = data;
-      _status.value = LoadingStatus.loaded;
-
-      // Imprimir información para debug
-      if (data != null && data.dashboard.nextWeekSessions.isNotEmpty) {
-        print("✅ TrainingViewModel - Datos cargados exitosamente");
-        print(
-            "📊 Total de sesiones: ${data.dashboard.nextWeekSessions.length}");
-        print(
-            "📊 Primera sesión: ${data.dashboard.nextWeekSessions[0].workoutName}");
-
-        // Verificar si hay sesiones para hoy
-        _verificarSesionesHoy(data.dashboard.nextWeekSessions);
-
-        // IMPORTANTE: Verificar si la lista contiene elementos después de ordenarla
-        List<Session> testSessions = List.from(data.dashboard.nextWeekSessions);
-        testSessions.sort((a, b) => a.sessionDate.compareTo(b.sessionDate));
-        print("📊 Después de ordenar: ${testSessions.length} sesiones");
-        if (testSessions.isNotEmpty) {
-          print("📊 Primera sesión ordenada: ${testSessions[0].workoutName}");
-        }
-      } else {
-        print(
-            "⚠️ TrainingViewModel - No hay sesiones disponibles o datos nulos");
+      // El stream listener debería manejar la actualización principal,
+      // pero podemos asegurarnos aquí si el stream no emitió o por redundancia.
+      // Solo actualizamos el estado si NO viene de un error previo
+      // o si forzamos el refresco.
+      if (_status.value != LoadingStatus.error || forceRefresh) {
+         if (data != null) {
+            // Podríamos comparar si data es diferente a _trainingData.value antes de actualizar
+            _trainingData.value = data;
+            _status.value = LoadingStatus.loaded;
+            print("✅ TrainingViewModel - Datos obtenidos/refrescados del servicio.");
+            update();
+            _verificarSesionesHoy(data.dashboard.nextWeekSessions);
+            _updatePastSessions();
+         } else if (!loadedFromCache) {
+            // Si no cargamos de caché y el servicio devuelve null -> Error
+            print("❌ TrainingViewModel - Servicio devolvió null y no había caché.");
+            _status.value = LoadingStatus.error;
+            _errorMessage.value = "No se pudieron obtener datos.";
+            update();
+         }
       }
 
-      // IMPORTANTE: Llamar a update() DESPUÉS de modificar los datos
-      update();
-
-      // Verificar sesiones pasadas
-      _updatePastSessions();
     } catch (e) {
-      print("❌ TrainingViewModel - Error al cargar datos: $e");
-
-      _status.value = LoadingStatus.error;
-      _errorMessage.value = e.toString();
-
-      // IMPORTANTE: Notificar a GetBuilder sobre el error
-      update();
+      print("❌ TrainingViewModel - Error llamando a getDashboardData: $e");
+      // Solo establecer error si NO habíamos cargado de caché previamente
+      if (!loadedFromCache) {
+        _status.value = LoadingStatus.error;
+        _errorMessage.value = e.toString();
+        update();
+      } else {
+         print("ℹ️ TrainingViewModel - Error al refrescar datos, manteniendo caché: $e");
+         // Opcional: mostrar mensaje no bloqueante (Toast/Snackbar)
+      }
     }
   }
 
@@ -167,10 +181,10 @@ class TrainingViewModel extends GetxController {
     if (success) {
       print("✅ Sesión actualizada exitosamente");
 
-      // Actualizar localmente
-      session.completed = newStatus;
+      // Actualizar localmente (el servicio ya debería haberlo hecho y notificado vía stream)
+      // session.completed = newStatus; // Comentado, el stream debería manejarlo
 
-      // IMPORTANTE: Notificar a GetBuilder
+      // IMPORTANTE: Notificar a GetBuilder (redundante si el stream funciona bien, pero seguro)
       update();
       return true;
     }
@@ -194,23 +208,38 @@ class TrainingViewModel extends GetxController {
       bool anyUpdated = false;
       List<Session> sessionsToUpdate = [];
 
-      for (var session in _trainingData.value!.dashboard.nextWeekSessions) {
+      // Usar una copia de la lista para evitar problemas de concurrencia si el stream la modifica
+      final currentSessions = List<Session>.from(_trainingData.value!.dashboard.nextWeekSessions);
+
+      for (var session in currentSessions) {
         // Verificar si la sesión ya pasó y no está completada
-        if (session.sessionDate.isBefore(now) && !session.completed) {
+        // Asegurarse que la comparación de fecha ignora la hora
+        final sessionDateOnly = DateTime(session.sessionDate.year, session.sessionDate.month, session.sessionDate.day);
+        final nowDateOnly = DateTime(now.year, now.month, now.day);
+
+        if (sessionDateOnly.isBefore(nowDateOnly) && !session.completed) {
           // Agregar a la lista de sesiones a actualizar en el backend
           sessionsToUpdate.add(session);
-          anyUpdated = true;
+          // Marcar localmente como no completada (si no lo estaba ya)
+          if (session.completed != false) {
+              session.completed = false; // Actualizar el objeto en la copia local
+              anyUpdated = true;
+          }
         }
       }
 
       // Actualizar en el backend las sesiones pasadas no completadas
       if (sessionsToUpdate.isNotEmpty) {
-        print("🔄 Actualizando ${sessionsToUpdate.length} sesiones pasadas");
+        print("🔄 Actualizando ${sessionsToUpdate.length} sesiones pasadas como no completadas en backend");
         _markPastSessionsAsNotCompleted(sessionsToUpdate);
       }
 
-      // Solo notificar si realmente hubo cambios
+      // Solo notificar si realmente hubo cambios locales
       if (anyUpdated) {
+         print("📊 Notificando UI por actualización de sesiones pasadas.");
+        // Es importante actualizar _trainingData.value con la lista modificada si es necesario
+        // O confiar en que el servicio emitirá los cambios si _markPast... los notifica.
+        // Por seguridad, llamamos update() aquí.
         update();
       }
     } finally {
@@ -220,17 +249,14 @@ class TrainingViewModel extends GetxController {
 
   // Método para marcar sesiones pasadas como no completadas en el backend
   Future<void> _markPastSessionsAsNotCompleted(List<Session> sessions) async {
-    for (var session in sessions) {
-      // Marca como no completada en el backend si ya pasó la fecha
-      // Solo si ya no estaba marcada como completada
-      if (!session.completed) {
-        await _trainingService.markSessionAsCompleted(
-            session, false, // Explícitamente marcamos como no completada
-            userId: _userId);
-
-        // Para evitar múltiples actualizaciones, marcamos localmente
-        session.completed = false;
-      }
+    // Iterar sobre una copia para evitar problemas si la lista original cambia
+    for (var session in List<Session>.from(sessions)) {
+      // Marca como no completada en el backend
+      // El servicio ya debería manejar la lógica de no reenviar si ya está false
+       await _trainingService.markSessionAsCompleted(
+          session, false, // Explícitamente marcamos como no completada
+          userId: _userId);
+        // No es necesario actualizar localmente aquí, _updatePastSessions ya lo hizo
     }
   }
 
@@ -239,7 +265,7 @@ class TrainingViewModel extends GetxController {
     await _trainingService.syncPendingChanges(_userId);
   }
 
-                                      // Método para forzar la generación de datos aleatorios para pruebas
+  // Método para forzar la generación de datos aleatorios para pruebas
   Future<void> generarDatosAleatorios() async {
     print("🚀 Generando datos aleatorios para pruebas");
     
@@ -274,7 +300,8 @@ class TrainingViewModel extends GetxController {
   @override
   void onClose() {
     print("🔄 TrainingViewModel - onClose");
-    _trainingService.dispose();
+    // Considera si necesitas cerrar el stream controller DENTRO del servicio
+    // _trainingService.dispose(); // Llama a dispose si existe en el servicio
     super.onClose();
   }
 }

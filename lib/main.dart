@@ -10,6 +10,7 @@ import 'package:get_storage/get_storage.dart';
 // import 'package:runap/Core/service_locator.dart'; // Eliminado: Ya no se usa
 import 'package:runap/data/repositories/authentication/authentication_repository.dart'; // Asegúrate que la ruta es correcta
 import 'package:runap/firebase_options.dart'; // Asegúrate que la ruta es correcta
+import 'package:cloud_firestore/cloud_firestore.dart'; // <--- Añadir esta importación
 import 'app.dart'; // Asegúrate que la ruta es correcta
 
 // Punto de entrada de la aplicación
@@ -53,6 +54,14 @@ Future<void> main() async {
             options: DefaultFirebaseOptions.currentPlatform)
         .then(
       (FirebaseApp value) {
+        // Configurar la persistencia de Firestore ANTES de usar Firestore por primera vez
+        FirebaseFirestore.instance.settings = const Settings(
+          persistenceEnabled: true,
+          // Opcional: Ajustar el tamaño de la caché si es necesario
+          // cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED, // O un valor específico en bytes
+        );
+        log("Firestore Persistence Enabled");
+
         // Una vez Firebase está listo, inicializamos y registramos el repositorio
         // usando GetX. Esto asegura que el repo solo esté disponible si Firebase funciona.
         Get.put(AuthenticationRepository());
