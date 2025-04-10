@@ -83,14 +83,25 @@ class TrainingService {
         return _cachedTrainingData!;
       } catch (e) {
         print("❌ Error al obtener datos del servidor: $e");
-        
-        // Si hay error con la API y no hay datos en caché, propagar el error
-        if (_cachedTrainingData == null) {
-          throw Exception('Error al obtener datos del entrenamiento: ${e.toString()}');
+
+        // INTENTAR CARGAR CACHE LOCAL COMO FALLBACK ANTES DE PROPAGAR ERROR
+        final localDataFallback = await TrainingLocalStorage.getTrainingData();
+        if (localDataFallback != null) {
+           print("⚠️ Usando CACHÉ LOCAL EXPIRADA debido a error de servidor");
+           _cachedTrainingData = TrainingData.fromJson(localDataFallback);
+           _lastFetchTime = DateTime.now(); // Resetear tiempo para evitar reintentos inmediatos
+           _cachedTrainingData = _modificarSesionesDescansoParaHoy(_cachedTrainingData!);
+           _trainingDataController.add(_cachedTrainingData!);
+           return _cachedTrainingData!;
         }
         
-        // Si hay error pero tenemos datos en caché, usarlos
-        print("⚠️ Usando caché en memoria debido a error de servidor");
+        // Si hay error con la API y TAMPOCO hay datos en caché local, propagar el error
+        if (_cachedTrainingData == null) { // _cachedTrainingData sería null si memoria y local fallaron
+          throw Exception('Error al obtener datos del entrenamiento y sin caché disponible: ${e.toString()}');
+        }
+        
+        // Si llegamos aquí, significa que hubo un error pero sí teníamos caché EN MEMORIA (no expirada)
+        print("⚠️ Usando caché EN MEMORIA debido a error de servidor");
         return _modificarSesionesDescansoParaHoy(_cachedTrainingData!);
       }
     }

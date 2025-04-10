@@ -50,28 +50,22 @@ class TrainingLocalStorage {
         return null;
       }
 
-      // Verificar validez del caché
-      final lastFetchTime = prefs.getInt(_lastFetchTimeKey);
-      if (lastFetchTime == null) {
+      // NO verificar validez aquí, solo obtener datos si existen.
+      // La lógica de expiración se maneja en el Service/ViewModel.
+      final lastFetchTime = prefs.getInt(_lastFetchTimeKey); // Necesario para el log
+
+      // Obtener datos
+      final jsonData = prefs.getString(_trainingDataKey);
+      if (jsonData == null || lastFetchTime == null) {
         return null;
       }
 
+      // Calcular diferencia solo para el log
       final now = DateTime.now();
       final lastFetch = DateTime.fromMillisecondsSinceEpoch(lastFetchTime);
       final difference = now.difference(lastFetch).inMinutes;
 
-      if (difference >= cacheValidityMinutes) {
-        print("⚠️ Caché expirado ($difference minutos)");
-        return null;
-      }
-
-      // Obtener datos
-      final jsonData = prefs.getString(_trainingDataKey);
-      if (jsonData == null) {
-        return null;
-      }
-
-      print("📥 Datos recuperados del almacenamiento local ($difference minutos)");
+      print("📥 Datos recuperados del almacenamiento local (antigüedad: $difference minutos)");
       return json.decode(jsonData) as Map<String, dynamic>;
     } catch (e) {
       print("❌ Error al obtener datos del almacenamiento local: $e");
