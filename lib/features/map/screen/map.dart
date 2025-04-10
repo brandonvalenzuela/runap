@@ -1,13 +1,20 @@
 // ignore_for_file: avoid_print
 
+import 'dart:async';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:runap/features/dashboard/domain/entities/dashboard_model.dart';
 import 'package:runap/features/map/controller/map_controller.dart';
+import 'package:runap/features/map/controller/workout_controller.dart';
+import 'package:runap/features/map/controller/goal_controller.dart';
 import 'package:runap/features/map/models/workout_goal.dart';
 import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/constants/sizes.dart';
+import 'package:runap/utils/helpers/helper_functions.dart';
 
 class MapScreen extends StatefulWidget {
   final WorkoutGoal? initialWorkoutGoal;
@@ -29,882 +36,362 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
-  late MapController controller;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  late MapController mapController;
+  late WorkoutController workoutController;
+  late GoalController goalController;
+  bool _isSimulating = false;
+  Timer? _simulationTimer;
+  Position? _lastSimulatedPosition;
+  double _simulatedBearing = 0.0;
   
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     
-    // Inyectar el controlador
-    controller = Get.put(MapController(
-      initialSession: widget.sessionToUpdate,
-      initialWorkoutGoal: widget.initialWorkoutGoal,
-    ));
+    mapController = Get.find<MapController>();
+    workoutController = Get.find<WorkoutController>();
+    goalController = Get.find<GoalController>();
     
-    // Notificar que el mapa se ha inicializado
+    workoutController.initializeWithSession(widget.sessionToUpdate);
+    
+    _initializeSimulationPosition();
+
     if (widget.onMapInitialized != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
         widget.onMapInitialized!();
-      });
     }
-    
-    // Imprimir información de depuración
-    print("🗺️ MapScreen - Inicializado");
-    print("🗺️ MapScreen - Con sesión: ${widget.sessionToUpdate?.workoutName}");
+    print("🗺️ MapScreen - InitState");
   }
   
   @override
   void dispose() {
+    _simulationTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
-    // No eliminar el controlador si se está usando en la página anterior
-    if (Get.isRegistered<MapController>() && !Get.previousRoute.contains("dashboard")) {
-      Get.delete<MapController>();
-    }
+    // No eliminar controladores si son globales (gestionados por AppBindings con lazyPut/put permanent)
+    // Get.delete<MapController>(); // Solo si fue puesto localmente en esta pantalla con Get.put
+    // Get.delete<WorkoutController>(); // WorkoutController es global via AppBindings
+
     print("🗺️ MapScreen - Dispose");
     super.dispose();
   }
   
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Manejar cambios en el ciclo de vida de la app
-    print("🗺️ MapScreen - Cambio de estado: $state");
+    super.didChangeAppLifecycleState(state);
+    print("🗺️ MapScreen - AppLifecycleState: $state");
     if (state == AppLifecycleState.resumed) {
-      // La app vuelve a estar en primer plano
-      controller.resetMapIfNeeded();
+      // Al volver a la app, asegurarse de que el mapa esté centrado y actualizado
+      print("🗺️ MapScreen - App resumed - Checking map state...");
+      // Consider checking permissions again or other updates if needed
+      // mapController.checkGpsStatus(); // Example
+    } else if (state == AppLifecycleState.paused) {
+      // App is going to background
+      print("🗺️ MapScreen - App paused");
+      // Stop simulation if running? 
+      // if (_isSimulating) { _toggleSimulation(); }
     }
   }
 
+  Future<void> _initializeSimulationPosition() async {
+    Position? initialPos;
+    final currentLatLng = workoutController.workoutData.value.currentPosition;
+    if (currentLatLng != null) {
+      initialPos = Position(
+          latitude: currentLatLng.latitude,
+          longitude: currentLatLng.longitude,
+          timestamp: DateTime.now(),
+          accuracy: 10.0,
+          altitude: 0.0,
+          altitudeAccuracy: 10.0,
+          heading: 0.0,
+          headingAccuracy: 10.0,
+          speed: 0.0,
+          speedAccuracy: 0.0);
+    }
+    if (initialPos == null) {
+       try {
+          initialPos = await mapController.locationService.getCurrentPosition();
+       } catch (e) {
+          print("Error getting initial position for simulation: $e");
+       }
+    }
+    _lastSimulatedPosition = initialPos ?? Position(
+        latitude: 40.416775,
+        longitude: -3.703790,
+        timestamp: DateTime.now(),
+        accuracy: 50.0,
+        altitude: 0.0,
+        altitudeAccuracy: 50.0,
+        heading: 0.0,
+        headingAccuracy: 0.0,
+        speed: 0.0,
+        speedAccuracy: 0.0);
+     print("🗺️ MapScreen - Initial simulation position set: ${_lastSimulatedPosition?.latitude}, ${_lastSimulatedPosition?.longitude}");
+  }
+
+  void _toggleSimulation() async {
+    if (_isSimulating) {
+      _simulationTimer?.cancel();
+      _simulationTimer = null;
+      setState(() {
+        _isSimulating = false;
+      });
+      print("🛑 Simulation Stopped");
+    } else {
+      if (workoutController.workoutData.value.isWorkoutActive == false) {
+         ScaffoldMessenger.of(context).showSnackBar(
+           const SnackBar(content: Text("Inicia un entrenamiento para simular la ubicación."))
+         );
+         return;
+      }
+
+      if (_lastSimulatedPosition == null) {
+          print("Waiting for initial position...");
+          await _initializeSimulationPosition();
+          if(_lastSimulatedPosition == null) {
+             print("Cannot start simulation: No initial position.");
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("No se pudo obtener ubicación inicial."))
+              );
+              return;
+          }
+      }
+     
+      print("▶️ Starting Simulation from: ${_lastSimulatedPosition?.latitude}, ${_lastSimulatedPosition?.longitude}");
+
+      _simulationTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+        if (_lastSimulatedPosition == null) return; 
+
+        const double metersPerSecond = 5.0;
+        const double secondsInterval = 2.0;
+        const double distance = metersPerSecond * secondsInterval; 
+
+        _simulatedBearing += (Random().nextDouble() - 0.5) * 10; 
+        _simulatedBearing = _simulatedBearing % 360; 
+
+        const double earthRadius = 6371000; 
+        final double lat1 = _toRadians(_lastSimulatedPosition!.latitude);
+        final double lon1 = _toRadians(_lastSimulatedPosition!.longitude);
+        final double bearingRad = _toRadians(_simulatedBearing);
+
+        final double lat2 = asin(sin(lat1) * cos(distance / earthRadius) +
+                             cos(lat1) * sin(distance / earthRadius) * cos(bearingRad));
+        final double lon2 = lon1 + atan2(sin(bearingRad) * sin(distance / earthRadius) * cos(lat1),
+                                      cos(distance / earthRadius) - sin(lat1) * sin(lat2));
+
+        final Position newPosition = Position(
+           latitude: _toDegrees(lat2),
+           longitude: _toDegrees(lon2),
+           timestamp: DateTime.now(),
+           accuracy: 5.0 + Random().nextDouble() * 5, 
+           altitude: _lastSimulatedPosition!.altitude + (Random().nextDouble() - 0.5), 
+           altitudeAccuracy: 5.0 + Random().nextDouble() * 5, 
+           heading: _simulatedBearing,
+           headingAccuracy: 5.0 + Random().nextDouble() * 10, 
+           speed: metersPerSecond + (Random().nextDouble() - 0.5), 
+           speedAccuracy: 0.5,
+        );
+
+        workoutController.handleMetricsUpdate(newPosition); 
+        workoutController.handleLocationUpdate(LatLng(newPosition.latitude, newPosition.longitude));
+        _lastSimulatedPosition = newPosition; 
+
+      });
+
+      setState(() {
+        _isSimulating = true;
+      });
+    }
+  }
+  
+  double _toRadians(double degrees) => degrees * pi / 180.0;
+  double _toDegrees(double radians) => radians * 180.0 / pi;
+
   @override
   Widget build(BuildContext context) {
-    // Asegurarse de imprimir información de depuración
-    print(
-        "🗺️ MapScreen - Construyendo con sessionToUpdate: ${widget.sessionToUpdate?.workoutName}");
-    print(
-        "🗺️ MapScreen - initialWorkoutGoal: ${widget.initialWorkoutGoal?.targetDistanceKm}km");
+    final bool dark = THelperFunctions.isDarkMode(context);
 
-    // Añadir depuración adicional
-    print("🗺️ MapScreen - Posición actual: ${controller.workoutData.value.currentPosition}");
-    print("🗺️ MapScreen - Polilíneas: ${controller.workoutData.value.polylines.length}");
-
-    return WillPopScope(
-      onWillPop: () async {
-        // Lógica para manejar el evento de retroceso
-        print("🗺️ MapScreen - WillPopScope - Usuario presionó retroceder");
-        // Hacer cualquier limpieza necesaria antes de salir
-        return true; // true permite salir, false lo impide
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          title: Obx(() {
-            if (controller.sessionToUpdate.value != null) {
-              return Text(controller.sessionToUpdate.value!.workoutName);
-            }
-            return Text('Entrenamiento');
-          }),
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back),
-            onPressed: () {
-              // Código personalizado para manejar el retroceso
-              print("🗺️ MapScreen - Usuario presionó botón de retroceso");
-              // Reiniciar cualquier estado necesario antes de volver
-              Get.back();
-            },
-          ),
-          actions: [
-            Obx(() {
-              return IconButton(
-                icon: Icon(Icons.flag),
-                onPressed: controller.workoutData.value.isWorkoutActive
-                    ? null
-                    : controller.toggleGoalSelector,
-              );
-            }),
-          ],
-        ),
-        body: Stack(
-          children: [
-            // Mapa
-            Obx(() => _buildMap(controller)),
-
-            // Panel de información inferior
+    return Scaffold(
+      key: _scaffoldKey,
+      extendBodyBehindAppBar: true,
+      appBar: _buildAppBar(context, goalController),
+      body: Obx(() {
+          if (mapController.isLoading.value || goalController.isLoadingGoals.value) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return Stack(
+            children: [
+              GoogleMap(
+                key: const ValueKey("google_map"),
+                mapType: MapType.normal,
+                initialCameraPosition: const CameraPosition(
+                  target: LatLng(40.416775, -3.703790), 
+                  zoom: 14.0,
+                ),
+                onMapCreated: mapController.setMapControllerInstance,
+                myLocationEnabled: true,
+                myLocationButtonEnabled: false,
+                zoomControlsEnabled: false,
+                polylines: workoutController.workoutData.value.polylines,
+                markers: const <Marker>{},
+              ),
             Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Obx(() => _buildInfoPanel(controller)),
-            ),
-
-            // Selector de objetivos (condicional)
-            Obx(() {
-              if (controller.showGoalSelector.value) {
-                return _buildGoalSelector(controller);
-              }
-              return SizedBox.shrink();
-            }),
-
-            // Indicador de carga
-            Obx(() {
-              if (controller.isLoading.value) {
-                return Container(
-                  color: Colors.black54,
-                  child: Center(
-                    child: CircularProgressIndicator(),
-                  ),
-                );
-              }
-              return SizedBox.shrink();
-            }),
-
-            // Indicador de guardado
-            Obx(() {
-              if (controller.isSaving.value) {
-                return Container(
-                  color: Colors.black54,
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 16),
-                        Text(
-                          'Guardando entrenamiento...',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
-              return SizedBox.shrink();
-            }),
-          ],
-        ),
+                top: TSizes.appBarHeight + TSizes.md,
+                left: TSizes.md,
+                right: TSizes.md,
+                child: _buildTopControls(dark),
+              ),
+              if (goalController.showGoalSelector.value)
+                Positioned.fill(
+                  child: _buildGoalSelectionOverlay(dark, goalController),
+                ),
+            ],
+          );
+        }
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _toggleSimulation,
+        tooltip: _isSimulating ? 'Detener Simulación' : 'Iniciar Simulación',
+        child: Icon(_isSimulating ? Icons.stop : Icons.play_arrow),
+      ),
+      bottomNavigationBar: Obx(() => goalController.showGoalSelector.value 
+          ? const SizedBox.shrink() 
+          : _buildBottomInfoPanel(workoutController)),
     );
   }
 
-  Widget _buildMap(MapController controller) {
-    // Obtener dimensiones de la pantalla
-    final screenHeight = MediaQuery.of(Get.context!).size.height;
-    final appBarHeight = AppBar().preferredSize.height;
-    
-    // Estimar altura del panel de información
-    final infoPanelHeight = screenHeight * 0.33;
-    
-    return Stack(
-      children: [
-        GoogleMap(
-          initialCameraPosition: CameraPosition(
-            target: controller.workoutData.value.currentPosition ??
-                LatLng(20.651464, -103.392958),
-            zoom: 17.0,
-          ),
-          myLocationEnabled: true,
-          myLocationButtonEnabled: false,
-          zoomControlsEnabled: false,
-          mapType: MapType.normal,
-          polylines: controller.workoutData.value.polylines,
-          onMapCreated: (GoogleMapController mapController) {
-            controller.setMapControllerInstance(mapController);
-            
-            // Aplicar estilo personalizado para running
-            mapController.setMapStyle('''
-[
-  {
-    "elementType": "geometry",
-    "stylers": [
-      {
-        "color": "#f5f5f5"
-      }
-    ]
-  },
-  {
-    "elementType": "labels.icon",
-    "stylers": [
-      {
-        "visibility": "off"
-      }
-    ]
-  },
-  {
-    "elementType": "labels.text.fill",
-    "stylers": [
-      {
-        "color": "#616161"
-      }
-    ]
-  },
-  {
-    "elementType": "labels.text.stroke",
-    "stylers": [
-      {
-        "color": "#f5f5f5"
-      }
-    ]
-  },
-  {
-    "featureType": "administrative.land_parcel",
-    "stylers": [
-      {
-        "visibility": "off"
-      }
-    ]
-  },
-  {
-    "featureType": "administrative.land_parcel",
-    "elementType": "labels.text.fill",
-    "stylers": [
-      {
-        "color": "#bdbdbd"
-      }
-    ]
-  },
-  {
-    "featureType": "administrative.neighborhood",
-    "stylers": [
-      {
-        "visibility": "simplified"
-      }
-    ]
-  },
-  {
-    "featureType": "poi",
-    "stylers": [
-      {
-        "visibility": "simplified"
-      }
-    ]
-  },
-  {
-    "featureType": "poi",
-    "elementType": "geometry",
-    "stylers": [
-      {
-        "color": "#eeeeee"
-      }
-    ]
-  },
-  {
-    "featureType": "poi",
-    "elementType": "labels.text",
-    "stylers": [
-      {
-        "visibility": "off"
-      }
-    ]
-  },
-  {
-    "featureType": "poi.attraction",
-    "stylers": [
-      {
-        "visibility": "off"
-      }
-    ]
-  },
-  {
-    "featureType": "poi.business",
-    "stylers": [
-      {
-        "visibility": "off"
-      }
-    ]
-  },
-  {
-    "featureType": "poi.government",
-    "stylers": [
-      {
-        "visibility": "off"
-      }
-    ]
-  },
-  {
-    "featureType": "poi.medical",
-    "stylers": [
-      {
-        "visibility": "off"
-      }
-    ]
-  },
-  {
-    "featureType": "poi.park",
-    "elementType": "geometry",
-    "stylers": [
-      {
-        "color": "#c1e7c1"
-      }
-    ]
-  },
-  {
-    "featureType": "poi.park",
-    "elementType": "labels.text",
-    "stylers": [
-      {
-        "visibility": "simplified"
-      }
-    ]
-  },
-  {
-    "featureType": "poi.park",
-    "elementType": "labels.text.fill",
-    "stylers": [
-      {
-        "color": "#9e9e9e"
-      }
-    ]
-  },
-  {
-    "featureType": "poi.place_of_worship",
-    "stylers": [
-      {
-        "visibility": "off"
-      }
-    ]
-  },
-  {
-    "featureType": "poi.school",
-    "stylers": [
-      {
-        "visibility": "off"
-      }
-    ]
-  },
-  {
-    "featureType": "poi.sports_complex",
-    "stylers": [
-      {
-        "visibility": "simplified"
-      }
-    ]
-  },
-  {
-    "featureType": "road",
-    "elementType": "geometry",
-    "stylers": [
-      {
-        "color": "#ffffff"
-      }
-    ]
-  },
-  {
-    "featureType": "road",
-    "elementType": "labels.icon",
-    "stylers": [
-      {
-        "visibility": "off"
-      }
-    ]
-  },
-  {
-    "featureType": "road.arterial",
-    "elementType": "labels.text.fill",
-    "stylers": [
-      {
-        "color": "#757575"
-      }
-    ]
-  },
-  {
-    "featureType": "road.highway",
-    "elementType": "geometry",
-    "stylers": [
-      {
-        "color": "#dadada"
-      }
-    ]
-  },
-  {
-    "featureType": "road.highway",
-    "elementType": "labels.text.fill",
-    "stylers": [
-      {
-        "color": "#616161"
-      }
-    ]
-  },
-  {
-    "featureType": "road.local",
-    "elementType": "labels.text.fill",
-    "stylers": [
-      {
-        "color": "#9e9e9e"
-      }
-    ]
-  },
-  {
-    "featureType": "transit",
-    "stylers": [
-      {
-        "visibility": "off"
-      }
-    ]
-  },
-  {
-    "featureType": "transit.line",
-    "elementType": "geometry",
-    "stylers": [
-      {
-        "color": "#e5e5e5"
-      }
-    ]
-  },
-  {
-    "featureType": "transit.station",
-    "elementType": "geometry",
-    "stylers": [
-      {
-        "color": "#eeeeee"
-      }
-    ]
-  },
-  {
-    "featureType": "water",
-    "elementType": "geometry",
-    "stylers": [
-      {
-        "color": "#c9c9c9"
-      }
-    ]
-  },
-  {
-    "featureType": "water",
-    "elementType": "labels.text.fill",
-    "stylers": [
-      {
-        "color": "#9e9e9e"
-      }
-    ]
-  }
-]
-            ''');
-            
-            // Forzar actualización del mapa
-            controller.forceMapUpdate();
-
-            // Notificar que el mapa está inicializado
-            if (widget.onMapInitialized != null) {
-              widget.onMapInitialized!();
-            }
-          },
-          padding: EdgeInsets.only(
-            top: appBarHeight,
-            bottom: infoPanelHeight,
-          ),
-          // Reducir el uso de memoria para carga más rápida
-          liteModeEnabled: false, // Cambiar a true en dispositivos de gama baja
-          // Optimizar para rendimiento
-          tiltGesturesEnabled: false,
-          compassEnabled: false,
-          indoorViewEnabled: false,
-          trafficEnabled: false,
-          buildingsEnabled: false,
-        ),
-        // Botón de centrado
-        Positioned(
-          right: 16,
-          bottom: infoPanelHeight + 20, // Posicionarlo justo encima del panel
-          child: FloatingActionButton(
-            mini: true,
-            backgroundColor: Colors.white,
-            onPressed: controller.resetMapView,
-            child: Icon(Icons.my_location, color: TColors.primaryColor),
-          ),
-        ),
+  AppBar _buildAppBar(BuildContext context, GoalController goalCtrl) {
+    return AppBar(
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back),
+        onPressed: () => Get.back(),
+      ),
+      title: Obx(() => Text(workoutController.sessionToUpdate.value?.workoutName ?? 'Entrenamiento')),
+      actions: [
+        Obx(() => IconButton(
+              icon: Icon(goalCtrl.showGoalSelector.value ? Icons.close : Icons.flag_outlined),
+              onPressed: goalCtrl.toggleGoalSelector,
+            )),
       ],
+      backgroundColor: Colors.transparent,
+      elevation: 0,
     );
   }
 
-  Widget _buildInfoPanel(MapController controller) {
+  Widget _buildTopControls(bool dark) {
     return Container(
-      key: widget.infoPanelKey,
-      padding: EdgeInsets.all(TSizes.defaultSpace),
+      padding: const EdgeInsets.symmetric(horizontal: TSizes.sm, vertical: TSizes.xs),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 10,
-            offset: Offset(0, -5),
-          ),
-        ],
+        color: dark ? Colors.black.withOpacity(0.7) : Colors.white.withOpacity(0.8),
+        borderRadius: BorderRadius.circular(TSizes.cardRadiusLg),
       ),
-      child: ListView(
-        shrinkWrap: true,
-        cacheExtent: 200,
-        physics: const NeverScrollableScrollPhysics(),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Añadir indicador de calidad GPS
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Obx(() => Text(
-                "GPS: ${controller.getGpsQualityIndicator()}",
-                style: TextStyle(fontSize: 12),
-              )),
-            ],
-          ),
-          // Información del objetivo (si hay uno establecido)
-          if (controller.workoutData.value.goal != null) ...[
-            Text(
-              'Objetivo',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildMetricTile(
-                  icon: Icons.straighten,
-                  value:
-                      '${controller.workoutData.value.goal!.targetDistanceKm} km',
-                  label: 'Distancia',
-                ),
-                _buildMetricTile(
-                  icon: Icons.timer,
-                  value:
-                      '${controller.workoutData.value.goal!.targetTimeMinutes} min',
-                  label: 'Tiempo',
-                ),
-                _buildProgressTile(controller),
-              ],
-            ),
-            SizedBox(height: 16),
-          ],
-
-          // Métricas actuales
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildMetricTile(
-                icon: Icons.straighten,
-                value:
-                    '${(controller.workoutData.value.distanceMeters / 1000).toStringAsFixed(2)} km',
-                label: 'Distancia',
-              ),
-              _buildMetricTile(
-                icon: Icons.timer,
-                value: controller.getFormattedElapsedTime(),
-                label: 'Tiempo',
-              ),
-              _buildMetricTile(
-                icon: Icons.speed,
-                value: controller.workoutData.value.isWorkoutActive
-                    ? controller.workoutData.value
-                        .getPaceFormatted() // Usar el nuevo método
-                    : "--:--",
-                label: 'Ritmo (min/km)', // Cambiar la etiqueta para claridad
-              ),
-            ],
-          ),
-          SizedBox(height: 16),
-
-          // Botón de inicio/parada
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: controller.workoutData.value.isWorkoutActive
-                  ? controller.stopWorkout
-                  : controller.startWorkout,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: controller.workoutData.value.isWorkoutActive
-                    ? Colors.red
-                    : TColors.primaryColor,
-                padding: EdgeInsets.symmetric(vertical: 12),
-              ),
-              child: Text(
-                controller.workoutData.value.isWorkoutActive
-                    ? 'DETENER'
-                    : 'INICIAR',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-
-          // Añadir botón de opciones avanzadas cuando el entrenamiento está activo
-          if (controller.workoutData.value.isWorkoutActive) ...[
-            SizedBox(height: 8),
-            TextButton(
-              onPressed: () {
-                // Mostrar opciones avanzadas
-                Get.bottomSheet(
-                  Container(
-                    padding: EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          "Opciones avanzadas",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 16),
-                        ListTile(
-                          leading: Icon(Icons.refresh),
-                          title: Text("Reiniciar visualización"),
-                          subtitle: Text("Centra el mapa en tu posición actual"),
-                          onTap: () {
-                            controller.resetMapView();
-                            Get.back();
-                          },
-                        ),
-                        ListTile(
-                          leading: Icon(Icons.route),
-                          title: Text("Optimizar ruta"),
-                          subtitle: Text("Elimina puntos redundantes para mejorar la precisión"),
-                          onTap: () {
-                            controller.workoutData.value.optimizeRoute();
-                            controller.workoutData.refresh();
-                            Get.back();
-                          },
-                        ),
-                        // Añadir opción para cambiar estilo del mapa
-                        ListTile(
-                          leading: Icon(Icons.map),
-                          title: Text("Estilo del mapa"),
-                          subtitle: Text("Cambia entre estilos de visualización"),
-                          onTap: () {
-                            _showMapStyleOptions(controller);
-                            Get.back();
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-              child: Text("Opciones avanzadas"),
-            ),
-          ],
+          IconButton(onPressed: mapController.resetMapView, icon: const Icon(Icons.my_location)),
         ],
       ),
     );
   }
 
-  Widget _buildMetricTile({
-    required IconData icon,
-    required String value,
-    required String label,
-  }) {
-    return Column(
-      children: [
-        Icon(icon, color: TColors.primaryColor, size: 28),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[700],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildProgressTile(MapController controller) {
-    // Calcular el progreso
-    final elapsedSeconds = controller.getElapsedTimeSeconds();
-    final targetSeconds =
-        controller.workoutData.value.goal!.targetTimeMinutes * 60;
-    final progress = targetSeconds > 0 ? elapsedSeconds / targetSeconds : 0.0;
-
-    return Column(
-      children: [
-        Icon(Icons.check_circle, color: TColors.primaryColor),
-        SizedBox(height: 4),
-        SizedBox(
-          width: 40,
-          height: 40,
-          child: CircularProgressIndicator(
-            value: progress.clamp(0.0, 1.0),
-            strokeWidth: 5,
-            backgroundColor: Colors.grey[300],
-            valueColor: AlwaysStoppedAnimation<Color>(TColors.primaryColor),
-          ),
-        ),
-        Text(
-          'Progreso',
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildGoalSelector(MapController controller) {
+  Widget _buildGoalSelectionOverlay(bool dark, GoalController goalCtrl) {
     return Container(
-      color: Colors.black54,
+      color: dark ? Colors.black.withOpacity(0.8) : Colors.white.withOpacity(0.9),
+      padding: const EdgeInsets.all(TSizes.defaultSpace),
       child: Center(
+        child: Material(
+           color: Colors.transparent,
         child: Container(
-          width: double.infinity,
-          margin: EdgeInsets.all(TSizes.defaultSpace),
-          padding: EdgeInsets.all(TSizes.defaultSpace),
+              padding: const EdgeInsets.all(TSizes.defaultSpace),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
+                 color: dark ? TColors.darkerGrey : Colors.white,
+                 borderRadius: BorderRadius.circular(TSizes.cardRadiusLg),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'Selecciona un objetivo',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                  const Text("Seleccionar Objetivo", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: TSizes.spaceBtwItems),
+                  Obx(() {
+                    if (goalCtrl.isLoadingGoals.value) {
+                       return const Center(child: CircularProgressIndicator());
+                    }
+                    if (goalCtrl.availableGoals.isEmpty) {
+                       return const Text("No hay objetivos disponibles.");
+                    }
+                    return ListView.builder(
+                           shrinkWrap: true,
+                           itemCount: goalCtrl.availableGoals.length,
+                           itemBuilder: (context, index) {
+                              final goal = goalCtrl.availableGoals[index];
+                              final bool isSelected = workoutController.workoutData.value.goal == goal;
+                              return ListTile(
+                                 leading: Icon(isSelected ? Icons.check_circle : Icons.circle_outlined,
+                                                color: isSelected ? Theme.of(context).primaryColor : Colors.grey),
+                                 title: Text('${goal.formattedTargetDistance} km en ${goal.targetTimeMinutes} min'),
+                                 onTap: () => goalCtrl.selectGoal(goal),
+                                 tileColor: isSelected ? Theme.of(context).primaryColor.withAlpha(30) : null,
+                              );
+                           }
+                       );
+                    }
+                  ),
+                  const SizedBox(height: TSizes.spaceBtwSections),
+                  TextButton(onPressed: goalCtrl.toggleGoalSelector, child: const Text("Cerrar")),
+                ],
               ),
-              SizedBox(height: 16),
-              ...controller.availableGoals
-                  .map((goal) => _buildGoalOption(controller, goal)),
-              SizedBox(height: 16),
-              TextButton(
-                onPressed: controller.toggleGoalSelector,
-                child: Text('Cancelar'),
-              ),
-            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildGoalOption(MapController controller, WorkoutGoal goal) {
-    final isSelected = controller.workoutData.value.goal?.targetDistanceKm ==
-            goal.targetDistanceKm &&
-        controller.workoutData.value.goal?.targetTimeMinutes ==
-            goal.targetTimeMinutes;
-
-    return GestureDetector(
-      onTap: () => controller.setWorkoutGoal(goal),
-      child: Container(
-        margin: EdgeInsets.only(bottom: 8),
-        padding: EdgeInsets.all(12),
+  Widget _buildBottomInfoPanel(WorkoutController workoutCtrl) {
+    return Container(
+      padding: const EdgeInsets.all(TSizes.defaultSpace),
         decoration: BoxDecoration(
-          color: isSelected
-              ? TColors.primaryColor.withAlpha(26)
-              : Colors.grey[100],
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isSelected ? TColors.primaryColor : Colors.grey[300]!,
-          ),
+        color: Colors.white,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
         ),
-        child: Row(
-          children: [
-            Icon(
-              isSelected ? Icons.check_circle : Icons.circle_outlined,
-              color: isSelected ? TColors.primaryColor : Colors.grey,
-            ),
-            SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${goal.targetDistanceKm} km en ${goal.targetTimeMinutes} min',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  'Ritmo: ${(goal.targetDistanceKm / (goal.targetTimeMinutes / 60)).toStringAsFixed(2)} km/h',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                ),
-              ],
-            ),
-          ],
-        ),
+        boxShadow: [ BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -2)) ]
       ),
+      child: Obx(() => Column(
+        mainAxisSize: MainAxisSize.min,
+              children: [
+             Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
+                _buildMetricDisplay("Distancia", "${(workoutCtrl.workoutData.value.distanceMeters / 1000).toStringAsFixed(2)} km"),
+                _buildMetricDisplay("Tiempo", workoutCtrl.getFormattedElapsedTime()),
+                _buildMetricDisplay("Ritmo", workoutCtrl.workoutData.value.getPaceFormatted()),
+             ]),
+             const SizedBox(height: TSizes.spaceBtwItems),
+             ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: workoutCtrl.workoutData.value.isWorkoutActive ? Colors.red : Theme.of(context).primaryColor,
+                      minimumSize: const Size(double.infinity, 50)
+                  ),
+                  onPressed: workoutCtrl.workoutData.value.isWorkoutActive
+                      ? workoutCtrl.stopWorkout
+                      : workoutCtrl.startWorkout,
+                  child: Text(
+                     workoutCtrl.workoutData.value.isWorkoutActive ? 'DETENER' : 'INICIAR',
+                     style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)
+                  ),
+             ),
+         ]
+      )),
     );
   }
 
-  String getGpsQualityIndicator(MapController controller) {
-    if (controller.workoutData.value.previousPosition == null) return "⚪"; // Sin datos
-    
-    double accuracy = controller.workoutData.value.previousPosition!.accuracy;
-    
-    if (accuracy <= 10) return "🟢"; // Excelente
-    if (accuracy <= 20) return "🟡"; // Buena
-    if (accuracy <= 40) return "🟠"; // Regular
-    return "🔴"; // Mala
-  }
-
-  // Método para obtener la altura del panel de información
-  double getInfoPanelHeight() {
-    if (widget.infoPanelKey.currentContext != null) {
-      final RenderBox box = widget.infoPanelKey.currentContext!.findRenderObject() as RenderBox;
-      return box.size.height;
-    }
-    // Valor predeterminado si no podemos obtener la altura real
-    return 220.0;
-  }
-
-  void _showMapStyleOptions(MapController controller) {
-    Get.dialog(
-      AlertDialog(
-        title: Text("Estilo del mapa"),
-        content: Column(
+  Widget _buildMetricDisplay(String label, String value) {
+     return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              title: Text("Running (Simple)"),
-              leading: Icon(Icons.run_circle_outlined, color: TColors.primaryColor),
-              onTap: () {
-                controller.setMapStyle("running_simple");
-                Get.back();
-              },
-            ),
-            ListTile(
-              title: Text("Running (Detallado)"),
-              leading: Icon(Icons.directions_run, color: TColors.primaryColor),
-              onTap: () {
-                controller.setMapStyle("running_detailed");
-                Get.back();
-              },
-            ),
-            ListTile(
-              title: Text("Terreno"),
-              leading: Icon(Icons.terrain, color: Colors.green),
-              onTap: () {
-                controller.setMapStyle("terrain");
-                Get.back();
-              },
-            ),
-            ListTile(
-              title: Text("Noche"),
-              leading: Icon(Icons.nightlight_round, color: Colors.blueGrey),
-              onTap: () {
-                controller.setMapStyle("night");
-                Get.back();
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text("Cancelar"),
-          ),
+           Text(value, style: Theme.of(context).textTheme.headlineSmall),
+           Text(label, style: Theme.of(context).textTheme.bodySmall),
         ],
-      ),
     );
   }
 }

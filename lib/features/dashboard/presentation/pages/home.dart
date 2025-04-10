@@ -179,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen>
                 opacity: _fadeUserInfoAnimation,
                 child: UserProfileHeader( // Asumiendo que UserProfileHeader obtiene UserController internamente
                   onAvatarTap: () => Get.to(() => const ProfileScreen(),
-                      transition: Transition.upToDown),
+                      transition: Transition.rightToLeft),
                 ),
               ),
             ),

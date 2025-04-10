@@ -5,20 +5,26 @@ import 'package:runap/features/dashboard/presentation/manager/home_controller.da
 import 'package:runap/features/dashboard/presentation/manager/training_view_model.dart';
 import 'package:runap/features/personalization/controllers/user_controller.dart';
 import 'package:runap/utils/helpers/network_manager.dart';
+import 'package:runap/features/map/controller/location_permission_controller.dart';
+import 'package:runap/features/map/controller/workout_controller.dart';
+import 'package:runap/features/map/controller/map_controller.dart';
+import 'package:runap/features/map/controller/goal_controller.dart';
 
 class AppBindings extends Bindings {
   @override
   void dependencies() {
-    Get.put(NetworkManager());
-
     // Utilities & Services
     Get.put(NetworkManager(), permanent: true);
 
     // ViewModels & Controllers
+    Get.put(LocationPermissionController(), permanent: true);
     Get.put(HomeController(), permanent: true);
     Get.put(UserController(), permanent: true);
-    Get.put(DashboardManager(), permanent: true);
+    Get.lazyPut<DashboardManager>(() => DashboardManager());
     Get.lazyPut<TrainingViewModel>(() => TrainingViewModel());
     Get.lazyPut<SignupController>(() => SignupController());
+    Get.lazyPut<WorkoutController>(() => WorkoutController());
+    Get.lazyPut<MapController>(() => MapController());
+    Get.lazyPut<GoalController>(() => GoalController());
   }
 }
