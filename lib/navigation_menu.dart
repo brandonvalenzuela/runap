@@ -6,6 +6,7 @@ import 'package:runap/features/personalization/screens/settings/settings.dart';
 import 'package:runap/features/dashboard/presentation/pages/home.dart';
 import 'package:runap/tests/report_screen.dart';
 import 'package:runap/tests/widgets/test.dart';
+import 'package:runap/tests/widgets/test1.dart';
 import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/helpers/helper_functions.dart';
 
@@ -48,6 +49,7 @@ class NavigationMenu extends StatelessWidget {
               NavigationDestination(icon: Icon(Iconsax.user), label: 'Profile'),
               NavigationDestination(
                   icon: Icon(Icons.storage), label: 'LocalStorage'),
+              NavigationDestination(icon: Icon(Iconsax.car), label: 'CARLENDAR'),
             ],
           ),
         ),
@@ -66,5 +68,6 @@ class NavigationController extends GetxController {
     const Test(),
     const SettingsScreen(),
     const DebugScreen(),  
+    const FullDiaryReplication(),
   ];
 }
