@@ -49,90 +49,80 @@ class SettingsScreen extends StatelessWidget {
               // --- SECCIÓN MY PROFILE ---
               _buildSectionHeader(context, 'My profile'),
               const SizedBox(height: TSizes.spaceBtwItems),
-              _buildSectionContainer(
+              _SettingsListItem(
+                title: 'My profile',
                 tileColor: tileColor,
-                children: [
-                  _SettingsListItem(
-                    title: 'My profile',
-                    onTap: () => Get.to(() => const ProfileScreen(), transition: Transition.rightToLeft),
-                    isFirst: true, // Indicar que es el primero para borde superior
-                  ),
-                  _buildDivider(),
-                  _SettingsListItem(
-                    title: 'My goals',
-                    onTap: () { /* TODO: Navegar a My Goals */ },
-                  ),
-                   _buildDivider(),
-                  _SettingsListItem(
-                    title: 'Diary settings',
-                    onTap: () { /* TODO: Navegar a Diary Settings */ },
-                    isLast: true, // Indicar que es el último para borde inferior
-                  ),
-                ],
+                onTap: () => Get.to(() => const ProfileScreen(), transition: Transition.rightToLeft),
+              ),
+              const SizedBox(height: TSizes.sm),
+              _SettingsListItem(
+                title: 'My goals',
+                tileColor: tileColor,
+                onTap: () { /* TODO: Navegar a My Goals */ },
+              ),
+              const SizedBox(height: TSizes.sm),
+              _SettingsListItem(
+                title: 'Diary settings',
+                tileColor: tileColor,
+                onTap: () { /* TODO: Navegar a Diary Settings */ },
               ),
               const SizedBox(height: TSizes.spaceBtwSections * 1.5),
 
               // --- SECCIÓN PARAMETERS ---
               _buildSectionHeader(context, 'Parameters'),
               const SizedBox(height: TSizes.spaceBtwItems),
-              _buildSectionContainer(
+              _SettingsListItem(
+                title: 'My account',
                 tileColor: tileColor,
-                children: [
-                   _SettingsListItem(
-                    title: 'My account',
-                    onTap: () => Get.to(() => const AccountScreen(), transition: Transition.rightToLeft),
-                    isFirst: true,
-                  ),
-                   _buildDivider(),
-                  _SettingsListItem(
-                    title: 'Manage my notifications',
-                    onTap: () { /* TODO: Navegar a Notifications */ },
-                  ),
-                   _buildDivider(),
-                  _SettingsListItem(
-                    title: 'Automatic tracking apps',
-                    onTap: () { /* TODO: Navegar a Tracking Apps */ },
-                    isLast: true,
-                  ),
-                ]
+                onTap: () => Get.to(() => const AccountScreen(), transition: Transition.rightToLeft),
+              ),
+              const SizedBox(height: TSizes.sm),
+              _SettingsListItem(
+                title: 'Manage my notifications',
+                tileColor: tileColor,
+                onTap: () { /* TODO: Navegar a Notifications */ },
+              ),
+              const SizedBox(height: TSizes.sm),
+              _SettingsListItem(
+                title: 'Automatic tracking apps',
+                tileColor: tileColor,
+                onTap: () { /* TODO: Navegar a Tracking Apps */ },
               ),
               const SizedBox(height: TSizes.spaceBtwSections * 1.5),
 
               // --- SECCIÓN OTHER ---
               _buildSectionHeader(context, 'Other'),
               const SizedBox(height: TSizes.spaceBtwItems),
-               _buildSectionContainer(
-                 tileColor: tileColor,
-                 children: [
-                   _SettingsListItem(
-                    title: 'Contact us',
-                    onTap: () { /* TODO: Navegar a Contact Us */ },
-                    isFirst: true,
-                  ),
-                   _buildDivider(),
-                  _SettingsListItem(
-                    title: 'Invite friends & get \$20', // Asegúrate de escapar el $ si es necesario
-                    onTap: () { /* TODO: Implementar Invite */ },
-                  ),
-                  _buildDivider(),
-                  _SettingsListItem(
-                    title: 'Log out',
-                    onTap: () => AuthenticationRepository.instance.logout(),
-                  ),
-                   _buildDivider(),
-                   _SettingsListItem(
-                    title: 'Terms of use',
-                    onTap: () { /* TODO: Navegar/Mostrar Terms */ },
-                  ),
-                  _buildDivider(),
-                   _SettingsListItem(
-                    title: 'Privacy policy',
-                    onTap: () { /* TODO: Navegar/Mostrar Policy */ },
-                    isLast: true,
-                  ),
-                 ]
-               ),
-               const SizedBox(height: TSizes.spaceBtwSections * 2),
+              _SettingsListItem(
+                title: 'Contact us',
+                tileColor: tileColor,
+                onTap: () { /* TODO: Navegar a Contact Us */ },
+              ),
+              const SizedBox(height: TSizes.sm),
+              _SettingsListItem(
+                title: 'Invite friends & get \$20',
+                tileColor: tileColor,
+                onTap: () { /* TODO: Implementar Invite */ },
+              ),
+              const SizedBox(height: TSizes.sm),
+              _SettingsListItem(
+                title: 'Log out',
+                tileColor: tileColor,
+                onTap: () => AuthenticationRepository.instance.logout(),
+              ),
+              const SizedBox(height: TSizes.sm),
+              _SettingsListItem(
+                title: 'Terms of use',
+                tileColor: tileColor,
+                onTap: () { /* TODO: Navegar/Mostrar Terms */ },
+              ),
+              const SizedBox(height: TSizes.sm),
+              _SettingsListItem(
+                title: 'Privacy policy',
+                tileColor: tileColor,
+                onTap: () { /* TODO: Navegar/Mostrar Policy */ },
+              ),
+              const SizedBox(height: TSizes.spaceBtwSections * 2),
 
               // --- FOOTER (Version & User ID) ---
               Center(
@@ -173,46 +163,21 @@ class SettingsScreen extends StatelessWidget {
       style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
     );
   }
-
-  // Construye el contenedor redondeado para un grupo de items
-  Widget _buildSectionContainer({required Color tileColor, required List<Widget> children}) {
-    return Material( // Usar Material para el ClipRRect
-      color: tileColor,
-      borderRadius: BorderRadius.circular(TSizes.borderRadiusLg),
-      clipBehavior: Clip.antiAlias, // Para que el Divider no se salga
-      child: Column(
-        children: children,
-      ),
-    );
-  }
-  
-  // Construye un Divider sutil entre items
-  Widget _buildDivider() {
-    return const Divider(
-      height: 0.5,      // Altura mínima
-      thickness: 0.5,   // Grosor mínimo
-      indent: TSizes.md, // Indentación izquierda
-      endIndent: TSizes.md, // Indentación derecha
-      // color: Colors.grey.shade300, // Color opcional
-    );
-  }
 }
 
-// --- WIDGET PARA LOS ITEMS DE LA LISTA ---
+// --- WIDGET PARA LOS ITEMS DE LA LISTA (Modificado) ---
 
 class _SettingsListItem extends StatelessWidget {
   final String title;
   final VoidCallback onTap;
-  final Color? textColor; // Opcional para cambiar color de texto si es necesario
-  final bool isFirst; // Para quitar borde superior del primer item
-  final bool isLast; // Para quitar borde inferior del último item
+  final Color tileColor; // Ahora requerido
+  final Color? textColor;
 
   const _SettingsListItem({
     required this.title,
     required this.onTap,
+    required this.tileColor, // Añadido
     this.textColor,
-    this.isFirst = false,
-    this.isLast = false,
   });
 
   @override
@@ -222,22 +187,28 @@ class _SettingsListItem extends StatelessWidget {
       color: textColor
     );
 
-    return InkWell( // InkWell para efecto ripple dentro del Material
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: TSizes.md, 
-          vertical: TSizes.lg 
-        ),
-        // El contenedor padre (_buildSectionContainer) ya tiene el color y borde redondeado
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Text(title, style: titleStyle, overflow: TextOverflow.ellipsis)
-            ),
-            const Icon(Iconsax.arrow_right_3, size: TSizes.iconSm, color: Colors.grey), // Icono gris
-          ],
+    // Aplicar Material y borderRadius aquí
+    return Material(
+      color: tileColor,
+      borderRadius: BorderRadius.circular(TSizes.borderRadiusLg),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(TSizes.borderRadiusLg),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: TSizes.md, 
+            vertical: TSizes.lg 
+          ),
+          // El Material padre ahora maneja color y borderRadius
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(title, style: titleStyle, overflow: TextOverflow.ellipsis)
+              ),
+              const Icon(Iconsax.arrow_right_3, size: TSizes.iconSm, color: Colors.grey),
+            ],
+          ),
         ),
       ),
     );
