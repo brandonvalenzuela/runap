@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:runap/features/dashboard/presentation/pages/calendar/calendar.dart';
-import 'package:runap/features/personalization/screens/settings/settings.dart';
+import 'package:runap/features/personalization/screens/account/account.dart';
 import 'package:runap/features/dashboard/presentation/pages/home.dart';
 import 'package:runap/tests/report_screen.dart';
 import 'package:runap/tests/widgets/test.dart';
@@ -66,7 +66,7 @@ class NavigationController extends GetxController {
     const HomeScreen(),
     const CalendarScreen(),
     const Test(),
-    const SettingsScreen(),
+    const AccountScreen(),
     const DebugScreen(),  
     const FullDiaryReplication(),
   ];

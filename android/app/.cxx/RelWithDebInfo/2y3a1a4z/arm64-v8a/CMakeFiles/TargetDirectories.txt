@@ -1,0 +1,2 @@
+C:/Users/Lenovo/source/repos/Flutter/runap/android/app/.cxx/RelWithDebInfo/2y3a1a4z/arm64-v8a/CMakeFiles/edit_cache.dir
+C:/Users/Lenovo/source/repos/Flutter/runap/android/app/.cxx/RelWithDebInfo/2y3a1a4z/arm64-v8a/CMakeFiles/rebuild_cache.dir

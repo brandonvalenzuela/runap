@@ -16,6 +16,7 @@ import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/constants/sizes.dart';
 import 'package:runap/utils/helpers/helper_functions.dart';
 import 'package:runap/utils/validators/validation.dart';
+import 'package:runap/features/map/controller/location_permission_controller.dart';
 
 class MapScreen extends StatefulWidget {
   final WorkoutGoal? initialWorkoutGoal;
@@ -175,6 +176,7 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
       });
       print("🛑 Simulation Stopped");
       workoutController.resumeRealLocationUpdates();
+      workoutController.setSimulationMode(false);
     } else {
       if (workoutController.workoutData.value.isWorkoutActive == false) {
          ScaffoldMessenger.of(context).showSnackBar(
@@ -185,20 +187,48 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
 
       workoutController.pauseRealLocationUpdates();
 
-      if (_lastSimulatedPosition == null) {
-          print("Waiting for initial position...");
-          await _initializeSimulationPosition();
-          if(_lastSimulatedPosition == null) {
-             print("Cannot start simulation: No initial position.");
+      // Get the VERY LATEST known position before starting simulation
+      LatLng? currentPosition = workoutController.workoutData.value.currentPosition;
+      if (currentPosition == null && mapController.lastKnownPosition != null) {
+          currentPosition = LatLng(mapController.lastKnownPosition!.latitude, mapController.lastKnownPosition!.longitude);
+      }
+
+      // If still no position, try to fetch it one last time (might happen if map opened without location)
+      if (currentPosition == null) {
+          print("SimToggle: Last known position is null, attempting to fetch current...");
+          try {
+            final pos = await mapController.locationService.getCurrentPosition();
+            currentPosition = LatLng(pos.latitude, pos.longitude);
+            mapController.lastKnownPosition = pos; // Update MapController's knowledge too
+          } catch (e) {
+             print("SimToggle: Cannot start simulation: Failed to get current position: $e");
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("No se pudo obtener ubicación inicial."))
+                const SnackBar(content: Text("No se pudo obtener ubicación actual para simular."))
               );
               workoutController.resumeRealLocationUpdates();
               return;
           }
       }
-     
-      print("▶️ Starting Simulation from: ${_lastSimulatedPosition?.latitude}, ${_lastSimulatedPosition?.longitude}");
+      
+      // Update the simulation starting point
+      _lastSimulatedPosition = Position(
+        latitude: currentPosition.latitude,
+        longitude: currentPosition.longitude,
+        timestamp: DateTime.now(),
+        accuracy: 5.0,
+        altitude: workoutController.workoutData.value.previousPosition?.altitude ?? mapController.lastKnownPosition?.altitude ?? 0.0,
+        altitudeAccuracy: 10.0,
+        heading: 0.0,
+        headingAccuracy: 0.0,
+        speed: 0.0,
+        speedAccuracy: 0.0
+      );
+      
+      print("▶️ Starting Simulation from ACTUAL: ${_lastSimulatedPosition?.latitude}, ${_lastSimulatedPosition?.longitude}");
+
+      // Reset workout controller's route state with this starting position
+      workoutController.resetRouteStateForSimulation(currentPosition);
+      workoutController.setSimulationMode(true);
 
       _simulationTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
         if (_lastSimulatedPosition == null) return; 
@@ -262,20 +292,21 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
           }
           return Stack(
             children: [
-              GoogleMap(
+              Obx(() => GoogleMap(
                 key: const ValueKey("google_map"),
                 mapType: MapType.normal,
                 initialCameraPosition: const CameraPosition(
-                  target: LatLng(40.416775, -3.703790), 
+                  target: LatLng(40.416775, -3.703790), // Madrid as fallback initial center
                   zoom: 14.0,
                 ),
                 onMapCreated: mapController.setMapControllerInstance,
-                myLocationEnabled: true,
+                // Make myLocationEnabled reactive to permission status
+                myLocationEnabled: mapController.permissionController.permissionStatus.value == LocationPermissionStatus.granted,
                 myLocationButtonEnabled: false,
                 zoomControlsEnabled: false,
                 polylines: workoutController.workoutData.value.polylines,
-                markers: const <Marker>{},
-              ),
+                markers: const <Marker>{}, // Add markers if needed later
+              )),
             Positioned(
                 top: TSizes.appBarHeight + TSizes.md,
                 left: TSizes.md,

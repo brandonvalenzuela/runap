@@ -61,15 +61,29 @@ class MapController extends GetxController {
   void onInit() {
     super.onInit();
     locationService = LocationService(
-      onLocationUpdate: (_) {}, 
-      onMetricsUpdate: (_) {},  
+      onLocationUpdate: (_) {}, // Assuming these are handled by WorkoutController now
+      onMetricsUpdate: (_) {},
     );
     Future.microtask(() => initialize());
 
-    // --- MODIFIED LISTENER ---
-    // Store the previous workout active state to detect transitions
+    // --- ADDED REACTIVE LISTENER ---
+    // Listen for changes in the permission status
+    ever<LocationPermissionStatus>(permissionController.permissionStatus, (status) {
+      logger.i("MapController: Permission status changed to: $status");
+      if (status == LocationPermissionStatus.granted) {
+        logger.i("MapController: Permission granted! Attempting to get location and center map...");
+        // Use a small delay to ensure map controller might be ready if this happens early
+        Future.delayed(const Duration(milliseconds: 100), () {
+           getCurrentLocationAndAnimateCamera();
+        });
+      }
+      // Optionally handle other statuses if needed (e.g., show error if denied again)
+    });
+    // --- END OF ADDED LISTENER ---
+
+    // --- MODIFIED LISTENER (Keep existing listener for workout state) ---
     bool wasWorkoutActive = workoutController.workoutData.value.isWorkoutActive;
-    ever(workoutController.workoutData, (WorkoutData workoutData) { 
+    ever<WorkoutData>(workoutController.workoutData, (WorkoutData workoutData) {
       // Update map based on workout state changes
       _updateMapCameraBasedOnWorkoutState(workoutData, wasWorkoutActive);
       // Update the previous state for the next change detection
@@ -177,13 +191,20 @@ class MapController extends GetxController {
   Future<void> initialize() async {
     isLoading.value = true;
     try {
+      // Check initial status but don't request here, let the listener handle reaction
       await permissionController.checkPermissions(requestIfNeeded: false);
       if (permissionController.permissionStatus.value != LocationPermissionStatus.granted) {
-        permissionController.showPermissionDialogIfNeeded();
-      isLoading.value = false;
-      return;
-    }
-                  await getCurrentLocationAndAnimateCamera();
+         logger.i("MapController.initialize: Permission not granted initially. Waiting for status change or dialog interaction.");
+         // Don't show dialog here directly, permission controller handles that if needed
+         // permissionController.showPermissionDialogIfNeeded(); // Removed - Let permission controller manage dialogs
+         // ADDED BACK: Show dialog if permissions aren't granted on init
+         permissionController.showPermissionDialogIfNeeded();
+         isLoading.value = false; // Still need to stop loading indicator
+         return;
+      }
+      // If granted initially, proceed to get location
+      logger.i("MapController.initialize: Permission granted initially. Getting location.");
+      await getCurrentLocationAndAnimateCamera();
     } catch (e) {
       logger.e('Error en inicialización: $e');
     } finally {
@@ -192,23 +213,33 @@ class MapController extends GetxController {
   }
 
   Future<void> getCurrentLocationAndAnimateCamera() async {
+    // Add check if mapController is ready
+    if (mapController.value == null) {
+       logger.w("getCurrentLocationAndAnimateCamera: Map controller not ready yet.");
+       return; // Don't proceed if map isn't ready
+    }
+
     if (permissionController.permissionStatus.value != LocationPermissionStatus.granted) {
-       logger.w("getCurrentLocationAndAnimateCamera: Permiso no concedido.");
-       permissionController.showPermissionDialogIfNeeded();
+       logger.w("getCurrentLocationAndAnimateCamera: Permission not granted.");
+       // Don't show dialog here, listener or initial check should handle it.
+       // permissionController.showPermissionDialogIfNeeded(); // Removed
        return;
     }
+    logger.i("getCurrentLocationAndAnimateCamera: Permission granted. Fetching location...");
     try {
       Position position = await locationService.getCurrentPosition();
       lastKnownPosition = position; // Store the position
       LatLng latLng = LatLng(position.latitude, position.longitude);
-      if (mapController.value != null) {
+      logger.i("getCurrentLocationAndAnimateCamera: Location obtained: $latLng. Animating camera.");
+      if (mapController.value != null) { // Double check mapController is still valid
         mapController.value!.animateCamera( // Use animate for smooth initial centering
           CameraUpdate.newLatLngZoom(latLng, 17.0),
         );
       }
     } catch (e) {
       logger.e('Error al obtener la ubicación: $e');
-      // Handle error appropriately (e.g., show default location)
+      // Consider showing a snackbar error here?
+      // Get.snackbar('Error', 'No se pudo obtener la ubicación actual.');
     }
   }
 
@@ -250,8 +281,11 @@ class MapController extends GetxController {
     mapController.value = controller;
     logger.d("🗺️ MapController - Controlador de mapa inicializado");
     setMapStyle("minimalist_streets"); 
+    // Keep this call - ensures centering happens if permission was already granted
+    // before listener fired, or as a final check once map is ready.
     Future.microtask(() {
-      getCurrentLocationAndAnimateCamera();
+       logger.d("MapController.setMapControllerInstance: Calling getCurrentLocationAndAnimateCamera.");
+       getCurrentLocationAndAnimateCamera();
     });
   }
 

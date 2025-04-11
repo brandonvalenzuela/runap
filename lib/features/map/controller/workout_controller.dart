@@ -60,6 +60,8 @@ class WorkoutController extends GetxController {
   LatLng? _lastStablePosition;
   Timer? _goalCheckTimer;
   bool _processingFirstRealGpsAfterSimulation = false;
+  // ADDED: Flag to indicate if updates are simulated
+  bool _isSimulatingUpdates = false;
 
   // Flag de depuración (podría venir de configuración)
   final bool _isDebugMode = false;
@@ -155,8 +157,8 @@ class WorkoutController extends GetxController {
 
           // Only add point if distance check passed
           if (addPoint) {
-              // Estabilización de ruta al inicio (moved inside addPoint check? No, stabilization is separate)
-              if (_stabilizationCount < 3) {
+              // --- MODIFIED: Stabilization only for REAL GPS updates --- 
+              if (!_isSimulatingUpdates && _stabilizationCount < 3) {
                 _stabilizationCount++;
                 if (_lastStablePosition != null) {
                   double distanceStable = Geolocator.distanceBetween(
@@ -175,19 +177,33 @@ class WorkoutController extends GetxController {
                   logger.d("🔍 (WorkoutCtrl) Estabilizando GPS: $_stabilizationCount/3");
                   return; // Don't add point yet
                 } else {
-                  logger.d("✅ (WorkoutCtrl) GPS estabilizado, iniciando trazado de ruta");
-                  // If stabilization just finished, ensure the stable point is the first one added IF the list is empty
+                  logger.d("✅ (WorkoutCtrl-Sim/Stabilized) GPS estabilizado o simulando, iniciando trazado de ruta");
+                  // If stabilization just finished OR simulating, ensure the stable point is the first one added IF the list is empty
                   if (val.polylineCoordinates.isEmpty) {
                      val.polylineCoordinates.add(position);
-                     logger.d("(WorkoutCtrl) Punto estabilizado añadido como inicial.");
+                     logger.d("(WorkoutCtrl) Punto estabilizado/simulado añadido como inicial.");
                   } // Otherwise, the normal flow below will add it if needed
                 }
               }
+              // --- END OF MODIFICATION ---
       
               // Añadir punto a la ruta (if check passed and stabilization allows)
-              val.polylineCoordinates.add(position);
-              val.updatePolyline(); 
-              logger.d("✅ (WorkoutCtrl) Polilínea actualizada - ${val.polylineCoordinates.length} puntos");
+              // --- MODIFIED: Ensure point is added if simulating or stabilized ---
+              // If simulating, we always add (addPoint is true, stabilization skipped)
+              // If real GPS, add only if stabilization is complete (_stabilizationCount >= 3)
+              if (_isSimulatingUpdates || _stabilizationCount >= 3) {
+                 // Avoid adding duplicate points (can happen during stabilization transition)
+                 if (val.polylineCoordinates.isEmpty || val.polylineCoordinates.last != position) {
+                    val.polylineCoordinates.add(position);
+                    val.updatePolyline(); 
+                    logger.d("✅ (WorkoutCtrl - ${_isSimulatingUpdates ? 'Sim' : 'Real'}) Polilínea actualizada - ${val.polylineCoordinates.length} puntos");
+                 } else {
+                    logger.d("ℹ️ (WorkoutCtrl) Punto duplicado detectado, no añadido.");
+                 }
+              } else {
+                  logger.d("ℹ️ (WorkoutCtrl) Punto no añadido (Esperando estabilización: ${_stabilizationCount}/3)");
+              }
+              // --- END OF MODIFICATION ---
           }
       }
     });
@@ -544,6 +560,43 @@ class WorkoutController extends GetxController {
     } catch (e) {
       logger.e('❌ (WorkoutCtrl) Error creando WorkoutGoal: $e');
       return null; // Devolver null si hay error
+    }
+  }
+
+  // --- ADDED: Reset state specifically for simulation start ---
+  void resetRouteStateForSimulation(LatLng startPosition) {
+    logger.i("🔄 (WorkoutCtrl) Reseteando estado de ruta para inicio de simulación en $startPosition");
+    workoutData.update((val) {
+      if (val == null) return;
+      val.polylineCoordinates.clear();
+      val.polylineCoordinates.add(startPosition); // Add the first simulated point
+      val.previousPosition = null; // Clear previous real position
+      val.previousTime = null;
+      val.currentPosition = startPosition; // Set current to the start
+      // Keep distance, duration etc. as they are, simulation adds to them
+      val.updatePolyline(); 
+    });
+    // Reset stabilization flags as well, if applicable
+    _stabilizationCount = 0;
+    _lastStablePosition = null;
+    _processingFirstRealGpsAfterSimulation = false; // Ensure this is reset
+  }
+
+  // --- ADDED: Method to toggle simulation state internally ---
+  void setSimulationMode(bool isSimulating) {
+    logger.i("🕹️ (WorkoutCtrl) Simulation mode set to: $isSimulating");
+    _isSimulatingUpdates = isSimulating;
+    if (!isSimulating) {
+      // Reset stabilization count when stopping simulation?
+      // Or let it be handled by resumeRealLocationUpdates/startWorkout?
+      // Let's reset it here for clarity when switching back to real GPS.
+       _stabilizationCount = 0;
+       _lastStablePosition = null;
+       // Set flag to ignore first real update AFTER simulation
+       _processingFirstRealGpsAfterSimulation = true; 
+    } else {
+        // When starting simulation, ensure stabilization isn't active
+        _stabilizationCount = 3; // Mark stabilization as complete for simulation
     }
   }
 

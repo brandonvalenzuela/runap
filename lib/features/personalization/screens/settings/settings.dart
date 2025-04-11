@@ -1,188 +1,245 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:runap/common/widgets/appbar/appbar.dart';
-import 'package:runap/common/widgets/custom_shapes/containers/primary_header_container.dart';
-import 'package:runap/common/widgets/custom_shapes/containers/skeleton_primary_header_container.dart';
-import 'package:runap/common/widgets/list_tiles/settings_menu_tile.dart';
-import 'package:runap/common/widgets/list_tiles/skeleton_settings_menu_tile.dart';
-import 'package:runap/common/widgets/list_tiles/user_profile_tiles.dart';
-import 'package:runap/common/widgets/texts/sections_heading.dart';
-import 'package:runap/features/personalization/screens/profile/profile.dart';
+import 'package:runap/common/widgets/appbar/appbar.dart'; // Asumiendo que TAppBar existe
+import 'package:runap/data/repositories/authentication/authentication_repository.dart';
+import 'package:runap/features/personalization/controllers/user_controller.dart';
+import 'package:runap/features/personalization/screens/account/account.dart'; // Para navegar a Account
+import 'package:runap/features/personalization/screens/profile/profile.dart'; // Para navegar a Profile
 import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/constants/sizes.dart';
-import 'package:runap/data/repositories/authentication/authentication_repository.dart';
-import 'package:runap/common/widgets/loaders/skeleton_loader.dart';
+// Importar Package Info Plus si se usa para la versión
+// import 'package:package_info_plus/package_info_plus.dart'; 
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
-  @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
-}
-
-class _SettingsScreenState extends State<SettingsScreen> {
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    // Simular carga con 1.5 segundos
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    });
-  }
+  // --- Opcional: Método para obtener la versión de la app ---
+  // Future<String> _getAppVersion() async {
+  //   try {
+  //     PackageInfo packageInfo = await PackageInfo.fromPlatform();
+  //     return 'Version v${packageInfo.version} - ${packageInfo.buildNumber}';
+  //   } catch (e) {
+  //     return 'Version unknown';
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDarkMode ? TColors.black : TColors.lightGrey;
+    final tileColor = isDarkMode ? TColors.darkerGrey : Colors.white;
+    final userController = Get.find<UserController>();
+
     return Scaffold(
+      backgroundColor: bgColor,
+      appBar: TAppBar(
+        leadingIcon: Iconsax.close_square,
+        leadingOnPressed: () => Get.back(),
+        title: Text('Settings', style: Theme.of(context).textTheme.headlineSmall),
+      ),
       body: SingleChildScrollView(
-        child: Column(
-          children: [
-            /// -- HEADER
-            _isLoading 
-              ? const SkeletonPrimaryHeader() // Mostrar esqueleto del header
-              : TPrimaryHeaderContainer( // Mostrar header real
-                  child: Column(
-                    children: [
-                      TAppBar(
-                          title: Text('Account',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .headlineMedium!
-                                  .apply(color: TColors.white))),
-                      TUserPorfileTile(
-                          onPressed: () => Get.to(() => const ProfileScreen(), transition: Transition.rightToLeft)),
-                      const SizedBox(height: TSizes.spaceBtwSections),
-                    ],
-                  ),
-                ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: TSizes.defaultSpace), // Padding horizontal principal
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: TSizes.spaceBtwSections / 2), // Espacio inicial reducido
 
-            /// -- BODY
-            Padding(
-              padding: const EdgeInsets.all(TSizes.defaultSpace),
-              child: Column(
+              // --- SECCIÓN MY PROFILE ---
+              _buildSectionHeader(context, 'My profile'),
+              const SizedBox(height: TSizes.spaceBtwItems),
+              _buildSectionContainer(
+                tileColor: tileColor,
                 children: [
-                  /// ACCOUNT SETTINGS
-                  TSectionHeading(
-                    title: 'Account Settings',
-                    showActionButton: false,
+                  _SettingsListItem(
+                    title: 'My profile',
+                    onTap: () => Get.to(() => const ProfileScreen(), transition: Transition.rightToLeft),
+                    isFirst: true, // Indicar que es el primero para borde superior
                   ),
-                  const SizedBox(height: TSizes.spaceBtwItems),
-
-                  _isLoading ? _buildSettingsSkeletonList(7) : _buildAccountSettings(),
-
-                  /// -- APP SETTINGS
-                  const SizedBox(height: TSizes.spaceBtwSections),
-                  TSectionHeading(
-                      title: 'App Settings', showActionButton: false),
-                  const SizedBox(height: TSizes.spaceBtwItems),
-
-                  _isLoading ? _buildSettingsSkeletonList(4) : _buildAppSettings(),
-
-                  /// -- LOGOUT BUTTON
-                  const SizedBox(height: TSizes.spaceBtwSections),
-                  _isLoading
-                      ? const SkeletonWidget(height: 50, width: double.infinity) // Skeleton for button
-                      : SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton(
-                              onPressed: () =>
-                                  AuthenticationRepository.instance.logout(),
-                              child: const Text('Logout')),
-                        ),
-                  const SizedBox(height: TSizes.spaceBtwSections * 2.5),
+                  _buildDivider(),
+                  _SettingsListItem(
+                    title: 'My goals',
+                    onTap: () { /* TODO: Navegar a My Goals */ },
+                  ),
+                   _buildDivider(),
+                  _SettingsListItem(
+                    title: 'Diary settings',
+                    onTap: () { /* TODO: Navegar a Diary Settings */ },
+                    isLast: true, // Indicar que es el último para borde inferior
+                  ),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: TSizes.spaceBtwSections * 1.5),
+
+              // --- SECCIÓN PARAMETERS ---
+              _buildSectionHeader(context, 'Parameters'),
+              const SizedBox(height: TSizes.spaceBtwItems),
+              _buildSectionContainer(
+                tileColor: tileColor,
+                children: [
+                   _SettingsListItem(
+                    title: 'My account',
+                    onTap: () => Get.to(() => const AccountScreen(), transition: Transition.rightToLeft),
+                    isFirst: true,
+                  ),
+                   _buildDivider(),
+                  _SettingsListItem(
+                    title: 'Manage my notifications',
+                    onTap: () { /* TODO: Navegar a Notifications */ },
+                  ),
+                   _buildDivider(),
+                  _SettingsListItem(
+                    title: 'Automatic tracking apps',
+                    onTap: () { /* TODO: Navegar a Tracking Apps */ },
+                    isLast: true,
+                  ),
+                ]
+              ),
+              const SizedBox(height: TSizes.spaceBtwSections * 1.5),
+
+              // --- SECCIÓN OTHER ---
+              _buildSectionHeader(context, 'Other'),
+              const SizedBox(height: TSizes.spaceBtwItems),
+               _buildSectionContainer(
+                 tileColor: tileColor,
+                 children: [
+                   _SettingsListItem(
+                    title: 'Contact us',
+                    onTap: () { /* TODO: Navegar a Contact Us */ },
+                    isFirst: true,
+                  ),
+                   _buildDivider(),
+                  _SettingsListItem(
+                    title: 'Invite friends & get \$20', // Asegúrate de escapar el $ si es necesario
+                    onTap: () { /* TODO: Implementar Invite */ },
+                  ),
+                  _buildDivider(),
+                  _SettingsListItem(
+                    title: 'Log out',
+                    onTap: () => AuthenticationRepository.instance.logout(),
+                  ),
+                   _buildDivider(),
+                   _SettingsListItem(
+                    title: 'Terms of use',
+                    onTap: () { /* TODO: Navegar/Mostrar Terms */ },
+                  ),
+                  _buildDivider(),
+                   _SettingsListItem(
+                    title: 'Privacy policy',
+                    onTap: () { /* TODO: Navegar/Mostrar Policy */ },
+                    isLast: true,
+                  ),
+                 ]
+               ),
+               const SizedBox(height: TSizes.spaceBtwSections * 2),
+
+              // --- FOOTER (Version & User ID) ---
+              Center(
+                child: Column(
+                  children: [
+                    // --- Usar FutureBuilder para la versión (opcional) ---
+                    // FutureBuilder<String>(
+                    //   future: _getAppVersion(),
+                    //   builder: (context, snapshot) {
+                    //     return Text(snapshot.data ?? 'Loading version...', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Colors.grey));
+                    //   }
+                    // ),
+                     Text('Version v1.0.0 - 4120', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Colors.grey)), // Placeholder por ahora
+                    Obx(() => Text(
+                      // No mostrar User ID si aún está cargando o es nulo/vacío
+                      userController.isLoading.value || userController.currentUser.value.id.isEmpty 
+                        ? 'User ID: Loading...'
+                        : 'User ID: ${userController.currentUser.value.id}', 
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Colors.grey))
+                    ),
+                  ],
+                ),
+              ),
+               const SizedBox(height: TSizes.spaceBtwSections),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // Helper para construir la lista de esqueletos
-  Widget _buildSettingsSkeletonList(int count) {
-    return Column(
-      children: List.generate(count, (_) => const SkeletonSettingsMenuTile()),
+  // --- Helper Widgets ---
+
+  // Construye el título de una sección
+  Widget _buildSectionHeader(BuildContext context, String title) {
+    return Text(
+      title,
+      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
     );
   }
 
-  // Helper para construir las opciones reales de cuenta
-  Widget _buildAccountSettings() {
-    return Column(
-      children: [
-        TSettingsMenuTile(
-            icon: Iconsax.safe_home,
-            title: 'My Addresses',
-            subTitle: 'Set shopping delivery addresses',
-            onTap: () {}),
-        TSettingsMenuTile(
-            icon: Iconsax.shopping_cart,
-            title: 'My Cart',
-            subTitle: 'Add, remove products and move to checkout',
-            onTap: () {}),
-        TSettingsMenuTile(
-            icon: Iconsax.bag_tick,
-            title: 'My Orders',
-            subTitle: 'In-progress and completed orders',
-            onTap: () {}),
-        TSettingsMenuTile(
-            icon: Iconsax.bank,
-            title: 'Bank Account',
-            subTitle: 'Withdraw balance to registered bank account',
-            onTap: () {}),
-        TSettingsMenuTile(
-            icon: Iconsax.discount_shape,
-            title: 'My Coupons',
-            subTitle: 'List of all the discounted coupons',
-            onTap: () {}),
-        TSettingsMenuTile(
-            icon: Iconsax.notification,
-            title: 'Notifications',
-            subTitle: 'Set any kind of notification message',
-            onTap: () {}),
-        TSettingsMenuTile(
-            icon: Iconsax.security_card,
-            title: 'Account Privacy',
-            subTitle: 'Manage data usage and connected accounts',
-            onTap: () {}),
-      ],
+  // Construye el contenedor redondeado para un grupo de items
+  Widget _buildSectionContainer({required Color tileColor, required List<Widget> children}) {
+    return Material( // Usar Material para el ClipRRect
+      color: tileColor,
+      borderRadius: BorderRadius.circular(TSizes.borderRadiusLg),
+      clipBehavior: Clip.antiAlias, // Para que el Divider no se salga
+      child: Column(
+        children: children,
+      ),
     );
   }
-
-  // Helper para construir las opciones reales de app
-  Widget _buildAppSettings() {
-    return Column(
-      children: [
-         TSettingsMenuTile(
-            icon: Iconsax.document_upload,
-            title: 'Load Data',
-            subTitle: 'Upload Data to your Cloud Firebase',
-            onTap: () {}),
-        TSettingsMenuTile(
-          icon: Iconsax.location,
-          title: 'Geolocation',
-          subTitle: 'Set recommendations based on location',
-          trailing: Switch(value: true, onChanged: (value) {}),
-        ),
-        TSettingsMenuTile(
-          icon: Iconsax.security_user,
-          title: 'Safe Mode',
-          subTitle: 'Search result is safe for all ages',
-          trailing: Switch(value: false, onChanged: (value) {}),
-        ),
-        TSettingsMenuTile(
-          icon: Iconsax.image,
-          title: 'HD Image Quality',
-          subTitle: 'Set image quality to be seen',
-          trailing: Switch(value: false, onChanged: (value) {}),
-        ),
-      ],
+  
+  // Construye un Divider sutil entre items
+  Widget _buildDivider() {
+    return const Divider(
+      height: 0.5,      // Altura mínima
+      thickness: 0.5,   // Grosor mínimo
+      indent: TSizes.md, // Indentación izquierda
+      endIndent: TSizes.md, // Indentación derecha
+      // color: Colors.grey.shade300, // Color opcional
     );
   }
 }
+
+// --- WIDGET PARA LOS ITEMS DE LA LISTA ---
+
+class _SettingsListItem extends StatelessWidget {
+  final String title;
+  final VoidCallback onTap;
+  final Color? textColor; // Opcional para cambiar color de texto si es necesario
+  final bool isFirst; // Para quitar borde superior del primer item
+  final bool isLast; // Para quitar borde inferior del último item
+
+  const _SettingsListItem({
+    required this.title,
+    required this.onTap,
+    this.textColor,
+    this.isFirst = false,
+    this.isLast = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final titleStyle = Theme.of(context).textTheme.titleMedium?.copyWith(
+      fontWeight: FontWeight.w500,
+      color: textColor
+    );
+
+    return InkWell( // InkWell para efecto ripple dentro del Material
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: TSizes.md, 
+          vertical: TSizes.lg 
+        ),
+        // El contenedor padre (_buildSectionContainer) ya tiene el color y borde redondeado
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Text(title, style: titleStyle, overflow: TextOverflow.ellipsis)
+            ),
+            const Icon(Iconsax.arrow_right_3, size: TSizes.iconSm, color: Colors.grey), // Icono gris
+          ],
+        ),
+      ),
+    );
+  }
+} 
