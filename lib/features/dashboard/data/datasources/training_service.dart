@@ -242,87 +242,60 @@ class TrainingService {
   // Método para marcar una sesión como completada o no completada
   Future<bool> markSessionAsCompleted(Session session, bool completed,
       {int userId = 1}) async {
+
+    // --- ADDED: Validate sessionId --- 
+    if (session.sessionId == null) {
+      print("⛔ Error: No se puede marcar la sesión como completada sin un sessionId.");
+      return false;
+    }
+    // --- END ADDED --- 
+
     try {
       // Verificar si la sesión ya pasó y asegurarnos de que se marque como no completada
       final now = DateTime.now();
       final sessionDate = session.sessionDate;
       if (sessionDate.isBefore(now) && completed) {
         // Si la sesión ya pasó, no permitir marcarla como completada
-        final stackTrace = StackTrace.current.toString();
-        if (!stackTrace.contains('_markPastSessionsAsNotCompleted')) {
-          // Si es una acción del usuario (no automática), no permitir marcar como completada
-          return false;
-        }
+        print(
+            "🔒 No se puede marcar una sesión pasada como completada. Se marcará como no completada.");
+        completed = false; // Forzar a no completado si ya pasó
       }
 
-      // Crear los datos a enviar
-      final data = {
-        'sessionId': session.sessionDate
-            .toIso8601String(), // Suponiendo que usas la fecha como identificador
+      print("💡 Enviando solicitud para marcar sesión ID: ${session.sessionId} como $completed");
+
+      // Crear el cuerpo de la solicitud
+      final Map<String, dynamic> body = {
+        // Remove sessionId from body if it's part of the URL path
+        // 'sessionId': session.sessionId,
         'completed': completed,
-        'userId': userId, // Incluimos el ID del usuario
-        'isPastSession':
-            sessionDate.isBefore(now) // Indicar si es una sesión pasada
       };
 
-      // Primero actualizar localmente para mejor experiencia de usuario
-      session.completed = completed;
+      // --- UPDATED: Use sessionId in the endpoint URL --- 
+      // Realizar la llamada PUT a la API (asumiendo que el ID va en la URL)
+      await THttpHelper.put('$_sessionEndpoint/${session.sessionId}?userId=$userId', body);
+      // --- END UPDATED --- 
 
-      // Actualizar en el almacenamiento local
-      await TrainingLocalStorage.updateSession(session);
-
-      // Si hay datos en caché, actualizamos también el caché en memoria
+      // Actualizar el estado local en el caché
       if (_cachedTrainingData != null) {
         final index = _cachedTrainingData!.dashboard.nextWeekSessions
-            .indexWhere(
-                (s) => s.sessionDate.isAtSameMomentAs(session.sessionDate));
-
+            .indexWhere((s) => s.sessionId == session.sessionId);
         if (index != -1) {
-          // Si el estado ya está igual al que se quiere establecer, no hacer nada
-          if (_cachedTrainingData!
-                  .dashboard.nextWeekSessions[index].completed ==
-              completed) {
-            return true; // Ya está en el estado deseado, no hay cambios
-          }
-
-          _cachedTrainingData!.dashboard.nextWeekSessions[index].completed =
-              completed;
-
-          // Actualizar estadísticas del dashboard
-          int completedCount = _cachedTrainingData!.dashboard.nextWeekSessions
-              .where((s) => s.completed)
-              .length;
-
-          // Actualizar valores en el objeto caché
-          _cachedTrainingData!.dashboard.completedSessions = completedCount;
-          if (_cachedTrainingData!.dashboard.totalSessions > 0) {
-            _cachedTrainingData!.dashboard.completionRate = (completedCount /
-                    _cachedTrainingData!.dashboard.totalSessions *
-                    100)
-                .round();
-          }
-
-          // Notificar a los listeners
-          _trainingDataController.add(_cachedTrainingData!);
+          _cachedTrainingData!.dashboard.nextWeekSessions[index].completed = completed;
+          // Actualizar las estadísticas generales del dashboard
+          _cachedTrainingData!.dashboard.updateStats();
+          // Notificar a los oyentes
+          _trainingDataController.add(_cachedTrainingData!); 
+           // Opcional: Guardar cambios en local storage? Por ahora no para simplicidad
+           // await TrainingLocalStorage.saveTrainingData(_cachedTrainingData!.toJson()); 
+           print("✅ Sesión ID: ${session.sessionId} marcada localmente como $completed");
+        } else {
+          print("⚠️ No se encontró la sesión ID: ${session.sessionId} en el caché local después de la llamada API.");
         }
       }
-
-      // Enviar la actualización al servidor (en segundo plano)
-      THttpHelper.put(
-              '$_sessionEndpoint/${session.sessionDate.toIso8601String()}',
-              data)
-          .then((serverResponse) {
-        // Actualización exitosa en el servidor
-        // Podríamos hacer algo aquí si es necesario
-      }).catchError((error) {
-        // Error al actualizar en el servidor
-        // Podemos manejar la sincronización más tarde
-        print('Error al actualizar sesión en el servidor: $error');
-      });
 
       return true;
     } catch (e) {
-      print('Error al marcar la sesión como completada: $e');
+      print("⛔ ❌ Error al marcar sesión como completada en el servicio: $e");
       return false;
     }
   }

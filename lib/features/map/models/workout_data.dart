@@ -95,6 +95,17 @@ class WorkoutData {
     return "$minutes:${seconds.toString().padLeft(2, '0')}";
   }
 
+  // Getter para ritmo promedio en minutos/km (double)
+  double get averagePaceMinutesPerKm {
+    double averageSpeed = getAverageSpeedKmh();
+    if (averageSpeed <= 0.1) {
+      return 0.0; // O un valor indicativo como double.infinity?
+    }
+    double pace = 60 / averageSpeed;
+    // Limitar a un rango razonable
+    return pace.clamp(2.0, 20.0); 
+  }
+
   // Getters para mantener compatibilidad
   double get distance => distanceMeters;
   int get calories => _calculateCalories();
@@ -192,7 +203,10 @@ class WorkoutData {
     distanceMeters = 0;
     speedMetersPerSecond = 0;
     isWorkoutActive = false;
-    // No reseteamos el goal, ya que eso se maneja separadamente
+    currentPosition = null;
+    previousPosition = null;
+    previousTime = null;
+    // Goal is not reset here, managed by WorkoutController/GoalController
   }
 
   void setGoal(WorkoutGoal newGoal) {

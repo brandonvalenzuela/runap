@@ -1,12 +1,14 @@
 class WorkoutGoal {
   final double targetDistanceKm;
   final int targetTimeMinutes;
+  final double? targetPaceMinutesPerKm;
   final DateTime startTime;
   bool isCompleted = false;
 
   WorkoutGoal({
     required this.targetDistanceKm,
     required this.targetTimeMinutes,
+    this.targetPaceMinutesPerKm,
     DateTime? startTime,
   }) : startTime = startTime ?? DateTime.now();
 

@@ -56,7 +56,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   .headlineMedium!
                                   .apply(color: TColors.white))),
                       TUserPorfileTile(
-                          onPressed: () => Get.to(() => const ProfileScreen(), transition: Transition.upToDown)),
+                          onPressed: () => Get.to(() => const ProfileScreen(), transition: Transition.rightToLeft)),
                       const SizedBox(height: TSizes.spaceBtwSections),
                     ],
                   ),

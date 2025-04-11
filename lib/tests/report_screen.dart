@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 class DebugScreen extends StatelessWidget {
   const DebugScreen({super.key});
@@ -58,15 +60,61 @@ class DebugScreen extends StatelessWidget {
     Map<String, dynamic> result = {};
 
     // GetStorage
-    final getStorage = GetStorage();
-    for (var key in getStorage.getKeys()) {
-      result['GetStorage: $key'] = getStorage.read(key.toString());
+    try {
+      final getStorage = GetStorage();
+      final keys = getStorage.getKeys();
+      if (keys != null) {
+        for (var key in keys) {
+          result['GetStorage: $key'] = getStorage.read(key.toString());
+        }
+      } else {
+        result['GetStorage'] = 'No keys found';
+      }
+    } catch (e) {
+      result['GetStorage: Error'] = e.toString();
     }
 
     // SharedPreferences
-    final prefs = await SharedPreferences.getInstance();
-    for (var key in prefs.getKeys()) {
-      result['SharedPrefs: $key'] = prefs.get(key);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      for (var key in prefs.getKeys()) {
+        result['SharedPrefs: $key'] = prefs.get(key);
+      }
+    } catch (e) {
+      result['SharedPrefs: Error'] = e.toString();
+    }
+
+    // Workout JSON Files
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final workoutsPath = '${directory.path}/workouts';
+      final workoutsDir = Directory(workoutsPath);
+
+      if (await workoutsDir.exists()) {
+        final List<FileSystemEntity> entities = workoutsDir.listSync();
+        final List<File> workoutFiles = entities.whereType<File>()
+            .where((file) => file.path.endsWith('.json'))
+            .toList();
+        
+        if (workoutFiles.isEmpty) {
+          result['WorkoutFiles'] = 'No workout JSON files found in $workoutsPath';
+        } else {
+          result['WorkoutFiles_Path'] = workoutsPath;
+          for (var file in workoutFiles) {
+            String filename = file.path.split(Platform.pathSeparator).last;
+            try {
+              String content = file.readAsStringSync();
+              result['WorkoutFile: $filename'] = content;
+            } catch (e) {
+              result['WorkoutFile: $filename'] = 'Error reading file: ${e.toString()}';
+            }
+          }
+        }
+      } else {
+        result['WorkoutFiles'] = 'Workouts directory does not exist: $workoutsPath';
+      }
+    } catch (e) {
+      result['WorkoutFiles: Error'] = e.toString();
     }
 
     return result;

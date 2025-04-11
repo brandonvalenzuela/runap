@@ -1,17 +1,36 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:logger/logger.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:runap/features/dashboard/domain/entities/dashboard_model.dart';
 import 'package:runap/features/dashboard/presentation/manager/training_view_model.dart';
 import 'package:runap/features/map/models/workout_data.dart';
 import 'package:runap/features/map/models/workout_goal.dart';
 import 'package:runap/features/map/services/location_service.dart';
-import 'package:runap/features/map/services/map_workout_data_provider.dart';
 import 'location_permission_controller.dart';
-import 'package:flutter/foundation.dart';
+import 'package:runap/features/dashboard/data/datasources/training_service.dart';
+
+// ADDED: Class to hold completion info for the UI listener
+class WorkoutCompletionInfo {
+  final bool hadGoal;
+  final bool goalAchieved;
+  final double distanceMeters;
+  final Duration duration;
+  final double averagePaceMinutesPerKm;
+
+  WorkoutCompletionInfo({
+    required this.hadGoal,
+    required this.goalAchieved,
+    required this.distanceMeters,
+    required this.duration,
+    required this.averagePaceMinutesPerKm,
+  });
+}
 
 class WorkoutController extends GetxController {
   final Logger logger = Logger(
@@ -34,13 +53,13 @@ class WorkoutController extends GetxController {
   // Dependencias (inyectadas a través de Get.find)
   late final LocationService _locationService;
   final LocationPermissionController _permissionController = Get.find<LocationPermissionController>();
-  final WorkoutDatabaseService _databaseService = WorkoutDatabaseService(); // Podría inyectarse si es necesario
-  final TrainingViewModel _trainingViewModel = Get.find<TrainingViewModel>(); // Para actualizar sesión
+  final TrainingViewModel _trainingViewModel = Get.find<TrainingViewModel>();
 
   // Variables de control internas
   int _stabilizationCount = 0;
   LatLng? _lastStablePosition;
   Timer? _goalCheckTimer;
+  bool _processingFirstRealGpsAfterSimulation = false;
 
   // Flag de depuración (podría venir de configuración)
   final bool _isDebugMode = false;
@@ -101,40 +120,75 @@ class WorkoutController extends GetxController {
   // --- Manejo de Ubicación y Métricas --- 
 
   void handleLocationUpdate(LatLng position) {
+    if (_processingFirstRealGpsAfterSimulation) {
+       logger.i("🛰️ Ignorando la primera ubicación GPS real después de reanudar desde simulación.");
+       _processingFirstRealGpsAfterSimulation = false;
+       return;
+    }
+
     logger.d("📍 (WorkoutCtrl) Nueva posición recibida: $position");
 
     workoutData.update((val) {
-      val?.currentPosition = position;
+      if (val == null) return;
 
-      if (val?.isWorkoutActive == true) {
-        // Estabilización de ruta al inicio
-        if (_stabilizationCount < 3) {
-          _stabilizationCount++;
-          if (_lastStablePosition != null) {
-            double distance = Geolocator.distanceBetween(
-                _lastStablePosition!.latitude,
-                _lastStablePosition!.longitude,
-                position.latitude,
-                position.longitude);
-            if (distance > 50) {
-              _stabilizationCount = 0;
-              logger.d("⚠️ (WorkoutCtrl) Saltó GPS detectado (${distance.toStringAsFixed(1)}m), esperando estabilización");
-              return;
-            }
-          }
-          _lastStablePosition = position;
-          if (_stabilizationCount < 3) {
-            logger.d("🔍 (WorkoutCtrl) Estabilizando GPS: $_stabilizationCount/3");
-            return;
-          } else {
-            logger.d("✅ (WorkoutCtrl) GPS estabilizado, iniciando trazado de ruta");
-          }
-        }
+      val.currentPosition = position;
 
-        // Añadir punto a la ruta
-        val?.polylineCoordinates.add(position);
-        val?.updatePolyline(); // Llama al método dentro de WorkoutData para actualizar el Set<Polyline>
-        logger.d("✅ (WorkoutCtrl) Polilínea actualizada - ${val?.polylineCoordinates.length} puntos");
+      if (val.isWorkoutActive == true) {
+          // --- ADDED: Distance check before adding to polyline --- 
+          bool addPoint = true;
+          if (val.polylineCoordinates.isNotEmpty) {
+              final lastPoint = val.polylineCoordinates.last;
+              double distance = Geolocator.distanceBetween(
+                  lastPoint.latitude,
+                  lastPoint.longitude,
+                  position.latitude,
+                  position.longitude);
+              
+              // Use a threshold (e.g., 100m) to detect large jumps
+              const double jumpThreshold = 100.0; 
+              if (distance > jumpThreshold) {
+                 logger.w("⚠️ Salto de GPS detectado en handleLocationUpdate (${distance.toStringAsFixed(1)}m). Punto NO añadido a polilínea.");
+                 addPoint = false;
+              }
+          }
+          // --- END OF ADDED CHECK ---
+
+          // Only add point if distance check passed
+          if (addPoint) {
+              // Estabilización de ruta al inicio (moved inside addPoint check? No, stabilization is separate)
+              if (_stabilizationCount < 3) {
+                _stabilizationCount++;
+                if (_lastStablePosition != null) {
+                  double distanceStable = Geolocator.distanceBetween(
+                      _lastStablePosition!.latitude,
+                      _lastStablePosition!.longitude,
+                      position.latitude,
+                      position.longitude);
+                  if (distanceStable > 50) { // Stabilization threshold remains
+                    _stabilizationCount = 0;
+                    logger.d("⚠️ (WorkoutCtrl-Stabilization) Saltó GPS detectado (${distanceStable.toStringAsFixed(1)}m), esperando estabilización");
+                    return; // Don't add point during stabilization reset
+                  }
+                }
+                _lastStablePosition = position;
+                if (_stabilizationCount < 3) {
+                  logger.d("🔍 (WorkoutCtrl) Estabilizando GPS: $_stabilizationCount/3");
+                  return; // Don't add point yet
+                } else {
+                  logger.d("✅ (WorkoutCtrl) GPS estabilizado, iniciando trazado de ruta");
+                  // If stabilization just finished, ensure the stable point is the first one added IF the list is empty
+                  if (val.polylineCoordinates.isEmpty) {
+                     val.polylineCoordinates.add(position);
+                     logger.d("(WorkoutCtrl) Punto estabilizado añadido como inicial.");
+                  } // Otherwise, the normal flow below will add it if needed
+                }
+              }
+      
+              // Añadir punto a la ruta (if check passed and stabilization allows)
+              val.polylineCoordinates.add(position);
+              val.updatePolyline(); 
+              logger.d("✅ (WorkoutCtrl) Polilínea actualizada - ${val.polylineCoordinates.length} puntos");
+          }
       }
     });
   }
@@ -182,94 +236,54 @@ class WorkoutController extends GetxController {
       }
     }
 
-    // 3. Inicialización y estabilización
     _stabilizationCount = 0;
     _lastStablePosition = null;
-    // Considerar mostrar un loader aquí si la estabilización toma tiempo
-
-    // 4. Obtener posición inicial estable
+    
+    // Obtain initial position BEFORE starting listeners
+    Position? initialPosition;
     try {
-       logger.d("🔄 (WorkoutCtrl) Estabilizando ubicación GPS...");
-       // Dar tiempo al GPS
-       await Future.delayed(const Duration(seconds: 2));
-       final initialPosition = await Geolocator.getCurrentPosition(
+       logger.d("🔄 (WorkoutCtrl) Obteniendo posición inicial...");
+       initialPosition = await Geolocator.getCurrentPosition(
           locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.best,
-            timeLimit: Duration(seconds: 5),
+            accuracy: LocationAccuracy.best, // Use best for initial fix
+            timeLimit: Duration(seconds: 7), // Increase timeout slightly
           )
        );
-
-       if (initialPosition.accuracy <= 20) {
-          _lastStablePosition = LatLng(initialPosition.latitude, initialPosition.longitude);
-          workoutData.update((val) { val?.currentPosition = _lastStablePosition; });
-          logger.d("✅ (WorkoutCtrl) Ubicación inicial estable: ${initialPosition.accuracy}m");
-       } else {
-         logger.w("⚠️ (WorkoutCtrl) Precisión inicial insuficiente: ${initialPosition.accuracy}m");
-         // Intentar obtener posición actual como fallback si no hay estable
-         if (workoutData.value.currentPosition == null) {
-            workoutData.update((val) { val?.currentPosition = LatLng(initialPosition.latitude, initialPosition.longitude); });
-         }
-       }
+       logger.d("✅ (WorkoutCtrl) Posición inicial obtenida: ${initialPosition.latitude}, ${initialPosition.longitude}");
     } catch (e) {
-       logger.w("⚠️ (WorkoutCtrl) Error al obtener ubicación estable: $e");
-        // Intentar obtener cualquier posición como fallback
-        if (workoutData.value.currentPosition == null) {
-            try {
-                Position position = await Geolocator.getCurrentPosition(
-                    locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 5))
-                );
-                 workoutData.update((val) { val?.currentPosition = LatLng(position.latitude, position.longitude); });
-                 logger.d("✅ (WorkoutCtrl) Posición inicial (fallback) obtenida.");
-            } catch (e2) {
-                logger.e("❌ (WorkoutCtrl) Fallo total al obtener posición inicial: $e2");
-                 // Usar posición por defecto si estamos en debug/emulador
-                if (kDebugMode) {
-                  workoutData.update((val) { val?.currentPosition = const LatLng(20.651464, -103.392958); });
-                  logger.d("🔮 (WorkoutCtrl) Usando posición por defecto para el emulador");
-                } else {
-                   Get.snackbar('GPS no disponible', 'No se pudo obtener la ubicación inicial.');
-                   return; // No podemos iniciar sin posición inicial
-                }
-            }
-        }
+       logger.e("❌ Error al obtener posición inicial: $e");
+       Get.snackbar(
+          'Error de ubicación', 
+          'No se pudo obtener la ubicación inicial. Inténtalo de nuevo.',
+          backgroundColor: Get.theme.colorScheme.error,
+          colorText: Get.theme.colorScheme.onError,
+        );
+       return; // Do not start workout if initial position fails
     }
 
-    // 5. Resetear datos y marcar como activo
+    // Set workout as active and update initial state
     workoutData.update((val) {
-      val?.reset();
-      val?.isWorkoutActive = true;
-      val?.previousTime = DateTime.now(); // Inicializar tiempo previo
-      // Re-aplicar el objetivo si existe, actualizando su startTime
-      if (val?.goal != null) {
-          val?.setGoal(WorkoutGoal(
-              targetDistanceKm: val.goal!.targetDistanceKm,
-              targetTimeMinutes: val.goal!.targetTimeMinutes,
-              startTime: DateTime.now(), // Actualizar tiempo de inicio del objetivo
-          ));
+      val?.reset(); // Reset previous data
+      // Call _createWorkoutGoalFromSession only if session is not null
+      if (sessionToUpdate.value != null) { 
+          val?.goal = _createWorkoutGoalFromSession(sessionToUpdate.value!); // Pass non-null session
       }
-      // Añadir punto inicial si es estable
-      if (_lastStablePosition != null) {
-          // Verificar cercanía con la posición actual por si acaso
-          double distanceBetween = workoutData.value.currentPosition != null ? Geolocator.distanceBetween(
-            _lastStablePosition!.latitude, _lastStablePosition!.longitude,
-            workoutData.value.currentPosition!.latitude, workoutData.value.currentPosition!.longitude
-          ) : 0;
-          if (distanceBetween < 30) {
-              val?.polylineCoordinates.add(_lastStablePosition!); // Añadir punto estable
-              logger.d("✅ (WorkoutCtrl) Punto inicial añadido a la ruta");
-              val?.updatePolyline();
-          }
+      val?.isWorkoutActive = true;
+      val?.currentPosition = LatLng(initialPosition!.latitude, initialPosition.longitude);
+      val?.previousPosition = initialPosition; // Set previous for metrics
+      val?.previousTime = DateTime.now();      // Set time for metrics
+      // Add the very first point to the polyline
+      if (initialPosition != null) {
+         val?.polylineCoordinates.add(LatLng(initialPosition.latitude, initialPosition.longitude));
+         val?.updatePolyline();
       }
     });
-
     workoutStartTime.value = DateTime.now();
-    workoutData.refresh(); // Asegurar que la UI refleje el inicio
-
-    // 6. Iniciar servicios y timers
-    logger.d("▶️ (WorkoutCtrl) Iniciando entrenamiento...");
-    logWorkoutStatus(detailed: true);
-    _locationService.startLocationUpdates();
     _startGoalCheckTimer();
+
+    // **** Start real location updates AFTER workout is active ****
+    _locationService.startLocationUpdates(); 
+    logger.i("▶️ (WorkoutCtrl) Entrenamiento iniciado.");
   }
 
   void _startGoalCheckTimer() {
@@ -285,106 +299,129 @@ class WorkoutController extends GetxController {
   }
 
   Future<void> stopWorkout() async {
-    if (!workoutData.value.isWorkoutActive) return;
+    logger.i("⏹️ (WorkoutCtrl) Deteniendo entrenamiento...");
+    
+    _locationService.stopLocationUpdates(); 
+    _goalCheckTimer?.cancel(); 
+    
+    final endTime = DateTime.now();
+    final startTime = workoutStartTime.value;
+    Duration? duration;
+    if (startTime != null) {
+      duration = endTime.difference(startTime);
+    }
 
-    isSaving.value = true;
-    logger.d("⏹️ (WorkoutCtrl) Deteniendo entrenamiento...");
+    // --- Capture final data BEFORE resetting workoutData --- 
+    final currentWorkoutData = workoutData.value;
+    final finalDistanceMeters = currentWorkoutData.distanceMeters;
+    final finalDuration = duration ?? Duration.zero;
+    final finalAvgPace = currentWorkoutData.averagePaceMinutesPerKm;
+    final finalCalories = currentWorkoutData.calories;
+    final finalGoalCompleted = currentWorkoutData.goal?.isCompleted ?? false;
+    final finalRouteCoordinates = List<LatLng>.from(currentWorkoutData.polylineCoordinates);
+    final Session? sessionBeingUpdated = sessionToUpdate.value; // Keep a reference before clearing
+    // --- End of capture --- 
 
     workoutData.update((val) {
       val?.isWorkoutActive = false;
     });
 
-    _locationService.stopLocationUpdates();
-    _goalCheckTimer?.cancel();
+    if (finalDistanceMeters < 10 && finalDuration.inSeconds < 5) {
+       logger.w("⚠️ Entrenamiento demasiado corto. No se guardará.");
+       Get.snackbar(
+          'Entrenamiento corto', 
+          'El entrenamiento fue demasiado corto para ser guardado.',
+          backgroundColor: Colors.orange,
+        );
+       workoutData.value.reset();
+       workoutStartTime.value = null;
+       sessionToUpdate.value = null; 
+       return; 
+    }
 
-    // Guardar datos
-    await _saveWorkoutData();
+    isSaving.value = true;
+    try {
+      logger.d("💾 Preparando datos para guardar...");
 
-    // Actualizar sesión en el dashboard si aplica
-    await _updateDashboardSession();
+      // --- 1. Guardado Local --- 
+      final localData = {
+        'distanceMeters': finalDistanceMeters,
+        'durationSeconds': finalDuration.inSeconds,
+        'averagePaceMinutesPerKm': finalAvgPace,
+        'calories': finalCalories,
+        'goalCompleted': finalGoalCompleted,
+        'startTime': startTime?.toIso8601String(),
+        'endTime': endTime.toIso8601String(),
+        // Convert LatLng list to a JSON encodable format
+        'route': finalRouteCoordinates
+            .map((coord) => {'latitude': coord.latitude, 'longitude': coord.longitude})
+            .toList(),
+        // Include session info if available
+        'sessionInfo': sessionBeingUpdated?.toJson() 
+      };
 
-    isSaving.value = false;
-    logger.d("✅ (WorkoutCtrl) Entrenamiento detenido y guardado.");
-
-    // Mostrar diálogo de completado
-    await _showCompletionDialog();
-
-    // Opcional: Resetear estado después de guardar y mostrar diálogo
-    // workoutData.update((val) { val?.reset(); });
-    // workoutStartTime.value = null;
-  }
-
-  Future<void> _saveWorkoutData() async {
-      if (workoutStartTime.value == null) return;
-
-      final durationSeconds = DateTime.now().difference(workoutStartTime.value!).inSeconds;
-      final distanceKm = workoutData.value.distanceMeters / 1000;
-      final goalCompleted = workoutData.value.goal?.isCompleted ?? false;
-
-      try {
-          await _databaseService.saveWorkoutResult(distanceKm, durationSeconds, goalCompleted);
-          logger.d("💾 Resultado guardado: ${distanceKm.toStringAsFixed(2)}km en $durationSeconds seg. Meta: $goalCompleted");
-          if (workoutData.value.polylineCoordinates.length > 5) {
-              await _databaseService.saveWorkoutRoute(workoutData.value.polylineCoordinates);
-              logger.d("💾 Ruta guardada con ${workoutData.value.polylineCoordinates.length} puntos.");
+      // --- UPDATED: Use endTime for filename --- 
+      final formattedEndTime = endTime.toIso8601String().replaceAll(':', '-').replaceAll('.', '-');
+      final filename = sessionBeingUpdated != null 
+          ? 'workout_session_${sessionBeingUpdated.sessionId}_${formattedEndTime}.json' 
+          : 'workout_free_${formattedEndTime}.json';
+      // --- END UPDATED --- 
+      
+      final directory = await getApplicationDocumentsDirectory();
+      final path = '${directory.path}/workouts'; // Subdirectory for workouts
+      await Directory(path).create(recursive: true); // Ensure directory exists
+      final file = File('$path/$filename');
+      
+      await file.writeAsString(jsonEncode(localData));
+      logger.i("💾 Datos del entrenamiento guardados localmente en: $filename");
+      
+      // --- 2. Actualización Simple de Estado (Compatible con Servicio Actual) ---
+      if (sessionBeingUpdated != null) {
+          logger.d("🔄 Marcando sesión como completada en TrainingService...");
+          // Use the existing service method (assumes TrainingViewModel exposes or uses TrainingService)
+          // We might need to access the service directly if ViewModel doesn't expose markSessionAsCompleted
+          // For now, let's assume we call it through the ViewModel as a proxy if possible,
+          // otherwise we might need TrainingService here.
+          // Let's try calling the service directly for simplicity here.
+          final trainingService = TrainingService(); // Get instance (assuming singleton)
+          bool success = await trainingService.markSessionAsCompleted(sessionBeingUpdated, true);
+          if (success) {
+             logger.i("✅ Sesión marcada como completada en el servicio.");
+             // Trigger UI update if needed (TrainingViewModel listener should handle this)
+          } else {
+             logger.e("❌ Error al marcar sesión como completada en el servicio.");
+             // Maybe show a specific snackbar?
           }
-      } catch (e) {
-          logger.e("❌ Error al guardar datos del entrenamiento: $e");
-          Get.snackbar("Error", "No se pudo guardar el entrenamiento: $e");
+      } else {
+         logger.i("ℹ️ Entrenamiento libre completado (no asociado a sesión específica).");
       }
-  }
 
-  Future<void> _updateDashboardSession() async {
-     if (sessionToUpdate.value != null) {
-      try {
-        logger.d("🔄 Actualizando sesión en TrainingViewModel...");
-        // Usamos el TrainingViewModel que debería estar disponible globalmente (lazy loaded)
-        await _trainingViewModel.toggleSessionCompletion(sessionToUpdate.value!);
-        logger.d("✅ Sesión actualizada en TrainingViewModel.");
-      } catch (e) {
-         logger.e("❌ Error al actualizar sesión en TrainingViewModel: $e");
-         Get.snackbar('Error', 'Error al actualizar el estado en el dashboard: $e');
-      }
+    } catch (e, stacktrace) {
+      logger.e("❌ Error durante el proceso de guardado: $e", stackTrace: stacktrace);
+      Get.snackbar('Error', 'No se pudo guardar el entrenamiento. $e');
+    } finally {
+      isSaving.value = false;
+      workoutData.value.reset(); 
+      workoutStartTime.value = null;
+      sessionToUpdate.value = null; 
     }
   }
 
-  Future<void> _showCompletionDialog() async {
-    return Get.dialog(
-      AlertDialog(
-        title: const Text('¡Entrenamiento completado!'),
-        content: SingleChildScrollView(
-          child: ListBody(
-            children: <Widget>[
-              Text('Has finalizado tu entrenamiento.'),
-              SizedBox(height: 8),
-              Text(
-                'Distancia: ${(workoutData.value.distanceMeters / 1000).toStringAsFixed(2)} km',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              Text(
-                'Tiempo: ${getFormattedElapsedTime()}',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              Text(
-                 'Ritmo Prom.: ${workoutData.value.getAveragePaceFormatted()} min/km',
-                 style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-        ),
-        actions: <Widget>[
-          TextButton(
-            child: const Text('Aceptar'),
-            onPressed: () {
-              Get.back(); // Cerrar diálogo
-              // Considerar si navegar atrás automáticamente o no
-              // if (sessionToUpdate.value != null) Get.back(); // Volver si veníamos de dashboard
-            },
-          ),
-        ],
-      ),
-      barrierDismissible: false,
-    );
+  // --- Methods to control LocationService from outside (e.g., MapScreen) ---
+
+  void pauseRealLocationUpdates() {
+    logger.d("⏸️ (WorkoutCtrl) Pausando actualizaciones GPS reales (LocationService)");
+    _locationService.stopLocationUpdates();
+  }
+
+  void resumeRealLocationUpdates() {
+    if (workoutData.value.isWorkoutActive) {
+      logger.d("▶️ (WorkoutCtrl) Reanudando actualizaciones GPS reales (LocationService)");
+      _processingFirstRealGpsAfterSimulation = true;
+      _locationService.startLocationUpdates();
+    } else {
+       logger.d("🚫 (WorkoutCtrl) No se reanudan actualizaciones GPS reales (entrenamiento no activo)");
+    }
   }
 
   // --- Utilidades --- 
@@ -426,41 +463,87 @@ class WorkoutController extends GetxController {
     }
   }
 
-  // Método para crear un objetivo a partir de la sesión (copiado de TrainingCard)
+  // Método para crear un objetivo a partir de la sesión (ACTUALIZADO)
   WorkoutGoal? _createWorkoutGoalFromSession(Session session) {
     try {
       logger.i("📊 (WorkoutCtrl) Creando WorkoutGoal a partir de: ${session.description}");
       String description = session.description.toLowerCase();
-      double targetDistanceKm = 5.0; // Valor predeterminado
-      int targetTimeMinutes = 30; // Valor predeterminado
+      double? targetDistanceKm;
+      int? targetTimeMinutes;
+      double? targetPaceMinutesPerKm;
 
-      RegExp distanceRegExp = RegExp(r'(\d+(?:\.\d+)?)\s*km');
+      // --- Regex mejoradas --- 
+      // 1. Buscar distancia (e.g., "10 km", "5.5km")
+      RegExp distanceRegExp = RegExp(r'(\d+(?:\.\d+)?)\s*k(?:ilo)?m(?:etros)?\b');
       var distanceMatch = distanceRegExp.firstMatch(description);
       if (distanceMatch != null) {
-        targetDistanceKm = double.tryParse(distanceMatch.group(1) ?? '5.0') ?? 5.0;
-        logger.i("📏 (WorkoutCtrl) Distancia detectada: $targetDistanceKm km");
+        targetDistanceKm = double.tryParse(distanceMatch.group(1) ?? '');
+        if (targetDistanceKm != null) {
+           logger.i("📏 (WorkoutCtrl) Distancia detectada: $targetDistanceKm km");
+        }
       }
 
-      RegExp timeRegExp = RegExp(r'(\d+)\s*min');
-      var timeMatch = timeRegExp.firstMatch(description);
-      if (timeMatch != null) {
-        targetTimeMinutes = int.tryParse(timeMatch.group(1) ?? '30') ?? 30;
-         logger.i("⏱️ (WorkoutCtrl) Tiempo detectado: $targetTimeMinutes min");
+      // 2. Buscar ritmo (e.g., "ritmo 5:30 min/km", "a 6:15/km")
+      RegExp paceRegExp = RegExp(r'(\d{1,2}):(\d{2})\s*m(?:in)?\/km\b');
+      var paceMatch = paceRegExp.firstMatch(description);
+      if (paceMatch != null) {
+        int paceMinutes = int.tryParse(paceMatch.group(1) ?? '') ?? 0;
+        int paceSeconds = int.tryParse(paceMatch.group(2) ?? '') ?? 0;
+        targetPaceMinutesPerKm = paceMinutes + (paceSeconds / 60.0);
+        logger.i("⏱️ (WorkoutCtrl) Ritmo detectado: ${paceMatch.group(0)} ($targetPaceMinutesPerKm min/km)");
       }
-      // Solo crear objetivo si se detectó al menos distancia o tiempo
-      if (distanceMatch != null || timeMatch != null) {
-         return WorkoutGoal(
+
+      // 3. Buscar tiempo total (e.g., "30 min", "45 minutos") - SOLO si NO se encontró ritmo
+      if (targetPaceMinutesPerKm == null) { 
+        RegExp timeRegExp = RegExp(r'\b(\d+)\s*m(?:inutos)?\b');
+        var timeMatch = timeRegExp.firstMatch(description);
+        if (timeMatch != null) {
+          targetTimeMinutes = int.tryParse(timeMatch.group(1) ?? '');
+          if (targetTimeMinutes != null) {
+             logger.i("⏱️ (WorkoutCtrl) Tiempo total detectado: $targetTimeMinutes min");
+          }
+        }
+      }
+
+      // --- Lógica de creación del objetivo --- 
+
+      // Caso 1: Distancia y Ritmo -> Calcular Tiempo
+      if (targetDistanceKm != null && targetPaceMinutesPerKm != null) {
+        targetTimeMinutes = (targetDistanceKm * targetPaceMinutesPerKm).round();
+        logger.i("🎯 Objetivo D+R: $targetDistanceKm km a $targetPaceMinutesPerKm min/km => Tiempo calculado: $targetTimeMinutes min");
+        return WorkoutGoal(
             targetDistanceKm: targetDistanceKm,
             targetTimeMinutes: targetTimeMinutes,
+            targetPaceMinutesPerKm: targetPaceMinutesPerKm, // Guardar ritmo detectado
+        );
+      }
+      // Caso 2: Solo Distancia -> Usar distancia, tiempo por defecto (o 0?)
+      else if (targetDistanceKm != null) {
+         logger.i("🎯 Objetivo D: $targetDistanceKm km (sin tiempo/ritmo específico)");
+         // Podríamos poner un tiempo muy alto o 0 para indicar que no hay límite de tiempo
+         return WorkoutGoal(
+            targetDistanceKm: targetDistanceKm,
+            targetTimeMinutes: 0, // 0 indica sin límite de tiempo
          );
-      } else {
-          logger.w("⚠️ (WorkoutCtrl) No se detectó distancia ni tiempo en la descripción para crear objetivo.");
+      }
+      // Caso 3: Solo Tiempo -> Usar tiempo, distancia por defecto (o 0?)
+      else if (targetTimeMinutes != null) { 
+         logger.i("🎯 Objetivo T: $targetTimeMinutes min (sin distancia específica)");
+         // Podríamos poner distancia 0 para indicar que no hay objetivo de distancia
+         return WorkoutGoal(
+            targetDistanceKm: 0, // 0 indica sin objetivo de distancia
+            targetTimeMinutes: targetTimeMinutes,
+         );
+      }
+      // Caso 4: No se detectó nada útil
+      else {
+          logger.w("⚠️ (WorkoutCtrl) No se detectó distancia, tiempo ni ritmo útil en la descripción para crear objetivo.");
           return null;
       }
 
     } catch (e) {
       logger.e('❌ (WorkoutCtrl) Error creando WorkoutGoal: $e');
-      return null; // Devolver null si hay error o no se puede parsear
+      return null; // Devolver null si hay error
     }
   }
 

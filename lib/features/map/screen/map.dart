@@ -15,6 +15,7 @@ import 'package:runap/features/map/models/workout_goal.dart';
 import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/constants/sizes.dart';
 import 'package:runap/utils/helpers/helper_functions.dart';
+import 'package:runap/utils/validators/validation.dart';
 
 class MapScreen extends StatefulWidget {
   final WorkoutGoal? initialWorkoutGoal;
@@ -57,6 +58,40 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
     workoutController.initializeWithSession(widget.sessionToUpdate);
     
     _initializeSimulationPosition();
+
+    bool wasActive = workoutController.workoutData.value.isWorkoutActive;
+    ever(workoutController.workoutData, (callback) {
+      final bool isActive = workoutController.workoutData.value.isWorkoutActive;
+      if (wasActive && !isActive) {
+        // Workout just finished
+        // Capture data *immediately* after state change, before reset might fully complete
+        final data = workoutController.workoutData.value; 
+        final duration = workoutController.workoutStartTime.value != null 
+            ? DateTime.now().difference(workoutController.workoutStartTime.value!) 
+            : Duration.zero;
+
+        // Ensure data is valid before showing dialog
+        if (data.distanceMeters > 0 || duration > Duration.zero) { 
+            final completionInfo = WorkoutCompletionInfo(
+               hadGoal: data.goal != null,
+               goalAchieved: data.goal?.isCompleted ?? false, 
+               distanceMeters: data.distanceMeters,
+               duration: duration,
+               averagePaceMinutesPerKm: data.averagePaceMinutesPerKm
+            );
+            print("Workout finished, showing completion dialog.");
+            // Use addPostFrameCallback to ensure build context is ready
+            WidgetsBinding.instance.addPostFrameCallback((_) { 
+               if (mounted) { // Check if widget is still in the tree
+                  _showCompletionDialog(completionInfo);
+               }
+            });
+        } else {
+           print("Workout finished but data seems invalid, not showing dialog.");
+        }
+      }
+      wasActive = isActive; // Update state for next check
+    });
 
     if (widget.onMapInitialized != null) {
         widget.onMapInitialized!();
@@ -134,10 +169,12 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
     if (_isSimulating) {
       _simulationTimer?.cancel();
       _simulationTimer = null;
+      _lastSimulatedPosition = null;
       setState(() {
         _isSimulating = false;
       });
       print("🛑 Simulation Stopped");
+      workoutController.resumeRealLocationUpdates();
     } else {
       if (workoutController.workoutData.value.isWorkoutActive == false) {
          ScaffoldMessenger.of(context).showSnackBar(
@@ -145,6 +182,8 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
          );
          return;
       }
+
+      workoutController.pauseRealLocationUpdates();
 
       if (_lastSimulatedPosition == null) {
           print("Waiting for initial position...");
@@ -154,6 +193,7 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text("No se pudo obtener ubicación inicial."))
               );
+              workoutController.resumeRealLocationUpdates();
               return;
           }
       }
@@ -392,6 +432,58 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
            Text(value, style: Theme.of(context).textTheme.headlineSmall),
            Text(label, style: Theme.of(context).textTheme.bodySmall),
         ],
+    );
+  }
+
+  void _showCompletionDialog(WorkoutCompletionInfo info) {
+    Get.dialog(
+      AlertDialog(
+        title: Text(info.hadGoal && info.goalAchieved ? '¡Objetivo Cumplido!' : 'Entrenamiento Finalizado'),
+        content: SingleChildScrollView(
+          child: ListBody(
+            children: <Widget>[
+              _buildCompletionMessage(info),
+              const SizedBox(height: 16),
+              _buildMetricRow('Distancia', "${(info.distanceMeters / 1000).toStringAsFixed(2)} km"),
+              _buildMetricRow('Tiempo', "${info.duration.inMinutes}:${(info.duration.inSeconds % 60).toString().padLeft(2, '0')}"),
+              _buildMetricRow('Ritmo Prom.', "${info.averagePaceMinutesPerKm.toStringAsFixed(2)} min/km"),
+            ],
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            child: const Text('Aceptar'),
+            onPressed: () {
+              Get.back();
+            },
+          ),
+        ],
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(TSizes.cardRadiusLg)),
+      ),
+      barrierDismissible: false,
+    );
+  }
+
+  Widget _buildCompletionMessage(WorkoutCompletionInfo info) {
+    if (info.hadGoal && info.goalAchieved) {
+      return const Text('¡Felicidades! Has completado tu objetivo.');
+    } else if (info.hadGoal && !info.goalAchieved) {
+      return const Text('No alcanzaste tu objetivo, ¡pero completaste el entrenamiento!');
+    } else {
+      return const Text('Has finalizado tu entrenamiento.');
+    }
+  }
+
+  Widget _buildMetricRow(String label, String value) {
+     return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4.0),
+        child: Row(
+           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+           children: [
+              Text(label, style: const TextStyle(color: Colors.black54)),
+              Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+           ],
+      ),
     );
   }
 }

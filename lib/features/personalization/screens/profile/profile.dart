@@ -50,7 +50,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: TAppBar(showBackArrow: true, title: Text('Perfil')),
+      appBar: TAppBar(showBackArrow: true, title: Text('Mi perfil')),
 
       /// -- BODY
       body: SingleChildScrollView(

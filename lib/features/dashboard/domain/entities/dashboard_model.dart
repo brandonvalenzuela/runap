@@ -75,12 +75,14 @@ class Dashboard {
 }
 
 class Session {
+  final int? sessionId;
   final DateTime sessionDate;
   final String workoutName;
   final String description;
   bool completed;
 
   Session({
+    this.sessionId,
     required this.sessionDate,
     required this.workoutName,
     required this.description,
@@ -89,6 +91,7 @@ class Session {
 
   factory Session.fromJson(Map<String, dynamic> json) {
     return Session(
+      sessionId: json['sessionId'] as int? ?? json['id'] as int? ?? -1,
       sessionDate: json['sessionDate'] != null
           ? DateTime.parse(json['sessionDate'])
           : DateTime.now(),
@@ -100,6 +103,7 @@ class Session {
 
   Map<String, dynamic> toJson() {
     return {
+      'sessionId': sessionId,
       'sessionDate': sessionDate.toIso8601String(),
       'workoutName': workoutName,
       'description': description,
