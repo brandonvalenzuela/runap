@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:runap/features/dashboard/presentation/pages/calendar/calendar.dart';
-import 'package:runap/features/personalization/screens/account/account.dart';
 import 'package:runap/features/dashboard/presentation/pages/home.dart';
-import 'package:runap/features/personalization/screens/progress/progress.dart';
-import 'package:runap/features/personalization/screens/settings/settings.dart';
+import 'package:runap/features/progress/progress.dart';
 import 'package:runap/tests/report_screen.dart';
 import 'package:runap/tests/widgets/test.dart';
 import 'package:runap/tests/widgets/test1.dart';
@@ -47,10 +45,10 @@ class NavigationMenu extends StatelessWidget {
               NavigationDestination(icon: Icon(Iconsax.home), label: 'Home'),
               NavigationDestination(
                   icon: Icon(Iconsax.calendar), label: 'Calendar'),
-              NavigationDestination(icon: Icon(Iconsax.like_shapes), label: 'JOURNAL'),
+              NavigationDestination(icon: Icon(Iconsax.clipboard_text), label: 'JOURNAL'),
               NavigationDestination(
                   icon: Icon(Icons.storage), label: 'LocalStorage'),
-              NavigationDestination(icon: Icon(Iconsax.cake), label: 'Test'),
+              //NavigationDestination(icon: Icon(Iconsax.cake), label: 'Test'),
               NavigationDestination(icon: Icon(Iconsax.car), label: 'CARLENDAR'),
              //NavigationDestination(icon: Icon(Iconsax.user), label: 'Profile'),
               //NavigationDestination(icon: Icon(Iconsax.setting), label: 'SETTINGS'),
@@ -71,7 +69,7 @@ class NavigationController extends GetxController {
     const CalendarScreen(),
     const ProgressScreen(),
     const DebugScreen(),  
-    const Test(),
+    //const Test(),
     const FullDiaryReplication(),
     //const AccountScreen(),
     //const SettingsScreen(),

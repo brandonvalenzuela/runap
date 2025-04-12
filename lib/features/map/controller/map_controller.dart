@@ -200,11 +200,11 @@ class MapController extends GetxController {
          // ADDED BACK: Show dialog if permissions aren't granted on init
          permissionController.showPermissionDialogIfNeeded();
          isLoading.value = false; // Still need to stop loading indicator
-         return;
-      }
+      return;
+    }
       // If granted initially, proceed to get location
       logger.i("MapController.initialize: Permission granted initially. Getting location.");
-      await getCurrentLocationAndAnimateCamera();
+                  await getCurrentLocationAndAnimateCamera();
     } catch (e) {
       logger.e('Error en inicialización: $e');
     } finally {

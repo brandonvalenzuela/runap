@@ -513,7 +513,7 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
            children: [
               Text(label, style: const TextStyle(color: Colors.black54)),
               Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
-           ],
+        ],
       ),
     );
   }

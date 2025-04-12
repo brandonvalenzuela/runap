@@ -8,6 +8,7 @@ import 'package:runap/features/personalization/screens/account/account.dart'; //
 import 'package:runap/features/personalization/screens/profile/profile.dart'; // Para navegar a Profile
 import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/constants/sizes.dart';
+import 'package:runap/common/screens/placeholder/placeholder_screen.dart';
 // Importar Package Info Plus si se usa para la versión
 // import 'package:package_info_plus/package_info_plus.dart'; 
 
@@ -34,7 +35,7 @@ class SettingsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: bgColor,
       appBar: TAppBar(
-        leadingIcon: Iconsax.close_square,
+        leadingIcon: Icons.close,
         leadingOnPressed: () => Get.back(),
         title: Text('Settings', style: Theme.of(context).textTheme.headlineSmall),
       ),
@@ -58,13 +59,13 @@ class SettingsScreen extends StatelessWidget {
               _SettingsListItem(
                 title: 'My goals',
                 tileColor: tileColor,
-                onTap: () { /* TODO: Navegar a My Goals */ },
+                onTap: () => Get.to(() => const PlaceholderScreen(title: 'My Goals')),
               ),
               const SizedBox(height: TSizes.sm),
               _SettingsListItem(
                 title: 'Diary settings',
                 tileColor: tileColor,
-                onTap: () { /* TODO: Navegar a Diary Settings */ },
+                onTap: () => Get.to(() => const PlaceholderScreen(title: 'Diary Settings')),
               ),
               const SizedBox(height: TSizes.spaceBtwSections * 1.5),
 
@@ -80,13 +81,13 @@ class SettingsScreen extends StatelessWidget {
               _SettingsListItem(
                 title: 'Manage my notifications',
                 tileColor: tileColor,
-                onTap: () { /* TODO: Navegar a Notifications */ },
+                onTap: () => Get.to(() => const PlaceholderScreen(title: 'Notifications')),
               ),
               const SizedBox(height: TSizes.sm),
               _SettingsListItem(
                 title: 'Automatic tracking apps',
                 tileColor: tileColor,
-                onTap: () { /* TODO: Navegar a Tracking Apps */ },
+                onTap: () => Get.to(() => const PlaceholderScreen(title: 'Tracking Apps')),
               ),
               const SizedBox(height: TSizes.spaceBtwSections * 1.5),
 
@@ -96,13 +97,19 @@ class SettingsScreen extends StatelessWidget {
               _SettingsListItem(
                 title: 'Contact us',
                 tileColor: tileColor,
-                onTap: () { /* TODO: Navegar a Contact Us */ },
+                onTap: () => Get.to(() => const PlaceholderScreen(title: 'Contact Us')),
               ),
               const SizedBox(height: TSizes.sm),
               _SettingsListItem(
                 title: 'Invite friends & get \$20',
                 tileColor: tileColor,
-                onTap: () { /* TODO: Implementar Invite */ },
+                onTap: () => Get.snackbar(
+                  'Coming Soon!',
+                  'Invite friends feature will be available soon.',
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: TColors.darkGrey,
+                  colorText: Colors.white,
+                ),
               ),
               const SizedBox(height: TSizes.sm),
               _SettingsListItem(
@@ -114,13 +121,13 @@ class SettingsScreen extends StatelessWidget {
               _SettingsListItem(
                 title: 'Terms of use',
                 tileColor: tileColor,
-                onTap: () { /* TODO: Navegar/Mostrar Terms */ },
+                onTap: () => Get.to(() => const PlaceholderScreen(title: 'Terms of Use')),
               ),
               const SizedBox(height: TSizes.sm),
               _SettingsListItem(
                 title: 'Privacy policy',
                 tileColor: tileColor,
-                onTap: () { /* TODO: Navegar/Mostrar Policy */ },
+                onTap: () => Get.to(() => const PlaceholderScreen(title: 'Privacy Policy')),
               ),
               const SizedBox(height: TSizes.spaceBtwSections * 2),
 
@@ -206,7 +213,7 @@ class _SettingsListItem extends StatelessWidget {
               Expanded(
                 child: Text(title, style: titleStyle, overflow: TextOverflow.ellipsis)
               ),
-              const Icon(Iconsax.arrow_right_3, size: TSizes.iconSm, color: Colors.grey),
+              const Icon(Iconsax.arrow_right_1, size: TSizes.iconMx, color: TColors.colorBlack),
             ],
           ),
         ),
