@@ -189,6 +189,7 @@ class ProgressScreen extends StatelessWidget {
                   foregroundColor: isDarkMode ? TColors.colorBlack : TColors.light,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(TSizes.borderRadiusXl)),
                   padding: const EdgeInsets.symmetric(vertical: TSizes.smx),
+                  side: BorderSide.none,
               ),
               child: Text('Add a weight entry', style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: isDarkMode ? TColors.colorBlack : TColors.light, fontWeight: FontWeight.bold)),
@@ -308,6 +309,7 @@ class ProgressScreen extends StatelessWidget {
                       foregroundColor: buttonTextColor,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(TSizes.borderRadiusXl)),
                       padding: const EdgeInsets.symmetric(vertical: TSizes.smx),
+                      side: BorderSide.none,
                     ),
                     child: const Text('Get more info', style: TextStyle(fontWeight: FontWeight.bold)),
                     
@@ -772,6 +774,7 @@ class ProgressScreen extends StatelessWidget {
                 Get.back(); // Close dialog
               }
             },
+            
             child: Text(isEditing ? 'Update' : 'Add'),
           ),
         ],
