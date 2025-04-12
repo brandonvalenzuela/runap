@@ -226,10 +226,26 @@ class _FullDiaryReplicationState extends State<FullDiaryReplication> {
                           ),
                         ),
                       ),
+                      // --- Flecha hacia abajo (Aparece con las barras) ---
+                      Align(
+                        alignment: Alignment.bottomCenter,
+                        child: Padding(
+                          // Añadir padding SUPERIOR para separarlo de las barras
+                          padding: EdgeInsets.only(top: TSizes.lg * _scrollProgress), // Padding above, scales with scroll
+                          child: Opacity(
+                            opacity: _scrollProgress.clamp(0.0, 1.0), // Misma opacidad que las barras
+                            child: Icon(
+                              Icons.keyboard_arrow_down,
+                              color: textColorLight, // Usar un color sutil
+                              size: 24.0,
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
-                 const SizedBox(height: TSizes.lg), // Mantener espacio inferior
+                 const SizedBox(height: TSizes.xl + TSizes.sm), 
               ],
             ),
 

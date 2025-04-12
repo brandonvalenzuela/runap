@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Importar para HapticFeedback
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:runap/common/widgets/icons/t_circular_image.dart';
@@ -64,7 +65,10 @@ class ProgressScreen extends StatelessWidget {
                 actions: [
                   IconButton(
                     icon: const Icon(Iconsax.setting_2, color: TColors.colorBlack),
-                    onPressed: () => Get.to(() => const SettingsScreen()),
+                    onPressed: () {
+                      HapticFeedback.lightImpact(); // Vibración ligera
+                      Get.to(() => const SettingsScreen());
+                    },
                   ),
                 ],
                 flexibleSpace: FlexibleSpaceBar(
@@ -79,7 +83,10 @@ class ProgressScreen extends StatelessWidget {
       child: Obx(() => Row(
         children: [
           GestureDetector(
-            onTap: () => Get.to(() => const ProfileScreen(), transition: Transition.rightToLeft),
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Get.to(() => const ProfileScreen(), transition: Transition.rightToLeft);
+            },
             child: TCircularImage(
               image: userController.profilePicture.isNotEmpty
                 ? userController.profilePicture
@@ -93,7 +100,10 @@ class ProgressScreen extends StatelessWidget {
           const SizedBox(width: TSizes.spaceBtwItems),
           Expanded(
             child: GestureDetector(
-              onTap: () => Get.to(() => const ProfileScreen(), transition: Transition.rightToLeft),
+              onTap: () {
+                HapticFeedback.lightImpact();
+                Get.to(() => const ProfileScreen(), transition: Transition.rightToLeft);
+              },
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -183,7 +193,10 @@ class ProgressScreen extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-                onPressed: () => _showAddWeightDialog(context, controller, null),
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  _showAddWeightDialog(context, controller, null);
+                },
               style: ElevatedButton.styleFrom(
                 backgroundColor: buttonColor,
                   foregroundColor: isDarkMode ? TColors.colorBlack : TColors.light,
@@ -246,7 +259,10 @@ class ProgressScreen extends StatelessWidget {
     final dateColor = Colors.grey;
 
     return InkWell(
-      onTap: () => _showAddWeightDialog(context, Get.find<ProgressController>(), entry),
+      onTap: () {
+        HapticFeedback.lightImpact();
+        _showAddWeightDialog(context, Get.find<ProgressController>(), entry);
+      },
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: TSizes.md),
         child: Row(
@@ -304,7 +320,10 @@ class ProgressScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: TSizes.spaceBtwItems / 2),
                   ElevatedButton(
-                    onPressed: () => Get.to(() => const SettingsScreen()),
+                    onPressed: () {
+                      HapticFeedback.lightImpact();
+                      Get.to(() => const SettingsScreen());
+                    },
                     style: ElevatedButton.styleFrom(backgroundColor: buttonBgColor,
                       foregroundColor: buttonTextColor,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(TSizes.borderRadiusXl)),
@@ -674,6 +693,7 @@ class ProgressScreen extends StatelessWidget {
     return ToggleButtons(
       isSelected: isSelected,
       onPressed: (int index) {
+        HapticFeedback.lightImpact(); // Vibración al cambiar
         onChanged(index);
       },
       borderRadius: BorderRadius.circular(TSizes.borderRadiusLg),
@@ -758,12 +778,16 @@ class ProgressScreen extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              Get.back();
+            },
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () {
               if (formKey.currentState!.validate()) {
+                HapticFeedback.lightImpact();
                 final newWeight = double.parse(weightController.text);
                 if (isEditing) {
                   // Call controller method to UPDATE the entry
