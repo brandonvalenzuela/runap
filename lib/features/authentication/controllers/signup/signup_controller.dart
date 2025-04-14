@@ -20,8 +20,8 @@ class SignupController extends GetxController {
   final username = TextEditingController(); // Controller for username input
   final password = TextEditingController(); // Controller for password input
   final firstName = TextEditingController(); // Controller for first name input
-  final phoneNumber =
-      TextEditingController(); // Controller for phone number input
+  final phoneNumber = TextEditingController(); // Controller for phone number input (solo dígitos)
+  String completePhoneNumber = ''; // Variable para almacenar el número completo con código de país
   GlobalKey<FormState> signupFormKey =
       GlobalKey<FormState>(); // Form key for form validation
 
@@ -48,6 +48,9 @@ class SignupController extends GetxController {
         TFullScreenLoader.stopLoading();
         return;
       }
+
+      // Guardar el formulario para asegurar que onSaved sea llamado
+      signupFormKey.currentState!.save();
 
       // Privacy Policy Check
       if (!privacyPolicy.value) {
@@ -81,7 +84,7 @@ class SignupController extends GetxController {
         lastName: lastName.text.trim(),
         username: username.text.trim(),
         email: email.text.trim(),
-        phoneNumber: phoneNumber.text.trim(),
+        phoneNumber: completePhoneNumber.isNotEmpty ? completePhoneNumber : phoneNumber.text.trim(),
         porfilePicture: '',
       );
 

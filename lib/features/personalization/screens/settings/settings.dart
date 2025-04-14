@@ -6,9 +6,11 @@ import 'package:runap/data/repositories/authentication/authentication_repository
 import 'package:runap/features/personalization/controllers/user_controller.dart';
 import 'package:runap/features/personalization/screens/account/account.dart'; // Para navegar a Account
 import 'package:runap/features/personalization/screens/profile/profile.dart'; // Para navegar a Profile
+import 'package:runap/tests/report_screen.dart';
 import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/constants/sizes.dart';
 import 'package:runap/common/screens/placeholder/placeholder_screen.dart';
+import 'package:runap/utils/device/device_utility.dart'; // Para vibración
 // Importar Package Info Plus si se usa para la versión
 // import 'package:package_info_plus/package_info_plus.dart'; 
 
@@ -41,7 +43,7 @@ class SettingsScreen extends StatelessWidget {
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: TSizes.defaultSpace), // Padding horizontal principal
+          padding: const EdgeInsets.symmetric(horizontal: TSizes.smxx), // Padding horizontal principal
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -53,19 +55,28 @@ class SettingsScreen extends StatelessWidget {
               _SettingsListItem(
                 title: 'My profile',
                 tileColor: tileColor,
-                onTap: () => Get.to(() => const ProfileScreen(), transition: Transition.rightToLeft),
+                onTap: () {
+                  TDiviceUtility.vibrateLight();
+                  Get.to(() => const ProfileScreen(), transition: Transition.rightToLeft);
+                },
               ),
               const SizedBox(height: TSizes.sm),
               _SettingsListItem(
                 title: 'My goals',
                 tileColor: tileColor,
-                onTap: () => Get.to(() => const PlaceholderScreen(title: 'My Goals')),
+                onTap: () {
+                  TDiviceUtility.vibrateLight();
+                  Get.to(() => const PlaceholderScreen(title: 'My Goals'));
+                },
               ),
               const SizedBox(height: TSizes.sm),
               _SettingsListItem(
                 title: 'Diary settings',
                 tileColor: tileColor,
-                onTap: () => Get.to(() => const PlaceholderScreen(title: 'Diary Settings')),
+                onTap: () {
+                  TDiviceUtility.vibrateLight();
+                  Get.to(() => const PlaceholderScreen(title: 'Diary Settings'));
+                },
               ),
               const SizedBox(height: TSizes.spaceBtwSections * 1.5),
 
@@ -75,19 +86,41 @@ class SettingsScreen extends StatelessWidget {
               _SettingsListItem(
                 title: 'My account',
                 tileColor: tileColor,
-                onTap: () => Get.to(() => const AccountScreen(), transition: Transition.rightToLeft),
+                onTap: () {
+                  TDiviceUtility.vibrateLight();
+                  Get.to(() => const AccountScreen(), transition: Transition.rightToLeft);
+                },
               ),
               const SizedBox(height: TSizes.sm),
               _SettingsListItem(
                 title: 'Manage my notifications',
                 tileColor: tileColor,
-                onTap: () => Get.to(() => const PlaceholderScreen(title: 'Notifications')),
+                onTap: () {
+                  TDiviceUtility.vibrateLight();
+                  Get.to(() => const PlaceholderScreen(title: 'Notifications'));
+                },
               ),
               const SizedBox(height: TSizes.sm),
               _SettingsListItem(
                 title: 'Automatic tracking apps',
                 tileColor: tileColor,
-                onTap: () => Get.to(() => const PlaceholderScreen(title: 'Tracking Apps')),
+                onTap: () {
+                  TDiviceUtility.vibrateLight();
+                  Get.to(() => const PlaceholderScreen(title: 'Tracking Apps'));
+                },
+              ),
+              const SizedBox(height: TSizes.spaceBtwSections * 1.5),
+
+              // --- SECCIÓN DEVELOPMENT ---
+              _buildSectionHeader(context, 'Development'),
+              const SizedBox(height: TSizes.spaceBtwItems),
+              _SettingsListItem(
+                title: 'Local host',
+                tileColor: tileColor,
+                onTap: () {
+                  TDiviceUtility.vibrateLight();
+                  Get.to(const DebugScreen());
+                },
               ),
               const SizedBox(height: TSizes.spaceBtwSections * 1.5),
 
@@ -97,37 +130,52 @@ class SettingsScreen extends StatelessWidget {
               _SettingsListItem(
                 title: 'Contact us',
                 tileColor: tileColor,
-                onTap: () => Get.to(() => const PlaceholderScreen(title: 'Contact Us')),
+                onTap: () {
+                  TDiviceUtility.vibrateLight();
+                  Get.to(() => const PlaceholderScreen(title: 'Contact Us'));
+                },
               ),
               const SizedBox(height: TSizes.sm),
               _SettingsListItem(
                 title: 'Invite friends & get \$20',
                 tileColor: tileColor,
-                onTap: () => Get.snackbar(
-                  'Coming Soon!',
-                  'Invite friends feature will be available soon.',
-                  snackPosition: SnackPosition.BOTTOM,
-                  backgroundColor: TColors.darkGrey,
-                  colorText: Colors.white,
-                ),
+                onTap: () {
+                  TDiviceUtility.vibrateLight();
+                  Get.snackbar(
+                    'Coming Soon!',
+                    'Invite friends feature will be available soon.',
+                    snackPosition: SnackPosition.BOTTOM,
+                    backgroundColor: TColors.darkGrey,
+                    colorText: Colors.white,
+                  );
+                },
               ),
               const SizedBox(height: TSizes.sm),
               _SettingsListItem(
                 title: 'Log out',
                 tileColor: tileColor,
-                onTap: () => AuthenticationRepository.instance.logout(),
+                onTap: () {
+                  TDiviceUtility.vibrateMedium();
+                  AuthenticationRepository.instance.logout();
+                },
               ),
               const SizedBox(height: TSizes.sm),
               _SettingsListItem(
                 title: 'Terms of use',
                 tileColor: tileColor,
-                onTap: () => Get.to(() => const PlaceholderScreen(title: 'Terms of Use')),
+                onTap: () {
+                  TDiviceUtility.vibrateLight();
+                  Get.to(() => const PlaceholderScreen(title: 'Terms of Use'));
+                },
               ),
               const SizedBox(height: TSizes.sm),
               _SettingsListItem(
                 title: 'Privacy policy',
                 tileColor: tileColor,
-                onTap: () => Get.to(() => const PlaceholderScreen(title: 'Privacy Policy')),
+                onTap: () {
+                  TDiviceUtility.vibrateLight();
+                  Get.to(() => const PlaceholderScreen(title: 'Privacy Policy'));
+                },
               ),
               const SizedBox(height: TSizes.spaceBtwSections * 2),
 

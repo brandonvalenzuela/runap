@@ -53,11 +53,26 @@ class TValidator {
       return 'Phone number is required';
     }
 
-    // Regular expression for phone number validation
-    final phoneRegExp = RegExp(r'^\+?0[0-9]{10}$');
+    // Regular expression for international phone number validation
+    // Esta expresión regular está optimizada para validar números completos con código de país
+    // Acepta formatos como:
+    // - +34612345678
+    // - +1 (123) 456-7890
+    // - +44 20 1234 5678
+    final phoneRegExp = RegExp(
+      r'^\+(?:[0-9] ?){6,14}[0-9]$'
+    );
 
     if (!phoneRegExp.hasMatch(value)) {
-      return 'Enter a valid phone number';
+      return 'Enter a valid international phone number';
+    }
+
+    // Verificación adicional de longitud total (solo de los dígitos)
+    final digitsOnly = value.replaceAll(RegExp(r'[^\d+]'), '');
+    final digitCount = digitsOnly.replaceAll('+', '').length;
+    
+    if (digitCount < 7 || digitCount > 15) {
+      return 'Phone number must have between 7 and 15 digits';
     }
 
     return null;

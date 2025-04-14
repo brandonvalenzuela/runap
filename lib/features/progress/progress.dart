@@ -11,7 +11,8 @@ import 'package:runap/utils/constants/image_strings.dart';
 import 'package:runap/utils/constants/sizes.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:math' as math;
-import 'package:runap/features/progress/controllers/progress_controller.dart'; 
+import 'package:runap/features/progress/controllers/progress_controller.dart';
+import 'package:runap/utils/device/device_utility.dart'; 
 import 'package:shimmer/shimmer.dart'; // Importar el paquete shimmer
 
 class ProgressScreen extends StatelessWidget {
@@ -66,7 +67,7 @@ class ProgressScreen extends StatelessWidget {
                   IconButton(
                     icon: const Icon(Iconsax.setting_2, color: TColors.colorBlack),
                     onPressed: () {
-                      HapticFeedback.lightImpact(); // Vibración ligera
+                      TDiviceUtility.vibrateMedium();// Vibración ligera
                       Get.to(() => const SettingsScreen());
                     },
                   ),
@@ -84,7 +85,7 @@ class ProgressScreen extends StatelessWidget {
         children: [
           GestureDetector(
             onTap: () {
-              HapticFeedback.lightImpact();
+              TDiviceUtility.vibrateMedium();
               Get.to(() => const ProfileScreen(), transition: Transition.rightToLeft);
             },
             child: TCircularImage(
@@ -101,7 +102,7 @@ class ProgressScreen extends StatelessWidget {
           Expanded(
             child: GestureDetector(
               onTap: () {
-                HapticFeedback.lightImpact();
+                TDiviceUtility.vibrateMedium();
                 Get.to(() => const ProfileScreen(), transition: Transition.rightToLeft);
               },
               child: Column(
@@ -194,7 +195,7 @@ class ProgressScreen extends StatelessWidget {
             width: double.infinity,
             child: ElevatedButton(
                 onPressed: () {
-                  HapticFeedback.lightImpact();
+                  TDiviceUtility.vibrateMedium();
                   _showAddWeightDialog(context, controller, null);
                 },
               style: ElevatedButton.styleFrom(
@@ -260,7 +261,7 @@ class ProgressScreen extends StatelessWidget {
 
     return InkWell(
       onTap: () {
-        HapticFeedback.lightImpact();
+        TDiviceUtility.vibrateMedium();
         _showAddWeightDialog(context, Get.find<ProgressController>(), entry);
       },
       child: Padding(
@@ -321,7 +322,7 @@ class ProgressScreen extends StatelessWidget {
                   const SizedBox(height: TSizes.spaceBtwItems / 2),
                   ElevatedButton(
                     onPressed: () {
-                      HapticFeedback.lightImpact();
+                      TDiviceUtility.vibrateMedium();
                       Get.to(() => const SettingsScreen());
                     },
                     style: ElevatedButton.styleFrom(backgroundColor: buttonBgColor,
@@ -693,7 +694,7 @@ class ProgressScreen extends StatelessWidget {
     return ToggleButtons(
       isSelected: isSelected,
       onPressed: (int index) {
-        HapticFeedback.lightImpact(); // Vibración al cambiar
+        TDiviceUtility.vibrateMedium();// Vibración al cambiar
         onChanged(index);
       },
       borderRadius: BorderRadius.circular(TSizes.borderRadiusLg),
@@ -779,7 +780,7 @@ class ProgressScreen extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () {
-              HapticFeedback.lightImpact();
+              TDiviceUtility.vibrateMedium();
               Get.back();
             },
             child: const Text('Cancel'),
@@ -787,7 +788,7 @@ class ProgressScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               if (formKey.currentState!.validate()) {
-                HapticFeedback.lightImpact();
+                TDiviceUtility.vibrateMedium();
                 final newWeight = double.parse(weightController.text);
                 if (isEditing) {
                   // Call controller method to UPDATE the entry

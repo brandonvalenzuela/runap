@@ -15,6 +15,7 @@ import 'package:runap/common/widgets/headers/user_profile_header.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:collection/collection.dart';
 import 'package:intl/intl.dart';
+import 'package:runap/utils/device/device_utility.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -178,8 +179,11 @@ class _HomeScreenState extends State<HomeScreen>
               child: FadeTransition(
                 opacity: _fadeUserInfoAnimation,
                 child: UserProfileHeader( // Asumiendo que UserProfileHeader obtiene UserController internamente
-                  onAvatarTap: () => Get.to(() => const ProfileScreen(),
-                      transition: Transition.rightToLeft),
+                  onAvatarTap: () {
+                    TDiviceUtility.vibrateLight();
+                    Get.to(() => const ProfileScreen(),
+                        transition: Transition.rightToLeft);
+                  },
                 ),
               ),
             ),
@@ -316,7 +320,10 @@ class _HomeScreenState extends State<HomeScreen>
           const Text('Error al cargar los datos de entrenamiento'),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () => viewModel.loadDashboardData(forceRefresh: true),
+            onPressed: () {
+              TDiviceUtility.vibrateMedium();
+              viewModel.loadDashboardData(forceRefresh: true);
+            },
             child: const Text('Reintentar'),
           ),
         ],
@@ -565,7 +572,11 @@ class _HomeScreenState extends State<HomeScreen>
               const Spacer(),
               IconButton(
                 icon: const Icon(Iconsax.map_1, size: 20),
-                onPressed: () => Get.to(() => MapScreen(), transition: Transition.upToDown),
+                tooltip: 'Abrir Mapa',
+                onPressed: () {
+                  TDiviceUtility.vibrateLight();
+                  Get.to(() => MapScreen(), transition: Transition.upToDown);
+                },
               ),
             ],
           ),
@@ -824,7 +835,10 @@ class _ErrorViewWidget extends StatelessWidget {
           const Text('Error al cargar los datos de entrenamiento'),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () => viewModel.loadDashboardData(forceRefresh: true),
+            onPressed: () {
+              TDiviceUtility.vibrateMedium();
+              viewModel.loadDashboardData(forceRefresh: true);
+            },
             child: const Text('Reintentar'),
           ),
         ],
@@ -944,7 +958,10 @@ class _HomeContentWidget extends StatelessWidget {
               IconButton(
                 icon: const Icon(Iconsax.map_1, size: 20),
                 tooltip: 'Abrir Mapa', // Añadir tooltip para accesibilidad
-                onPressed: () => Get.to(() => MapScreen(), transition: Transition.upToDown),
+                onPressed: () {
+                  TDiviceUtility.vibrateLight();
+                  Get.to(() => MapScreen(), transition: Transition.upToDown);
+                },
               ),
             ],
           ),
@@ -1003,6 +1020,7 @@ class _DashboardHeaderCardState extends State<_DashboardHeaderCard> with SingleT
   }
 
   void _toggleExpansion() {
+    TDiviceUtility.vibrateLight();
     setState(() {
       _isExpanded = !_isExpanded;
       if (_isExpanded) {

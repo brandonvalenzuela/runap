@@ -10,6 +10,7 @@ import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/constants/image_strings.dart';
 import 'package:runap/utils/constants/sizes.dart';
 import 'package:runap/features/dashboard/domain/entities/dashboard_model.dart';
+import 'package:runap/utils/device/device_utility.dart';
 import 'package:runap/utils/helpers/page_transitions.dart';
 import 'dart:async';
 import 'dart:math' as math;
@@ -134,7 +135,7 @@ class _TrainingCardState extends State<TrainingCard>
         now.day == widget.session.sessionDate.day;
 
     if (isToday) {
-      HapticFeedback.lightImpact();
+      TDiviceUtility.vibrateMedium();;
     }
   }
 

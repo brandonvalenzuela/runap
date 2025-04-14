@@ -15,7 +15,11 @@ class TLoginForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<LoginController>();
+    // Verificar si el LoginController ya está registrado, si no, inicializarlo
+    final controller = Get.isRegistered<LoginController>() 
+        ? Get.find<LoginController>() 
+        : Get.put(LoginController());
+        
     return Form(
         key: controller.loginFormKey,
         child: Padding(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:runap/features/dashboard/presentation/pages/calendar/calendar.dart';
@@ -7,6 +8,7 @@ import 'package:runap/features/progress/progress.dart';
 import 'package:runap/tests/report_screen.dart';
 import 'package:runap/tests/widgets/test1.dart';
 import 'package:runap/utils/constants/colors.dart';
+import 'package:runap/utils/device/device_utility.dart';
 import 'package:runap/utils/helpers/helper_functions.dart';
 
 class NavigationMenu extends StatelessWidget {
@@ -34,8 +36,10 @@ class NavigationMenu extends StatelessWidget {
             height: 60,
             elevation: 0,
             selectedIndex: controller.selectedIndex.value,
-            onDestinationSelected: (index) =>
-                controller.selectedIndex.value = index,
+            onDestinationSelected: (index) {
+                controller.selectedIndex.value = index;
+                TDiviceUtility.vibrateLight();
+            },
             backgroundColor: darkMode ? TColors.colorBlack : Colors.white,
             indicatorColor: darkMode
                 ? TColors.white.withAlpha(25)
@@ -45,11 +49,11 @@ class NavigationMenu extends StatelessWidget {
               NavigationDestination(
                   icon: Icon(Iconsax.calendar), label: 'Calendar'),
               NavigationDestination(icon: Icon(Iconsax.clipboard_text), label: 'JOURNAL'),
-              NavigationDestination(
-                  icon: Icon(Icons.storage), label: 'LocalStorage'),
+              // NavigationDestination(
+              //     icon: Icon(Icons.storage), label: 'LocalStorage'),
               //NavigationDestination(icon: Icon(Iconsax.cake), label: 'Test'),
-              NavigationDestination(icon: Icon(Iconsax.car), label: 'CARLENDAR'),
-             //NavigationDestination(icon: Icon(Iconsax.user), label: 'Profile'),
+              //NavigationDestination(icon: Icon(Iconsax.car), label: 'CARLENDAR'),
+              //NavigationDestination(icon: Icon(Iconsax.user), label: 'Profile'),
               //NavigationDestination(icon: Icon(Iconsax.setting), label: 'SETTINGS'),
             ],
           ),
@@ -67,9 +71,9 @@ class NavigationController extends GetxController {
     const HomeScreen(),
     const CalendarScreen(),
     const ProgressScreen(),
-    const DebugScreen(),  
+    //const DebugScreen(),  
     //const Test(),
-    const FullDiaryReplication(),
+    //const FullDiaryReplication(),
     //const AccountScreen(),
     //const SettingsScreen(),
   ];

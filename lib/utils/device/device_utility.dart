@@ -80,6 +80,14 @@ class TDiviceUtility {
     Future.delayed(duration, () => HapticFeedback.vibrate());
   }
 
+  static void vibrateMedium() {
+    HapticFeedback.mediumImpact();
+  }
+
+   static void vibrateLight() {
+    HapticFeedback.lightImpact();
+  }
+
   static Future<void> setPreferredOrientation(
       List<DeviceOrientation> orientations) async {
     await SystemChrome.setPreferredOrientations(orientations);

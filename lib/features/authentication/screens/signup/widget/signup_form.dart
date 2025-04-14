@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
+import 'package:intl_phone_field/country_picker_dialog.dart';
 import 'package:runap/features/authentication/controllers/signup/signup_controller.dart';
 import 'package:runap/features/authentication/screens/signup/widget/terms_condition_checkbox.dart';
 import 'package:runap/utils/constants/sizes.dart';
@@ -30,7 +32,9 @@ class TSIgnupForm extends StatelessWidget {
                   expands: false,
                   decoration: const InputDecoration(
                       labelText: TTexts.firstName,
-                      prefixIcon: Icon(Iconsax.user)),
+                      prefixIcon: Icon(Iconsax.user),
+                      contentPadding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                  ),
                 ),
               ),
               const SizedBox(width: TSizes.spaceBtwInputFields),
@@ -42,7 +46,9 @@ class TSIgnupForm extends StatelessWidget {
                   expands: false,
                   decoration: const InputDecoration(
                       labelText: TTexts.lastName,
-                      prefixIcon: Icon(Iconsax.user)),
+                      prefixIcon: Icon(Iconsax.user),
+                      contentPadding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                  ),
                 ),
               )
             ],
@@ -57,7 +63,9 @@ class TSIgnupForm extends StatelessWidget {
             expands: false,
             decoration: const InputDecoration(
                 labelText: TTexts.username,
-                prefixIcon: Icon(Iconsax.user_edit)),
+                prefixIcon: Icon(Iconsax.user_edit),
+                contentPadding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+            ),
           ),
           const SizedBox(height: TSizes.spaceBtwInputFields),
 
@@ -66,16 +74,51 @@ class TSIgnupForm extends StatelessWidget {
             controller: controller.email,
             validator: (value) => TValidator.validateEmail(value),
             decoration: const InputDecoration(
-                labelText: TTexts.email, prefixIcon: Icon(Iconsax.direct)),
+                labelText: TTexts.email, 
+                prefixIcon: Icon(Iconsax.direct),
+                contentPadding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+            ),
           ),
           const SizedBox(height: TSizes.spaceBtwInputFields),
 
           /// PHONE NUMBER
-          TextFormField(
+          IntlPhoneField(
             controller: controller.phoneNumber,
-            validator: (value) => TValidator.validatePhoneNumber(value),
             decoration: const InputDecoration(
-                labelText: TTexts.phoneNo, prefixIcon: Icon(Iconsax.call)),
+              labelText: TTexts.phoneNo,
+              prefixIcon: Icon(Iconsax.call),
+              counterText: '',
+              contentPadding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+              isDense: false,
+            ),
+            initialCountryCode: 'ES',
+            showDropdownIcon: true,
+            dropdownIconPosition: IconPosition.trailing,
+            showCountryFlag: true,
+            flagsButtonPadding: EdgeInsets.symmetric(horizontal: 8),
+            flagsButtonMargin: EdgeInsets.only(left: 8),
+            invalidNumberMessage: 'Enter a valid phone number',
+            disableLengthCheck: true,
+            onSaved: (phone) {
+              if (phone != null) {
+                controller.completePhoneNumber = phone.completeNumber;
+              }
+            },
+            validator: (phoneNumber) {
+              if (phoneNumber == null) {
+                return 'Phone number is required';
+              }
+              final completeNumber = phoneNumber.completeNumber;
+              controller.completePhoneNumber = completeNumber;
+              return TValidator.validatePhoneNumber(completeNumber);
+            },
+            pickerDialogStyle: PickerDialogStyle(
+              searchFieldInputDecoration: const InputDecoration(
+                labelText: 'Search country',
+                prefixIcon: Icon(Icons.search),
+              ),
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            ),
           ),
           const SizedBox(height: TSizes.spaceBtwInputFields),
 
@@ -88,6 +131,7 @@ class TSIgnupForm extends StatelessWidget {
               decoration: InputDecoration(
                 labelText: TTexts.password,
                 prefixIcon: const Icon(Iconsax.password_check),
+                contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
                 suffixIcon: IconButton(
                   onPressed: () => controller.hidePassword.value =
                       !controller.hidePassword.value,

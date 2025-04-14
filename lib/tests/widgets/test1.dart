@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:runap/navigation_menu.dart';
@@ -6,8 +7,14 @@ import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/constants/sizes.dart';
 import 'package:iconsax/iconsax.dart'; // Para iconos como calendar, chevron_right
 import 'dart:math' as math;
+import 'package:runap/utils/device/device_utility.dart'; // Importar para vibración
 
-// Convertir a StatefulWidget
+// --- Imports para TrainingCard --- 
+import 'package:runap/features/dashboard/presentation/manager/training_view_model.dart';
+import 'package:runap/features/dashboard/domain/entities/dashboard_model.dart';
+import 'package:runap/common/widgets/training/training_card.dart';
+
+
 class FullDiaryReplication extends StatefulWidget {
   const FullDiaryReplication({super.key});
 
@@ -16,30 +23,30 @@ class FullDiaryReplication extends StatefulWidget {
 }
 
 class _FullDiaryReplicationState extends State<FullDiaryReplication> {
-  // Estado para rastrear el progreso del scroll entre initial y first snap
-  double _scrollProgress = 0.0; // Reemplaza _isSnapped
+  // Cambiar a ValueNotifier para el progreso del scroll
+  final ValueNotifier<double> _scrollProgressNotifier = ValueNotifier(0.0);
   DateTime _selectedDate = DateTime.now();
 
   // --- ESTADO PARA DATOS DEPENDIENTES DE LA FECHA ---
   int _eatenCaloriesForSelectedDate = 223; // Valor inicial de ejemplo
   int _burnedCaloriesForSelectedDate = 0;
-  double _goalCalories = 2055; // Asumiendo meta fija por ahora
-  Map<String, Map<String, double>> _macroData = {
+  final double _goalCalories = 2055; // Asumiendo meta fija por ahora
+  final Map<String, Map<String, double>> _macroData = {
     'protein': {'eaten': 32, 'goal': 128},
     'fat': {'eaten': 4, 'goal': 103},
     'carbs': {'eaten': 9, 'goal': 144},
     'fiber': {'eaten': 0, 'goal': 21},
   };
-  Map<String, List<String>> _mealItems = {
+  final Map<String, List<String>> _mealItems = {
     'Breakfast': ['Teriyaki chicken (224 Cal)'],
     'Lunch': [],
     'Dinner': [],
     'Snacks': [],
   };
-  Map<String, int> _mealCaloriesEaten = {
+  final Map<String, int> _mealCaloriesEaten = {
     'Breakfast': 224, 'Lunch': 0, 'Dinner': 0, 'Snacks': 0,
   };
-  Map<String, int> _mealCaloriesGoal = { // Ejemplo de metas por comida
+  final Map<String, int> _mealCaloriesGoal = { // Ejemplo de metas por comida
     'Breakfast': 617, 'Lunch': 617, 'Dinner': 617, 'Snacks': 206,
   };
   int _streakCount = 1; // Ejemplo racha
@@ -62,12 +69,20 @@ class _FullDiaryReplicationState extends State<FullDiaryReplication> {
   static const double maxChildSize = 1.0;   
   static const double firstSnapSize = 0.76; 
 
+  // Acceder al ViewModel existente
+  final TrainingViewModel _viewModel = Get.find<TrainingViewModel>();
 
   @override
   void initState() {
     super.initState();
     // Cargar datos iniciales para la fecha actual
     _loadDataForDate(_selectedDate);
+  }
+
+  @override
+  void dispose() {
+    _scrollProgressNotifier.dispose(); // Liberar el notifier
+    super.dispose();
   }
 
   // --- FUNCIÓN PARA CARGAR/SIMULAR DATOS PARA UNA FECHA ---
@@ -142,107 +157,118 @@ class _FullDiaryReplicationState extends State<FullDiaryReplication> {
             // --- Contenido Fijo (detrás de la hoja) ---
             Column(
               children: [
-                // --- Contador de Racha y Resumen de Calorías (alineados) ---
-                Padding(
-                  padding: const EdgeInsets.only(top: TSizes.sm, bottom: TSizes.sm), // Ajustar padding
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start, // Cambiar a start para alinear por arriba
-                    children: [
-                      // --- Resumen de Calorías (expandido) ---
-                      Expanded(
-                        child: _buildCaloriesSummary(
-                          context,
-                          primaryOrange,
-                          textColorDark,
-                          textColorLight,
-                          calorieValueStyle,
-                          calorieLabelStyle,
-                          calLeftValueStyle,
-                          calLeftUnitStyle,
-                          calLeftLabelStyle,
-                          // --- Pasar el icono de racha como widget ---
-                          streakIcon: Container( 
-                            padding: const EdgeInsets.symmetric(horizontal: TSizes.smx, vertical: TSizes.xs),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: primaryOrange),
-                              color: cardBackgroundColor,
-                              borderRadius: BorderRadius.circular(TSizes.borderRadiusLg),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Iconsax.flash_11, color: primaryOrange, size: 16),
-                                const SizedBox(width: TSizes.xs),
-                                Text(
-                                  '$_streakCount', // Usar estado de racha
-                                  style: Theme.of(context).textTheme.labelLarge?.copyWith(color: primaryOrange, fontWeight: FontWeight.bold)
-                                ),
-                              ],
-                            ),
-              ),
-            ),
-          ),
-        ],
-      ),
+                // Envolver Padding con Stack
+                Stack(
+                  children: [
+                     // 1. Padding con la Row SOLO para _buildCaloriesSummary
+                     Padding(
+                       padding: const EdgeInsets.only(top: TSizes.sm, bottom: TSizes.sm), 
+                       child: Row(
+                         children: [
+                           // Restaurar Expanded y quitar Center
+                           Expanded(
+                             child: _buildCaloriesSummary(
+                               context,
+                               primaryOrange,
+                               textColorDark,
+                               textColorLight,
+                               calorieValueStyle,
+                               calorieLabelStyle,
+                               calLeftValueStyle,
+                               calLeftUnitStyle,
+                               calLeftLabelStyle,
+                             ),
+                           ),
+                           // Quitar el streakIcon Container de aquí
+                         ],
+                       ),
+                     ),
+                     // 2. Align para posicionar el streakIcon
+                     Align(
+                       alignment: Alignment.topRight,
+                       child: Padding(
+                         padding: const EdgeInsets.only(top: TSizes.sm, right: TSizes.md), // Padding para el icono
+                         child: Container( 
+                           padding: const EdgeInsets.symmetric(horizontal: TSizes.smx, vertical: TSizes.xs),
+                           decoration: BoxDecoration(
+                             border: Border.all(color: primaryOrange),
+                             color: cardBackgroundColor,
+                             borderRadius: BorderRadius.circular(TSizes.borderRadiusLg),
+                           ),
+                           child: Row(
+                             mainAxisSize: MainAxisSize.min,
+                             children: [
+                               Icon(Iconsax.flash_11, color: primaryOrange, size: 16),
+                               const SizedBox(width: TSizes.xs),
+                               Text(
+                                 '$_streakCount',
+                                 style: Theme.of(context).textTheme.labelLarge?.copyWith(color: primaryOrange, fontWeight: FontWeight.bold)
+                               ),
+                             ],
+                           ),
+                         ),
+                       ),
+                     ),
+                  ]
                 ),
                  const SizedBox(height: TSizes.defaultSpace),
                 // --- Contenedor para la transición entre Macros Circulares y Barras --- // PASO 3
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: TSizes.smx),
-                  // Usar Stack con Opacity y Transform.translate
-                  child: Stack(
-        children: [
-                      // Sección Circular (cayendo hacia atrás y desvaneciéndose)
-                      Transform(
-                        // Usar Matrix4 para rotación 3D + traslación (SIN PERSPECTIVA)
-                        transform: Matrix4.identity()
-                          ..rotateX(-math.pi / 2 * _scrollProgress) // Rota hacia atrás
-                          ..translate(0.0, _scrollProgress * 30, 0.0), // Traslación vertical
-                        alignment: FractionalOffset.center,
-                        child: Opacity(
-                          opacity: (1.0 - _scrollProgress).clamp(0.0, 1.0),
-                          child: _buildMacronutrientsSection(
-                            context, cardBackgroundColor, textColorDark, textColorLight,
-                            proteinColor, fatColor, carbsColor, fiberColor,
-                            headerStyle, macroAmountStyle, macroGoalStyle, macroLabelStyle
-                          ),
-                        ),
-                      ),
-                      // Sección Barras Horizontales (levantándose y apareciendo)
-                      Transform(
-                        // Usar Matrix4 solo para rotación 3D (SIN PERSPECTIVA NI TRASLACIÓN)
-                        transform: Matrix4.identity()
-                          ..rotateX(-math.pi / 2 * (1.0 - _scrollProgress)), // Solo rotación
-                        alignment: FractionalOffset.center,
-                        child: Opacity(
-                          opacity: _scrollProgress.clamp(0.0, 1.0),
-                          child: _buildMinimalHorizontalBars(
-                            context, proteinColor, fatColor, carbsColor, fiberColor,
-                            // Datos desde el estado (ya se pasan desde el build)
-                            _macroData['protein']!,
-                            _macroData['fat']!,
-                            _macroData['carbs']!,
-                            _macroData['fiber']!,
-                          ),
-                        ),
-                      ),
-                      // --- Flecha hacia abajo (Aparece con las barras) ---
-                      Align(
-                        alignment: Alignment.bottomCenter,
-                        child: Padding(
-                          // Añadir padding SUPERIOR para separarlo de las barras
-                          padding: EdgeInsets.only(top: TSizes.lg * _scrollProgress), // Padding above, scales with scroll
-                          child: Opacity(
-                            opacity: _scrollProgress.clamp(0.0, 1.0), // Misma opacidad que las barras
-                            child: Icon(
-                              Icons.keyboard_arrow_down,
-                              color: textColorLight, // Usar un color sutil
-                              size: 24.0,
+                  // Envolver con ValueListenableBuilder
+                  child: ValueListenableBuilder<double>(
+                    valueListenable: _scrollProgressNotifier,
+                    builder: (context, progressValue, _) { 
+                      return Stack(
+                        children: [
+                          // Sección Circular (se desliza hacia abajo y se desvanece)
+                          Transform.translate(
+                            offset: Offset(0, progressValue * 50), // Usar translate
+                            child: ClipRect( // Asegurar ClipRect
+                              child: Opacity(
+                                opacity: (1.0 - progressValue).clamp(0.0, 1.0), 
+                                child: _buildMacronutrientsSection( 
+                                  context, cardBackgroundColor, textColorDark, textColorLight,
+                                  proteinColor, fatColor, carbsColor, fiberColor,
+                                  headerStyle, macroAmountStyle, macroGoalStyle, macroLabelStyle
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                    ],
+                          // Sección Barras Horizontales (se desliza desde abajo y aparece)
+                          Transform.translate(
+                            offset: Offset(0, (1.0 - progressValue) * 50), // Usar translate
+                            child: ClipRect( // Asegurar ClipRect
+                              child: Opacity(
+                                opacity: progressValue.clamp(0.0, 1.0), 
+                                child: _buildMinimalHorizontalBars( 
+                                  context, proteinColor, fatColor, carbsColor, fiberColor,
+                                  _macroData['protein']!,
+                                  _macroData['fat']!,
+                                  _macroData['carbs']!,
+                                  _macroData['fiber']!,
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Flecha hacia abajo
+                          Align(
+                            alignment: Alignment.bottomCenter,
+                            child: Padding(
+                              padding: EdgeInsets.only(top: TSizes.lg * progressValue), // Usar progressValue
+                              child: Opacity(
+                                opacity: progressValue.clamp(0.0, 1.0), // Usar progressValue
+                                child: Icon(
+                                  Icons.keyboard_arrow_down,
+                                  color: textColorLight,
+                                  size: 24.0,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }
                   ),
                 ),
                  const SizedBox(height: TSizes.xl + TSizes.sm), 
@@ -252,23 +278,22 @@ class _FullDiaryReplicationState extends State<FullDiaryReplication> {
             // --- Hoja Deslizable (encima del contenido fijo) ---
             NotificationListener<DraggableScrollableNotification>(
               onNotification: (notification) {
-                // Calcular el progreso entre initial y first snap
                 final currentExtent = notification.extent;
                 double progress = 0.0;
-                if (firstSnapSize > initialSheetSize) { // Evitar división por cero
+                if (firstSnapSize > initialSheetSize) { 
                   progress = (currentExtent - initialSheetSize) / (firstSnapSize - initialSheetSize);
                 }
-                // Asegurarse de que el progreso esté entre 0.0 y 1.0
                 final clampedProgress = progress.clamp(0.0, 1.0);
 
-                // Actualizar estado solo si el progreso cambió significativamente
-                // (Evita reconstrucciones innecesarias)
-                if ((clampedProgress - _scrollProgress).abs() > 0.01) { 
-                  setState(() {
-                    _scrollProgress = clampedProgress;
-                  });
-                }
-                return true; // Indicar que hemos manejado la notificación
+                // Actualizar el ValueNotifier directamente (sin setState)
+                _scrollProgressNotifier.value = clampedProgress; 
+                
+                // if ((clampedProgress - _scrollProgress).abs() > 0.01) { // Ya no se necesita esta comprobación
+                //   setState(() {
+                //     _scrollProgress = clampedProgress;
+                //   });
+                // }
+                return true; 
               },
               child: Positioned.fill( 
                 child: DraggableScrollableSheet(
@@ -278,6 +303,11 @@ class _FullDiaryReplicationState extends State<FullDiaryReplication> {
                   snap: true,
                   snapSizes: const [initialSheetSize, firstSnapSize],
                   builder: (BuildContext context, ScrollController scrollController) {
+                    // --- Obtener sesiones para la fecha seleccionada --- 
+                    final sessionsForSelectedDay = _getSessionsForDay(_selectedDate);
+                    final today = DateTime.now();
+                    final isPastDay = _selectedDate.isBefore(DateTime(today.year, today.month, today.day));
+
                     return Container(
                       decoration: BoxDecoration(
                         color: cardBackgroundColor,
@@ -302,10 +332,35 @@ class _FullDiaryReplicationState extends State<FullDiaryReplication> {
                         child: ListView(
                           controller: scrollController,
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.only(top: TSizes.sm, left: TSizes.smx, right: TSizes.smx),
+                          padding: const EdgeInsets.only(top: TSizes.sm, left: TSizes.smx, right: TSizes.smx, bottom: TSizes.defaultSpace), // Añadir padding inferior
                           children: [
                             _buildDateNavigation(context, textColorDark),
                             const SizedBox(height: TSizes.spaceBtwItems),
+
+                            // --- Sección Training Cards --- 
+                            if (sessionsForSelectedDay.isEmpty)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: TSizes.lg),
+                                child: Center(
+                                  child: Text(
+                                    'No hay entrenamientos programados.',
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: TColors.darkGrey),
+                                  ),
+                                ),
+                              )
+                            else
+                              ...sessionsForSelectedDay.map((session) => Padding(
+                                padding: const EdgeInsets.only(bottom: TSizes.spaceBtwItems),
+                                child: TrainingCard(
+                                  session: session,
+                                  showBorder: true,
+                                  isPast: isPastDay, // Usar el flag calculado
+                                ),
+                              )).toList(), 
+                              
+                            const SizedBox(height: TSizes.spaceBtwSections), // Espacio antes de las comidas
+
+                            // --- Secciones de Comida --- 
                             _buildMealSection(
                               context, icon: Iconsax.sun_1, iconColor: Colors.orangeAccent, title: 'Breakfast',
                               eatenCal: _mealCaloriesEaten['Breakfast'] ?? 0, // Usar estado
@@ -367,43 +422,40 @@ class _FullDiaryReplicationState extends State<FullDiaryReplication> {
     TextStyle leftValStyle, 
     TextStyle leftUnitStyle, 
     TextStyle leftLabelStyle,
-    {required Widget streakIcon} 
   ) {
-    // (Código existente de _buildCaloriesSummary)
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      crossAxisAlignment: CrossAxisAlignment.end, 
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        _buildCalorieItem('Eaten', _eatenCaloriesForSelectedDate.toString(), valueStyle, labelStyle),
+        SizedBox(
+          width: 70.0,
+          child: _buildCalorieItem('Eaten', _eatenCaloriesForSelectedDate.toString(), valueStyle, labelStyle)
+        ),
         _buildCircularGoal(
             primaryOrange,
             textColorDark,
             leftValStyle,
             leftUnitStyle,
             leftLabelStyle,
-            _eatenCaloriesForSelectedDate, // Pasar calorías comidas
-            _goalCalories                 // Pasar meta de calorías
+            _eatenCaloriesForSelectedDate, 
+            _goalCalories                 
         ),
-        Column(
-          mainAxisSize: MainAxisSize.min, 
-          crossAxisAlignment: CrossAxisAlignment.center, 
-          children: [
-            streakIcon, 
-            const SizedBox(height: TSizes.smxx), 
-            _buildCalorieItem('Burned', _burnedCaloriesForSelectedDate.toString(), valueStyle, labelStyle),
-          ],
-        )
+        SizedBox(
+          width: 70.0,
+          child: _buildCalorieItem('Burned', _burnedCaloriesForSelectedDate.toString(), valueStyle, labelStyle)
+        ),
       ],
     );
   }
 
   Widget _buildCalorieItem(String label, String value, TextStyle valueStyle, TextStyle labelStyle) {
-    // (Código existente de _buildCalorieItem)
     return Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Text(value, style: valueStyle),
-        Text(label, style: labelStyle),
+        Text(value, style: valueStyle, textAlign: TextAlign.center),
+        Text(label, style: labelStyle, textAlign: TextAlign.center),
       ],
     );
   }
@@ -575,8 +627,9 @@ class _FullDiaryReplicationState extends State<FullDiaryReplication> {
         _buildNavButton(context, Icons.chevron_left, () {
           setState(() {
             _selectedDate = _selectedDate.subtract(const Duration(days: 1));
-            _loadDataForDate(_selectedDate); // Cargar datos para la nueva fecha
+            _loadDataForDate(_selectedDate);
           });
+          TDiviceUtility.vibrateLight();
         }),
         const SizedBox(width: TSizes.sm), // Espacio entre botón y centro
 
@@ -595,7 +648,10 @@ class _FullDiaryReplicationState extends State<FullDiaryReplication> {
                 labelText,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(color: textColorDark, fontWeight: FontWeight.bold)
                 ),
-              onPressed: () => _showCalendarPicker(context),
+              onPressed: () {
+                 _showCalendarPicker(context);
+                 TDiviceUtility.vibrateLight();
+              },
               // Asegurarse de que el estilo del botón no interfiera con el contenedor
                  style: TextButton.styleFrom(
                 foregroundColor: textColorDark,
@@ -614,8 +670,9 @@ class _FullDiaryReplicationState extends State<FullDiaryReplication> {
         _buildNavButton(context, Icons.chevron_right, () {
            setState(() {
              _selectedDate = _selectedDate.add(const Duration(days: 1));
-             _loadDataForDate(_selectedDate); // Cargar datos para la nueva fecha
+             _loadDataForDate(_selectedDate);
            });
+           TDiviceUtility.vibrateLight();
         }),
       ],
     );
@@ -624,7 +681,10 @@ class _FullDiaryReplicationState extends State<FullDiaryReplication> {
   // Botones laterales como cuadrados redondeados
   Widget _buildNavButton(BuildContext context, IconData icon, VoidCallback onPressed) {
     return GestureDetector( 
-      onTap: onPressed,
+      onTap: () {
+        onPressed();
+        TDiviceUtility.vibrateLight();
+      },
       child: Container(
         padding: const EdgeInsets.all(TSizes.sm), 
         decoration: BoxDecoration(
@@ -789,6 +849,23 @@ class _FullDiaryReplicationState extends State<FullDiaryReplication> {
     );
   }
 
+  // --- FUNCIÓN PARA OBTENER SESIONES DEL DÍA --- 
+  List<Session> _getSessionsForDay(DateTime day) {
+    if (_viewModel.trainingData == null) {
+      return []; // No hay datos cargados
+    }
+    // Usar la misma lógica de agrupación/filtrado que calendar.dart si es necesario
+    // Por ahora, filtraremos directamente la lista `nextWeekSessions`
+    final dateUtc = DateTime.utc(day.year, day.month, day.day);
+    return _viewModel.trainingData!.dashboard.nextWeekSessions
+        .where((session) {
+          final sessionDateUtc = DateTime.utc(
+              session.sessionDate.year, session.sessionDate.month, session.sessionDate.day);
+          return sessionDateUtc == dateUtc; 
+        })
+        .toList();
+  }
+
 } // Fin de _FullDiaryReplicationState
 
 
@@ -838,7 +915,7 @@ class _CalendarViewState extends State<_CalendarView> {
         left: TSizes.defaultSpace,
         right: TSizes.defaultSpace,
         // Quitar padding inferior del sistema ya que no es bottom sheet
-        bottom: TSizes.defaultSpace,
+        bottom: TSizes.md,
       ),
       child: Column(
         children: [
@@ -852,6 +929,7 @@ class _CalendarViewState extends State<_CalendarView> {
                      setState(() {
                        _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1);
                      });
+                     TDiviceUtility.vibrateLight();
                   },
                   tooltip: 'Previous Month',
                ),
@@ -865,9 +943,10 @@ class _CalendarViewState extends State<_CalendarView> {
                      setState(() {
                        _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1);
                      });
+                     TDiviceUtility.vibrateLight();
                  },
                  tooltip: 'Next Month',
-                       ),
+               ),
                     ],
                  ),
           const SizedBox(height: TSizes.spaceBtwItems),
@@ -885,16 +964,17 @@ class _CalendarViewState extends State<_CalendarView> {
           Expanded( // <-- Re-añadido Expanded
             child: _buildCalendarGrid(context),
           ),
-          const SizedBox(height: TSizes.spaceBtwSections * 2), // <-- Espacio después del Expanded
+          const SizedBox(height: TSizes.spaceBtwSections), // <-- Espacio después del Expanded
 
           // --- Botón Inferior --- // (Sin cambios)
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
-                Navigator.pop(context); // Cerrar el diálogo
+                Navigator.pop(context);
                 // Cambiar a la pantalla de Progress usando el NavigationController
                 Get.find<NavigationController>().selectedIndex.value = 2;
+                TDiviceUtility.vibrateLight();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: _buttonColor,
@@ -972,10 +1052,11 @@ class _CalendarViewState extends State<_CalendarView> {
 
         // Si es del mes actual, construir la celda normal
         return GestureDetector(
-          onTap: () { // Quitado isCurrentMonth de la condición onTap ya que ya se verificó
-            widget.onDateSelected(date); // Llamar al callback pasado desde el State principal
+          onTap: () {
+            widget.onDateSelected(date);
+            TDiviceUtility.vibrateLight();
           },
-          behavior: HitTestBehavior.opaque, // Asegura que el área vacía también sea tappable
+          behavior: HitTestBehavior.opaque,
           child: Container(
             margin: const EdgeInsets.all(2), // Reducir margen para que quepa mejor
             decoration: decoration,

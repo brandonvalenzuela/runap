@@ -3,6 +3,7 @@ import 'package:get_storage/get_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+import 'package:runap/utils/device/device_utility.dart';
 
 class DebugScreen extends StatelessWidget {
   const DebugScreen({super.key});
@@ -33,6 +34,7 @@ class DebugScreen extends StatelessWidget {
                 trailing: IconButton(
                   icon: Icon(Icons.delete),
                   onPressed: () async {
+                    TDiviceUtility.vibrateMedium();
                     // Eliminar el valor
                     final storage = GetStorage();
                     await storage.remove(key);
@@ -47,6 +49,7 @@ class DebugScreen extends StatelessWidget {
       floatingActionButton: FloatingActionButton(
         child: Icon(Icons.delete_sweep),
         onPressed: () async {
+          TDiviceUtility.vibrateMedium();
           // Limpiar todo el almacenamiento
           final storage = GetStorage();
           await storage.erase();
