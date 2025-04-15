@@ -9,7 +9,7 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:runap/data/repositories/authentication/authentication_repository.dart'; // Asegúrate que la ruta es correcta
 import 'package:runap/firebase_options.dart'; // Asegúrate que la ruta es correcta
-import 'package:cloud_firestore/cloud_firestore.dart'; // <--- Añadir esta importación
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'app.dart'; // Asegúrate que la ruta es correcta
 
 // Punto de entrada de la aplicación
