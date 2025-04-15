@@ -11,6 +11,16 @@ class UserModel {
   String phoneNumber;
   String porfilePicture;
 
+  // New survey fields
+  String? gender;
+  String? age;
+  String? height; // Consider double/int?
+  String? currentWeight; // Consider double/int?
+  String? idealWeight; // Consider double/int?
+  String? mainGoal;
+  String? pace; // e.g., 'Slowly', 'Middle', 'Fast'
+  // Add other fields if needed (e.g., howHeard, loseWeightReasons)
+
   // Constructor for UserModel
   UserModel({
     required this.id,
@@ -20,6 +30,14 @@ class UserModel {
     required this.email,
     required this.phoneNumber,
     required this.porfilePicture,
+    // Initialize new fields
+    this.gender,
+    this.age,
+    this.height,
+    this.currentWeight,
+    this.idealWeight,
+    this.mainGoal,
+    this.pace,
   });
 
   /// Helper function to get the full name.
@@ -64,6 +82,13 @@ class UserModel {
       'Email': email,
       'PhoneNumber': phoneNumber,
       'ProfilePicture': porfilePicture,
+      'Gender': gender,
+      'Age': age,
+      'Height': height,
+      'CurrentWeight': currentWeight,
+      'IdealWeight': idealWeight,
+      'MainGoal': mainGoal,
+      'Pace': pace,
     };
   }
 
@@ -80,6 +105,13 @@ class UserModel {
         email: data['Email'] ?? '',
         phoneNumber: data['PhoneNumber'] ?? '',
         porfilePicture: data['ProfilePicture'] ?? '',
+        gender: data['Gender'] as String?,
+        age: data['Age'] as String?,
+        height: data['Height'] as String?,
+        currentWeight: data['CurrentWeight'] as String?,
+        idealWeight: data['IdealWeight'] as String?,
+        mainGoal: data['MainGoal'] as String?,
+        pace: data['Pace'] as String?,
       );
     }
     throw Exception('Document data is null');

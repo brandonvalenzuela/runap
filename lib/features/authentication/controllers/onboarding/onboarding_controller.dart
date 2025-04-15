@@ -2,7 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:runap/features/authentication/screens/login/login.dart';
+import 'package:runap/features/survey/screens/survey_screen.dart';
+import 'package:runap/features/survey/bindings/survey_binding.dart';
 
 class OnboardingController extends GetxController {
   static OnboardingController get instance => Get.find();
@@ -27,12 +28,15 @@ class OnboardingController extends GetxController {
 
       if (kDebugMode) {
         print(
-            '=========================== GET STORAGE Next Button ===========================');
-        print(storage.read('IsFirstTime'));
+            '=========================== GET STORAGE Next Button (Onboarding Complete) ===========================');
+        print('Setting IsFirstTime to false');
+        print('Setting NeedsSurveyCompletion to true');
       }
 
       storage.write('IsFirstTime', false);
-      Get.to(() => LoginScreen(), transition: Transition.upToDown);
+      storage.write('NeedsSurveyCompletion', true);
+
+      Get.offAll(() => const SurveyScreen(), binding: SurveyBinding(), transition: Transition.upToDown);
     } else {
       int page = currentPageIndex.value + 1;
       pageController.jumpToPage(page);
@@ -41,7 +45,20 @@ class OnboardingController extends GetxController {
 
   /// Update Current Index & junmp to the last page
   void skipPage() {
-    currentPageIndex.value = 2;
-    pageController.jumpToPage(2);
+    if (currentPageIndex.value != 2) {
+      currentPageIndex.value = 2;
+      pageController.jumpToPage(2);
+
+      final storage = GetStorage();
+      if (kDebugMode) {
+        print(
+            '=========================== GET STORAGE Skip Button (Onboarding Skipped) ===========================');
+        print('Setting IsFirstTime to false');
+        print('Setting NeedsSurveyCompletion to true');
+      }
+      storage.write('IsFirstTime', false);
+      storage.write('NeedsSurveyCompletion', true);
+      Get.offAll(() => const SurveyScreen(), binding: SurveyBinding(), transition: Transition.upToDown);
+    }
   }
 }

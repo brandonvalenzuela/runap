@@ -16,45 +16,53 @@ class TSIgnupForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(SignupController());
+    final controller = Get.find<SignupController>();
     return Form(
       key: controller.signupFormKey,
       child: Column(
         children: [
           /// First & Last Name
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: controller.firstName,
-                  validator: (value) =>
-                      TValidator.validateEmptyText('First name', value),
-                  expands: false,
-                  decoration: const InputDecoration(
-                      labelText: TTexts.firstName,
-                      prefixIcon: Icon(Iconsax.user),
-                      contentPadding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-                  ),
+          if (controller.shouldShowField('firstName') || controller.shouldShowField('lastName'))
+            Column(
+              children: [
+                Row(
+                  children: [
+                    if (controller.shouldShowField('firstName'))
+                      Expanded(
+                        child: TextFormField(
+                          controller: controller.firstName,
+                          validator: (value) =>
+                              TValidator.validateEmptyText('First name', value),
+                          expands: false,
+                          decoration: const InputDecoration(
+                              labelText: TTexts.firstName,
+                              prefixIcon: Icon(Iconsax.user),
+                              contentPadding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                          ),
+                        ),
+                      ),
+                    if (controller.shouldShowField('firstName') && controller.shouldShowField('lastName'))
+                       const SizedBox(width: TSizes.spaceBtwInputFields),
+                    if (controller.shouldShowField('lastName'))
+                      Expanded(
+                        child: TextFormField(
+                          controller: controller.lastName,
+                          validator: (value) =>
+                              TValidator.validateEmptyText('Last name', value),
+                          expands: false,
+                          decoration: const InputDecoration(
+                              labelText: TTexts.lastName,
+                              prefixIcon: Icon(Iconsax.user),
+                              contentPadding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                          ),
+                        ),
+                      )
+                  ],
                 ),
-              ),
-              const SizedBox(width: TSizes.spaceBtwInputFields),
-              Expanded(
-                child: TextFormField(
-                  controller: controller.lastName,
-                  validator: (value) =>
-                      TValidator.validateEmptyText('Last name', value),
-                  expands: false,
-                  decoration: const InputDecoration(
-                      labelText: TTexts.lastName,
-                      prefixIcon: Icon(Iconsax.user),
-                      contentPadding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-                  ),
-                ),
-              )
-            ],
-          ),
-          const SizedBox(height: TSizes.spaceBtwInputFields),
-
+                 const SizedBox(height: TSizes.spaceBtwInputFields),
+              ],
+            ),
+          
           /// USERNAME
           TextFormField(
             controller: controller.username,

@@ -7,7 +7,6 @@ import 'package:flutter/services.dart'; // Necesario para SystemChrome (barra de
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-// import 'package:runap/Core/service_locator.dart'; // Eliminado: Ya no se usa
 import 'package:runap/data/repositories/authentication/authentication_repository.dart'; // Asegúrate que la ruta es correcta
 import 'package:runap/firebase_options.dart'; // Asegúrate que la ruta es correcta
 import 'package:cloud_firestore/cloud_firestore.dart'; // <--- Añadir esta importación

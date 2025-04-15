@@ -10,7 +10,7 @@ class TColors {
   static const Color accent = Color(0xFFb0c7ff);
   static const Color colorBlack = Color(0xFF434343);
   static const Color fontColor = Color(0xFFE0E6EC);
-  static const Color lightBackground = Color(0xFFF2F6FC);
+  static const Color lightBackground = Color(0xFFFFFFFF);
   static const Color backgroundButton = Color(0xFFEAEEF3);
 
 

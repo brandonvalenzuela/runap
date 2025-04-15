@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Importar para HapticFeedback
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:runap/common/widgets/icons/t_circular_image.dart';
@@ -24,7 +23,7 @@ class ProgressScreen extends StatelessWidget {
     final progressController = Get.put(ProgressController());
 
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final headerBgColor = isDarkMode ? TColors.darkerGrey : const Color(0xFFE3F2F5);
+    final headerBgColor = isDarkMode ? TColors.darkerGrey : TColors.secondaryColor;
     final defaultBgColor = isDarkMode ? TColors.colorBlack : Colors.white;
     final chartGridColor = isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300;
     final chartLineColor = isDarkMode ? TColors.primaryColor : TColors.primaryColor;

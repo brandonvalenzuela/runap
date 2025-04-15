@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:runap/utils/constants/sizes.dart';
 import 'package:runap/utils/constants/text_strings.dart';
 import 'package:runap/features/authentication/screens/signup/widget/signup_form.dart';
 import 'package:runap/common/widgets/login_signup/form_divider.dart';
 import 'package:runap/common/widgets/login_signup/social_buttons.dart';
+import 'package:runap/features/authentication/controllers/signup/signup_controller.dart';
 
 class SignupScreen extends StatelessWidget {
   const SignupScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    Get.put(SignupController());
+
     return Scaffold(
       appBar: AppBar(),
       body: SingleChildScrollView(
