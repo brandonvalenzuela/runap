@@ -1,9 +1,32 @@
 flutter_native_splash:
+  # Color de fondo para modo claro
   color: "#ffffff"
+  # Color de fondo para modo oscuro
   color_dark: "#272727"
-  image: "assets/logos/splash.png"
-  image_dark: "assets/logos/splash_dark.png"
-
-
-
+  
+  # Imagen para modo claro
+  image: "assets/icons/logo_runap.png"
+  # Imagen para modo oscuro (usa la misma imagen)
+  image_dark: "assets/icons/logo_runap.png"
+  
+  # Configuración de pantalla completa
+  fullscreen: true
+  
+  # Asegurarse de que la splash screen se muestra correctamente en todos los dispositivos
+  android: true
+  ios: true
   web: false
+
+  # Intentar nuevamente con 'fill' para Android y 'scaleAspectFit' para iOS
+  android_gravity: fill
+  ios_content_mode: scaleAspectFit
+
+  # Mantener configuración específica de Android 12
+  android_12:
+    image: "assets/icons/logo_runap.png"
+    icon_background_color: "#ffffff"
+    image_dark: "assets/icons/logo_runap.png"
+    icon_background_color_dark: "#272727"
+
+  # Duración específica (opcional)
+  # duration: 1500

@@ -9,6 +9,11 @@ import 'package:runap/utils/constants/image_strings.dart';
 import 'package:runap/utils/helpers/network_manager.dart';
 import 'package:runap/utils/popups/full_screen_loader.dart';
 import 'package:runap/utils/popups/loaders.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart'; // Importar para PlatformException
+import 'package:runap/utils/exceptions/firebase_auth_exceptions.dart';
+import 'package:runap/utils/exceptions/firebase_exceptions.dart';
+import 'package:runap/utils/exceptions/format_exceptions.dart';
 
 class SignupController extends GetxController {
   static SignupController get instance => Get.find();
@@ -17,7 +22,6 @@ class SignupController extends GetxController {
   final hidePassword = true.obs; // Observed variable for password visibility
   final privacyPolicy = true.obs; // Observed variable for privacy policy
   final email = TextEditingController(); // Controller for email input
-  final lastName = TextEditingController(); // Controller for last name input
   final username = TextEditingController(); // Controller for username input
   final password = TextEditingController(); // Controller for password input
   final firstName = TextEditingController(); // Controller for first name input
@@ -25,30 +29,43 @@ class SignupController extends GetxController {
   String completePhoneNumber = ''; // Variable para almacenar el número completo con código de país
   GlobalKey<FormState> signupFormKey =
       GlobalKey<FormState>(); // Form key for form validation
+  
+  bool _firstNamePreFilled = false;
 
-  // Variable para guardar los datos de la encuesta
+  // Variable para guardar los datos de la encuesta leídos de storage
   Map<String, dynamic>? surveyData;
-  final storage = GetStorage();
+  final storage = GetStorage(); // Instancia de GetStorage
 
   @override
   void onInit() {
     super.onInit();
-    // Leer datos de la encuesta al inicializar el controlador
+    // Leer datos de la encuesta al inicializar
     loadSurveyData();
+    // Ya no intentamos obtener nombre/apellido de los argumentos aquí
   }
 
   void loadSurveyData() {
     surveyData = storage.read<Map<String, dynamic>>('pendingSurveyAnswers');
-    print("Survey data loaded in SignUpController: $surveyData"); // Debug
-    // No pre-rellenamos los controllers aquí, eso se manejará en la UI
+    print("Datos encuesta leídos en SignUpController: $surveyData"); // Debug
+    // Pre-rellenar controllers SI hay datos de encuesta
+    if (surveyData != null) {
+      if (surveyData!.containsKey('firstName') && surveyData!['firstName'] != null) {
+        firstName.text = surveyData!['firstName'];
+        _firstNamePreFilled = true;
+      }
+    }
   }
 
-  // Helper para saber si un campo debe mostrarse en la UI
+  // Método para determinar si mostrar el campo (usado en el UI)
   bool shouldShowField(String fieldName) {
-    // Muestra el campo si no hay datos de encuesta o si falta específicamente ese campo
-    return surveyData == null || surveyData![fieldName] == null || surveyData![fieldName].toString().isEmpty;
+    // Mostrar el campo si NO fue pre-rellenado desde la encuesta
+    switch (fieldName) {
+      case 'firstName':
+        return !_firstNamePreFilled;
+      default:
+        return true; // Mostrar otros campos por defecto
+    }
   }
-
 
   /// -- SIGNUP
   void signup() async {
@@ -66,14 +83,13 @@ class SignupController extends GetxController {
         return;
       }
 
-      // Form Validation
-      // Solo validamos si el formulario existe (puede que no si todos los campos vienen de la encuesta)
+      // Form Validation (Solo si hay campos visibles que validar)
       if (signupFormKey.currentState != null && !signupFormKey.currentState!.validate()) {
         TFullScreenLoader.stopLoading();
         return;
       }
 
-      // Guardar el formulario para asegurar que onSaved sea llamado (si existe)
+      // Guardar formulario (si existe)
       signupFormKey.currentState?.save();
 
       // Privacy Policy Check
@@ -87,17 +103,16 @@ class SignupController extends GetxController {
         return;
       }
 
-      // --- Obtener datos --- 
-      // Datos del formulario
+      // --- Recolectar datos --- 
+      // Datos del formulario visible
       final emailFromForm = email.text.trim();
       final passwordFromForm = password.text.trim();
       final usernameFromForm = username.text.trim();
       final phoneFromForm = completePhoneNumber.isNotEmpty ? completePhoneNumber : phoneNumber.text.trim();
       
-      // Datos de la encuesta (si existen)
+      // Datos de la encuesta (obligatorios ahora)
       final firstNameFromSurvey = surveyData?['firstName'] as String? ?? '';
       final lastNameFromSurvey = surveyData?['lastName'] as String? ?? '';
-      // Recuperar los nuevos datos de la encuesta
       final genderFromSurvey = surveyData?['gender'] as String?;
       final ageFromSurvey = surveyData?['age'] as String?;
       final heightFromSurvey = surveyData?['height'] as String?;
@@ -105,69 +120,39 @@ class SignupController extends GetxController {
       final idealWeightFromSurvey = surveyData?['idealWeight'] as String?;
       final mainGoalFromSurvey = surveyData?['mainGoal'] as String?;
       final paceFromSurvey = surveyData?['pace'] as String?;
-      // Recuperar otros si los añades al modelo (howHeard, loseWeightReasons, etc.)
 
-      // --- Validar datos combinados --- 
-      // Asegurarse de tener email y contraseña, ya sea del form o (hipotéticamente) de la encuesta
-      if (emailFromForm.isEmpty) {
-         TLoaders.errorSnackBar(title: 'Error', message: 'Email is required.');
-         TFullScreenLoader.stopLoading();
-         return;
+      // --- Validaciones Adicionales --- 
+      final finalFirstName = firstNameFromSurvey.isNotEmpty ? firstNameFromSurvey : firstName.text.trim();
+      
+      if (finalFirstName.isEmpty) { 
+        TLoaders.errorSnackBar(title: 'Validation Error', message: 'First Name is required.');
+        TFullScreenLoader.stopLoading(); 
+        return; 
       }
-       if (passwordFromForm.isEmpty) {
-         TLoaders.errorSnackBar(title: 'Error', message: 'Password is required.');
-         TFullScreenLoader.stopLoading();
-         return;
+      if (lastNameFromSurvey.isEmpty) { 
+        TLoaders.errorSnackBar(title: 'Data Error', message: 'Last Name information from survey is missing. Please complete the survey again.');
+        TFullScreenLoader.stopLoading(); 
+        return; 
       }
-       // Podrías añadir validación para firstName/lastName aquí si son obligatorios
-       if (firstNameFromSurvey.isEmpty && shouldShowField('firstName')) {
-         // Esto no debería pasar si la validación del form funciona, pero por si acaso
-         TLoaders.errorSnackBar(title: 'Error', message: 'First Name is required.');
-         TFullScreenLoader.stopLoading();
-         return;
-       }
-        if (lastNameFromSurvey.isEmpty && shouldShowField('lastName')) {
-         TLoaders.errorSnackBar(title: 'Error', message: 'Last Name is required.');
-         TFullScreenLoader.stopLoading();
-         return;
-       }
-       if (genderFromSurvey == null || genderFromSurvey.isEmpty) {
-        // Considerar si el género es obligatorio
-       }
-       if (ageFromSurvey == null || ageFromSurvey.isEmpty) {
-         TLoaders.errorSnackBar(title: 'Error', message: 'Age from survey is missing.');
-         TFullScreenLoader.stopLoading();
-         return;
-       }
-       // Añadir validaciones similares para height, currentWeight si son obligatorios
+      if (ageFromSurvey == null || ageFromSurvey.isEmpty) { 
+         TLoaders.errorSnackBar(title: 'Validation Error', message: 'Age information from survey is missing.');
+        TFullScreenLoader.stopLoading(); return; 
+      }
 
-      // Register user in the firebase Authentication & Save user data in the Firebase
+      // --- Registro y Guardado --- 
       final userCredential = await AuthenticationRepository.instance
-          .registerWithEmailAndPassword(
-              emailFromForm, passwordFromForm); // Usar datos del formulario para Auth
+          .registerWithEmailAndPassword(emailFromForm, passwordFromForm);
 
-      // Verify if user was created successfully
-      if (userCredential.user == null) {
-        TFullScreenLoader.stopLoading();
-        TLoaders.errorSnackBar(
-          title: 'Oh Snap!',
-          message: 'Account creation failed. Please try again.',
-        );
-        return;
-      }
+      if (userCredential.user == null) { /* Error */ TFullScreenLoader.stopLoading(); return; }
 
-      // Save Authenticated user data in the Firebase Firestore
       final newUser = UserModel(
         id: userCredential.user!.uid,
-        // Datos de encuesta o formulario (para nombre/apellido, encuesta tiene prioridad)
-        firstName: firstNameFromSurvey.isNotEmpty ? firstNameFromSurvey : firstName.text.trim(),
-        lastName: lastNameFromSurvey.isNotEmpty ? lastNameFromSurvey : lastName.text.trim(),
-        // Datos de formulario
+        firstName: finalFirstName,
+        lastName: lastNameFromSurvey,
         username: usernameFromForm,
         email: emailFromForm,
         phoneNumber: phoneFromForm,
-        porfilePicture: '', // Dejar vacío inicialmente
-        // Nuevos datos directamente de la encuesta
+        porfilePicture: '',
         gender: genderFromSurvey,
         age: ageFromSurvey,
         height: heightFromSurvey,
@@ -180,28 +165,59 @@ class SignupController extends GetxController {
       final userRepository = Get.put(UserRepository());
       await userRepository.saveUserRecord(newUser);
 
+      // --- Marcar Encuesta como Completada --- 
+      // Guardamos esto después de que el usuario se haya guardado correctamente.
+      storage.write('SurveyCompleted', true);
+      print("SurveyCompleted flag set to true in storage."); // Debug
+
       // --- Limpieza --- 
       // Eliminar los datos de la encuesta de storage después de usarlos exitosamente
       storage.remove('pendingSurveyAnswers');
       print("Pending survey answers removed from storage."); // Debug
-
-      // Remove Loader
+      
       TFullScreenLoader.stopLoading();
 
-      // Show Success Message
       TLoaders.successSnackBar(
-        title: 'Congratulations!',
-        message:
-            'Your account has been created successfully! Verify email to continue .',
-      );
+          title: 'Congratulations!',
+          message: 'Your account has been created! Verify email to continue.');
 
-      // Move to Verify Email Screen
-      Get.to(() => VerifyEmailScreen(email: email.text.trim()), transition: Transition.upToDown);
-    } catch (e) {
-      // Remove Loader
+      // Navegar a VerifyEmailScreen
+      Get.to(() => VerifyEmailScreen(email: emailFromForm));
+    } catch (e, stackTrace) { 
       TFullScreenLoader.stopLoading();
-      // Show some Generic Error to the User
-      TLoaders.errorSnackBar(title: 'Oh Snap!', message: e.toString());
+      
+      // --- Log detallado del error ---
+      print("‼️----- SIGNUP ERROR CAUGHT -----‼️");
+      print("Error Type: ${e.runtimeType}");
+      print("Error Message: ${e.toString()}");
+      String errorMessage = 'An unexpected error occurred during signup. Please try again.';
+      
+      if (e is FirebaseAuthException) {
+        print("Firebase Auth Code: ${e.code}");
+        // Usar el mensaje de nuestra clase TFirebaseAuthException
+        errorMessage = TFirebaseAuthException(e.code).message;
+      } else if (e is FirebaseException) {
+        print("Firebase Code: ${e.code}");
+        // Usar el mensaje de nuestra clase TFirebaseException
+        errorMessage = TFirebaseException(e.code).message;
+         if (e.code == 'permission-denied') {
+           errorMessage = 'Database permission denied. Check Firestore rules.';
+         }
+      } else if (e is FormatException) {
+        // Usar el mensaje de nuestra clase TFormatException
+        errorMessage = TFormatException().message; // Asumiendo constructor por defecto
+      } else if (e is PlatformException) {
+        print("Platform Exception Code: ${e.code}");
+        // Mostrar mensaje genérico o e.message si prefieres
+        errorMessage = 'An error occurred with a platform service: ${e.message ?? e.code}'; 
+      } else {
+        errorMessage = e.toString(); 
+      }
+      
+      print("Stack Trace:\n$stackTrace");
+      print("‼️-------------------------------‼️");
+      
+      TLoaders.errorSnackBar(title: 'Oh Snap!', message: errorMessage);
     }
   }
 }

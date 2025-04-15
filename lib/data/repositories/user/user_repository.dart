@@ -1,12 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get_core/src/get_main.dart';
-import 'package:get/get_instance/get_instance.dart';
-import 'package:get/get_state_manager/get_state_manager.dart';
+import 'package:get/get.dart';
 import 'package:runap/features/personalization/models/user_model.dart';
-import 'package:runap/utils/exceptions/exceptions.dart';
-import 'package:runap/utils/exceptions/firebase_exceptions.dart';
-import 'package:runap/utils/exceptions/format_exceptions.dart';
+import 'package:runap/data/repositories/authentication/authentication_repository.dart';
 
 /// Repository class for user-related operations.
 class UserRepository extends GetxController {
@@ -19,13 +15,47 @@ class UserRepository extends GetxController {
     try {
       await _db.collection("Users").doc(user.id).set(user.toJson());
     } on FirebaseException catch (e) {
-      throw TFirebaseException(e.code).message;
+      throw e;
     } on FormatException catch (_) {
-      throw const TFormatException();
+      rethrow;
     } on PlatformException catch (e) {
-      throw TExceptions(e.code).message;
+      throw e;
     } catch (e) {
-      throw 'Something went wrong. Please try again'; //const TGenericException();
+      throw Exception('Something went wrong while saving user record. Please try again.');
+    }
+  }
+
+  /// Function to fetch user details based on user ID.
+  Future<UserModel> fetchUserData() async {
+    try {
+      final userId = AuthenticationRepository.instance.currentUserId;
+      if (userId == null || userId.isEmpty) {
+        print("⚠️ UserRepository.fetchUserData: User not logged in.");
+        return UserModel.empty();
+      }
+      
+      print("ℹ️ UserRepository.fetchUserData: Fetching data for UID: $userId");
+      final documentSnapshot = await _db.collection("Users").doc(userId).get();
+      
+      if(documentSnapshot.exists){
+        print("✅ UserRepository.fetchUserData: Document found.");
+        return UserModel.fromSnapshot(documentSnapshot);
+      } else {
+        print("ℹ️ UserRepository.fetchUserData: Document not found for UID: $userId");
+        return UserModel.empty();
+      }
+    } on FirebaseException catch (e) {
+       print("❌ UserRepository.fetchUserData: FirebaseException - Code: ${e.code}, Message: ${e.message}");
+      throw e;
+    } on FormatException catch (_) {
+      print("❌ UserRepository.fetchUserData: FormatException");
+      rethrow;
+    } on PlatformException catch (e) {
+      print("❌ UserRepository.fetchUserData: PlatformException - Code: ${e.code}, Message: ${e.message}");
+      throw e;
+    } catch (e, stackTrace) {
+      print("❌ UserRepository.fetchUserData: Unexpected error - $e\n$stackTrace");
+      throw Exception('Something went wrong while fetching user data. Please try again.');
     }
   }
 }

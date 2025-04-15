@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:runap/bindings/app_bindings.dart';
-import 'package:runap/features/authentication/screens/login/login.dart';
+import 'package:runap/features/authentication/screens/splash/splash_screen.dart';
 import 'package:runap/utils/helpers/custom_navigator_observer.dart';
 import 'utils/theme/theme.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -18,7 +18,7 @@ class App extends StatelessWidget {
       theme: TAppTheme.lightTheme,
       darkTheme: TAppTheme.darkTheme,
       initialBinding: AppBindings(),
-      home: const LoginScreen(),
+      home: const SplashScreen(),
       defaultTransition: Transition.native,
       transitionDuration: const Duration(milliseconds: 300),
       popGesture: true,

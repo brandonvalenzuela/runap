@@ -3,15 +3,13 @@
 <plist version="1.0">
 	<dict>
 		<key>NSLocationWhenInUseUsageDescription</key>
-    	<string>Esta aplicación necesita acceder a tu ubicación para trazar tus entrenamientos de running.</string>
-    	<key>NSLocationAlwaysUsageDescription</key>
-    	<string>Esta aplicación necesita acceder a tu ubicación en segundo plano para trazar tus entrenamientos de running.</string>
-    	<key>UIBackgroundModes</key>
-    	<array>
-        	<string>location</string> 
+		<string>Esta aplicación necesita acceder a tu ubicación para trazar tus entrenamientos de running.</string>
+		<key>NSLocationAlwaysUsageDescription</key>
+		<string>Esta aplicación necesita acceder a tu ubicación en segundo plano para trazar tus entrenamientos de running.</string>
+		<key>UIBackgroundModes</key>
+		<array>
+			<string>location</string>
 		</array>
-
-
 		<key>CFBundleDevelopmentRegion</key>
 		<string>$(DEVELOPMENT_LANGUAGE)</string>
 		<key>CFBundleDisplayName</key>
@@ -56,6 +54,8 @@
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
 		<key>UIStatusBarHidden</key>
+		<true/>
+		<key>UIViewControllerBasedStatusBarAppearance</key>
 		<false/>
 	</dict>
 </plist>

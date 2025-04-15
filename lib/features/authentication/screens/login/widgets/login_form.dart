@@ -4,6 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:runap/features/authentication/controllers/login/login_controller.dart';
 import 'package:runap/features/authentication/screens/password_configuration/forget_password.dart';
 import 'package:runap/features/authentication/screens/signup/signup.dart';
+import 'package:runap/features/authentication/screens/onboarding/onboarding.dart';
 import 'package:runap/utils/constants/sizes.dart';
 import 'package:runap/utils/constants/text_strings.dart';
 import 'package:runap/utils/validators/validation.dart';
@@ -104,7 +105,8 @@ class TLoginForm extends StatelessWidget {
               SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
-                      onPressed: () => Get.to(() => const SignupScreen(), transition: Transition.upToDown),
+                      // Redirigir a OnBoardingScreen para asegurar el flujo completo con encuesta
+                      onPressed: () => Get.to(() => const OnBoardingScreen()), 
                       child: Text(TTexts.createAccount))),
               const SizedBox(height: TSizes.spaceBtwSections),
             ],

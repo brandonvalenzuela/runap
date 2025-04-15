@@ -4,7 +4,7 @@ import 'package:runap/features/dashboard/presentation/manager/training_view_mode
 class HomeBinding extends Bindings {
   @override
   void dependencies() {
-    // Using lazyPut so the ViewModel is created only when it's first needed
-    Get.lazyPut<TrainingViewModel>(() => TrainingViewModel());
+    // Cambiar a Get.put para asegurar que la instancia exista antes de que initState la busque.
+    Get.put<TrainingViewModel>(TrainingViewModel());
   }
 } 

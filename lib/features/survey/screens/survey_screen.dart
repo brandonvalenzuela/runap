@@ -52,11 +52,25 @@ class SurveyScreen extends GetView<SurveyController> {
                           if (currentQuestion.imagePath != null && currentQuestion.imagePath!.isNotEmpty) 
                              const SizedBox(height: TSizes.spaceBtwSections),
                           
-                          // Texto de la pregunta
-                          Text(
-                            _getProcessedQuestionText(currentQuestion.text),
-                            style: Theme.of(context).textTheme.headlineSmall, 
-                            textAlign: TextAlign.center,
+                          // Widget Builder para añadir logs ANTES de construir el Text
+                          Builder(
+                            builder: (context) {
+                              // --- Logs de depuración ---
+                              print("📊 [SURVEY_DEBUG] Index: ${currentIndex}");
+                              print("📊 [SURVEY_DEBUG] Total Preguntas: ${totalQuestions}");
+                              print("📊 [SURVEY_DEBUG] ID Pregunta: ${currentQuestion.id}");
+                              print("📊 [SURVEY_DEBUG] Texto Original: ${currentQuestion.text}");
+                              final processedText = _getProcessedQuestionText(currentQuestion.text);
+                              print("📊 [SURVEY_DEBUG] Texto Procesado: $processedText");
+                              // --- Fin logs ---
+
+                              // Devolver el widget Text real
+                              return Text(
+                                processedText,
+                                style: Theme.of(context).textTheme.headlineSmall, 
+                                textAlign: TextAlign.center,
+                              );
+                            }
                           ),
                           const SizedBox(height: TSizes.spaceBtwSections * 1.5),
 
@@ -262,15 +276,28 @@ class SurveyScreen extends GetView<SurveyController> {
        keyboardType = TextInputType.number;
     }
 
+    // --- Lógica de Hint Text Mejorada ---
+    String hintTextValue = ''; // Hint vacío por defecto
+    if (question.id == 'firstName') {
+      hintTextValue = 'First Name';
+    } else if (question.id == 'lastName') {
+      hintTextValue = 'Last Name'; // <-- Hint específico para apellido
+    } else if (question.id == 'age') {
+      hintTextValue = '0'; // <-- Hint '0' solo para edad
+    }
+    // Puedes añadir más 'else if' para otros campos de texto si es necesario
+    // --- Fin Lógica Hint Text ---
+
     return TextFormField(
       controller: controller.textInputController!,
       keyboardType: keyboardType,
-      textAlign: TextAlign.center, // Centrar texto como en las imágenes
-      style: Theme.of(context).textTheme.headlineSmall, // Estilo más grande
+      textAlign: TextAlign.center, 
+      style: Theme.of(context).textTheme.headlineSmall, 
       decoration: InputDecoration(
-        hintText: question.id == 'firstName' ? 'First Name' : '0', // Hint 0 para edad?
+        // Usar la variable hintTextValue
+        hintText: hintTextValue, 
         border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(TSizes.borderRadiusLg), // Más redondeado
+            borderRadius: BorderRadius.circular(TSizes.borderRadiusLg), 
             borderSide: BorderSide(color: Colors.grey.shade300)
         ),
         enabledBorder: OutlineInputBorder(
@@ -282,9 +309,8 @@ class SurveyScreen extends GetView<SurveyController> {
             borderSide: BorderSide(color: Theme.of(context).primaryColor)
         ),
         filled: true,
-        fillColor: Theme.of(context).scaffoldBackgroundColor, // Fondo como el scaffold
+        fillColor: Theme.of(context).scaffoldBackgroundColor, 
       ),
-      // onChanged ya está cubierto por el listener en el controller
     );
   }
 

@@ -71,13 +71,16 @@ class LoginController extends GetxController {
       final userCredentials = await AuthenticationRepository.instance
           .loginWithEmailAndPassword(email.text.trim(), password.text.trim());
 
-      // Remove Loader
-      TFullScreenLoader.stopLoading();
+      // No detener el loader aquí. La navegación de Get.offAll lo eliminará
+      // o será detenido por AuthenticationRepository antes de la navegación.
+      // TFullScreenLoader.stopLoading();
 
-      // Redirect
-      AuthenticationRepository.instance.screenRedirect();
+      // El listener onReady en AuthenticationRepository se encargará de la navegación.
+      // No es necesario llamar a checkAuthStatusAndNavigate aquí.
+      // AuthenticationRepository.instance.checkAuthStatusAndNavigate();
     } catch (e) {
-      TFullScreenLoader.stopLoading();
+      // Asegurarse de detener el loader SI hay un error
+      TFullScreenLoader.stopLoading(); 
       TLoaders.errorSnackBar(title: 'Oh Snap', message: e.toString());
     }
   }

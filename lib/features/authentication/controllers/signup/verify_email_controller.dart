@@ -40,7 +40,7 @@ class VerifyEmailController extends GetxController {
         await user?.reload();
         if (user?.emailVerified ?? false) {
           timer.cancel();
-          Get.off(() => const NavigationMenu(), transition: Transition.upToDown);
+          Get.offAll(() => const NavigationMenu(), transition: Transition.upToDown);
         }
       },
     );
@@ -53,7 +53,7 @@ class VerifyEmailController extends GetxController {
     await user?.reload();
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser != null && currentUser.emailVerified) {
-      Get.off(() => const LoginScreen(), transition: Transition.upToDown);
+      Get.offAll(() => const NavigationMenu(), transition: Transition.upToDown);
     }
   }
 }

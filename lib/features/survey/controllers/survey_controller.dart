@@ -4,6 +4,8 @@ import 'package:get_storage/get_storage.dart'; // Importar GetStorage
 import '../models/question_model.dart'; // Importar el modelo
 import 'package:runap/features/authentication/screens/login/login.dart'; // Importar LoginScreen
 import 'package:runap/features/authentication/screens/signup/signup_options_screen.dart'; 
+import 'package:runap/features/authentication/screens/signup/signup.dart'; // Importar SignupScreen
+import 'package:runap/features/authentication/bindings/signup_binding.dart'; // Importar el nuevo Binding
 
 class SurveyController extends GetxController {
   static SurveyController get instance => Get.find();
@@ -48,14 +50,20 @@ class SurveyController extends GetxController {
     final surveyFlowQuestions = [
        QuestionModel(
         id: 'firstName', 
-        text: 'Let\'s get to know each other 😊\nWhat is your name?', 
+        text: 'Let\'s start with the basics.\nWhat is your first name?', 
         type: 'text', 
-        imagePath: 'assets/images/survey/sunflower.png', // Placeholder
         sectionTitle: 'Welcome', // Sección inicial
       ),
       QuestionModel(
+        id: 'lastName', 
+        text: 'Great, {firstName}! And your last name?',
+        type: 'text',
+        sectionTitle: 'Welcome', // Misma sección
+        // Sin imagen para esta, o puedes añadir una diferente
+      ),
+      QuestionModel(
         id: 'mainGoal',
-        text: 'Hello {firstName}!\nSo, what brings you here?', // Usaremos el nombre ingresado
+        text: 'Nice to meet you, {firstName}!\nSo, what brings you here?', // Texto ajustado
         type: 'single_choice_button', 
         options: [
           'Losing weight',
@@ -350,12 +358,24 @@ class SurveyController extends GetxController {
   // Método para enviar la encuesta
   void submitSurvey() {
     print('Enviando encuesta con respuestas: $userAnswers');
-    storage.write('pendingSurveyAnswers', userAnswers.value); 
-    storage.write('NeedsSurveyCompletion', false);
-    print('Flag NeedsSurveyCompletion puesto a false.');
-
-    // Navegar a la pantalla de opciones de registro/signup REAL
-    Get.offAll(() => const SignupOptionsScreen(), transition: Transition.upToDown); 
+    
+    try {
+      // Guardar respuestas finales para que Signup las lea
+      storage.write('pendingSurveyAnswers', userAnswers.value); 
+      print('Respuestas de encuesta guardadas temporalmente.');
+      
+      // LIMPIAR el índice de progreso, ya no es necesario
+      storage.remove('nextSurveyQuestionIndex');
+      print("Índice de progreso de encuesta eliminado.");
+      
+      // Navegar a la pantalla de signup principal USANDO EL BINDING
+      Get.offAll(() => const SignupScreen(), 
+                 binding: SignupBinding(),
+                 transition: Transition.upToDown); 
+    } catch (e) {
+      print("Error al finalizar encuesta y navegar a Signup: $e");
+      Get.snackbar("Error", "No se pudo procesar la encuesta. Inténtalo de nuevo.", snackPosition: SnackPosition.BOTTOM);
+    }
   }
 
   // Helper para obtener la pregunta actual

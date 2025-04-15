@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:runap/features/authentication/screens/login/login.dart';
 import 'package:runap/features/authentication/screens/onboarding/onboarding.dart';
-import 'package:runap/utils/constants/image_strings.dart'; // Asumiendo que tienes logos aquí
 import 'package:runap/utils/constants/sizes.dart';
-import 'package:runap/utils/constants/text_strings.dart'; // Asumiendo textos aquí
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});

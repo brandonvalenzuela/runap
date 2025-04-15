@@ -193,8 +193,10 @@ class _HomeScreenState extends State<HomeScreen>
         ),
       ),
       body: GetBuilder<TrainingViewModel>(
-        init: TrainingViewModel(), // Asegúrate que esto esté bien, a veces es mejor inicializarlo en un Binding
         builder: (viewModel) {
+          // Añadir un log para depuración (opcional)
+          // print('🔄 HomeScreen GetBuilder - Status: ${viewModel.status}, Data: ${viewModel.trainingData != null}');
+          
           // Estado de carga
           if (viewModel.status == LoadingStatus.loading &&
               viewModel.trainingData == null) {
