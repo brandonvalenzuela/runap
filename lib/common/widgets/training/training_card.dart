@@ -1,7 +1,6 @@
 // ignore_for_file: avoid_print
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:runap/features/map/models/workout_goal.dart';
 import 'package:runap/features/map/screen/map.dart';
@@ -137,7 +136,7 @@ class _TrainingCardState extends State<TrainingCard>
         now.day == widget.session.sessionDate.day;
 
     if (isToday) {
-      TDiviceUtility.vibrateMedium();;
+      TDiviceUtility.vibrateMedium();
     }
   }
 

@@ -11,6 +11,7 @@ import 'package:runap/data/repositories/authentication/authentication_repository
 import 'package:runap/firebase_options.dart'; // Asegúrate que la ruta es correcta
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'app.dart'; // Asegúrate que la ruta es correcta
+import 'package:runap/features/gamification/presentation/manager/binding/gamification_binding.dart'; // Importar el binding
 
 // Punto de entrada de la aplicación
 Future<void> main() async {
@@ -76,6 +77,11 @@ Future<void> main() async {
     // - Lanzar una excepción para detener la ejecución si Firebase es absolutamente crítico.
     //   throw Exception("Firebase could not be initialized.");
   }
+
+  // --- Inicializar Bindings ---
+  // Asegúrate de inicializar tus bindings aquí
+  GamificationBinding().dependencies(); // Ejecutar las dependencias del binding
+  log("Gamification Dependencies Initialized"); // Mensaje opcional
 
   // --- 7. Inicializar Service Locator (si usas uno adicional a GetX) ---
   // Aquí configuras otras dependencias (ej: con get_it).

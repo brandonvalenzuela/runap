@@ -4,9 +4,8 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:runap/features/dashboard/presentation/pages/calendar/calendar.dart';
 import 'package:runap/features/dashboard/presentation/pages/home.dart';
+import 'package:runap/features/gamification/presentation/screens/gamification_profile_screen.dart';
 import 'package:runap/features/progress/progress.dart';
-import 'package:runap/tests/report_screen.dart';
-import 'package:runap/tests/widgets/test1.dart';
 import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/device/device_utility.dart';
 import 'package:runap/utils/helpers/helper_functions.dart';
@@ -49,6 +48,7 @@ class NavigationMenu extends StatelessWidget {
               NavigationDestination(
                   icon: Icon(Iconsax.calendar), label: 'Calendar'),
               NavigationDestination(icon: Icon(Iconsax.clipboard_text), label: 'JOURNAL'),
+              NavigationDestination(icon: Icon(Iconsax.medal), label: 'Progreso'),
               // NavigationDestination(
               //     icon: Icon(Icons.storage), label: 'LocalStorage'),
               //NavigationDestination(icon: Icon(Iconsax.cake), label: 'Test'),
@@ -71,6 +71,7 @@ class NavigationController extends GetxController {
     const HomeScreen(),
     const CalendarScreen(),
     const ProgressScreen(),
+    const GamificationProfileScreen(),
     //const DebugScreen(),  
     //const Test(),
     //const FullDiaryReplication(),
