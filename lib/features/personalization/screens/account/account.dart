@@ -3,7 +3,6 @@ import 'package:flutter/services.dart'; // Para Clipboard
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:runap/common/widgets/appbar/appbar.dart';
-import 'package:runap/data/repositories/authentication/authentication_repository.dart';
 import 'package:runap/features/personalization/controllers/user_controller.dart'; // Necesitamos UserController
 import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/constants/sizes.dart';
@@ -65,7 +64,8 @@ class _SettingsScreenState extends State<AccountScreen> {
       // Nuevo AppBar simple
       appBar: TAppBar(
         showBackArrow: true,
-        title: Text('My account', style: Theme.of(context).textTheme.headlineSmall),
+        leadingOnPressed: () => Get.back(),
+        title: Text('My account', style: Theme.of(context).textTheme.headlineSmall, textAlign: TextAlign.center,),
         // backgroundColor: screenBgColor, // Opcional: si quieres que sea igual al fondo
         // elevation: 0, // Opcional: quitar sombra
       ),
@@ -116,10 +116,11 @@ class _SettingsScreenState extends State<AccountScreen> {
                           onPressed: () { /* TODO: Implementar Contact Support */ },
                           style: ElevatedButton.styleFrom(
                              // Fondo más oscuro, casi negro
-                            backgroundColor: TColors.black, // O un gris muy oscuro
+                            backgroundColor: TColors.colorBlack, // O un gris muy oscuro
                             foregroundColor: Colors.white,
                             shape: const StadiumBorder(),
                             padding: const EdgeInsets.symmetric(vertical: TSizes.buttonHeight / 3.5, horizontal: TSizes.lg),
+                            side: BorderSide.none,
                           ),
                           child: Text('Contact support', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w600)), // Estilo de texto explícito
                         ),
@@ -145,10 +146,11 @@ class _SettingsScreenState extends State<AccountScreen> {
                           onPressed: () { /* TODO: Implementar pantalla Change Units */ },
                            style: ElevatedButton.styleFrom(
                             // Fondo más oscuro, casi negro
-                            backgroundColor: TColors.black, // O un gris muy oscuro
+                            backgroundColor: TColors.colorBlack, // O un gris muy oscuro
                             foregroundColor: Colors.white,
                             shape: const StadiumBorder(),
                             padding: const EdgeInsets.symmetric(vertical: TSizes.buttonHeight / 3.5, horizontal: TSizes.lg),
+                            side: BorderSide.none,
                           ),
                           child: Text('Change units', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w600)), // Estilo de texto explícito
                         ),
@@ -202,10 +204,10 @@ class _SettingsScreenState extends State<AccountScreen> {
               const SizedBox(height: TSizes.spaceBtwSections * 1.5),
 
               // --- SECCIÓN LOGOUT --- (Ahora con título y descripción)
-              Text('Account Actions', style: Theme.of(context).textTheme.headlineSmall),
+              Text('Delete Account', style: Theme.of(context).textTheme.headlineSmall),
               const SizedBox(height: TSizes.sm),
               Text(
-                'Sign out from your current session.',
+                'This action will permanently delete your account.',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: TSizes.spaceBtwSections),
@@ -216,14 +218,15 @@ class _SettingsScreenState extends State<AccountScreen> {
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(minWidth: 180), 
                         child: OutlinedButton(
-                            onPressed: () => AuthenticationRepository.instance.logout(),
+                            onPressed: () => {},
                             style: OutlinedButton.styleFrom(
-                               foregroundColor: TColors.primaryColor, // Usar color primario para el texto
-                               side: BorderSide(color: TColors.primaryColor.withOpacity(0.5)), // Borde de color primario semitransparente
+                               foregroundColor: TColors.error,
+                               backgroundColor: TColors.error,
+                               side: BorderSide(color: TColors.error.withAlpha(127)), // Borde de color primario semitransparente
                                padding: const EdgeInsets.symmetric(vertical: TSizes.buttonHeight / 3.5, horizontal: TSizes.lg),
                                shape: const StadiumBorder(), // Mantener forma redondeada
                             ),
-                            child: Text('Logout', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: TColors.primaryColor)), // Texto con color primario
+                            child: Text('Delete Account', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: TColors.white)), // Texto con color primario
                         ),
                       ),
                   ),

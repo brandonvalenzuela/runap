@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:runap/common/widgets/appbar/appbar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
@@ -11,7 +13,12 @@ class DebugScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Debug - Almacenamiento Local')),
+      appBar: TAppBar(
+        showBackArrow: true,
+        leadingOnPressed: () => Get.back(),
+        title: Text('Debug - Almacenamiento Local', style: Theme.of(context).textTheme.headlineSmall),
+      ),
+      
       body: FutureBuilder(
         future: _getStorageData(),
         builder: (context, snapshot) {

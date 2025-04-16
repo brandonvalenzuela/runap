@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:runap/common/screens/placeholder/placeholder_screen.dart';
 import 'package:runap/common/widgets/icons/t_circular_image.dart';
 import 'package:runap/features/personalization/controllers/user_controller.dart';
 import 'package:runap/features/personalization/screens/settings/settings.dart'; // Para navegar a Settings
@@ -67,7 +68,7 @@ class ProgressScreen extends StatelessWidget {
                     icon: const Icon(Iconsax.setting_2, color: TColors.colorBlack),
                     onPressed: () {
                       TDiviceUtility.vibrateMedium();// Vibración ligera
-                      Get.to(() => const SettingsScreen());
+                      Get.to(() => const SettingsScreen(), transition: Transition.rightToLeft);
                     },
                   ),
                 ],
@@ -322,7 +323,7 @@ class ProgressScreen extends StatelessWidget {
                   ElevatedButton(
                     onPressed: () {
                       TDiviceUtility.vibrateMedium();
-                      Get.to(() => const SettingsScreen());
+                      Get.to(() => const PlaceholderScreen(title: 'Get More Info'));
                     },
                     style: ElevatedButton.styleFrom(backgroundColor: buttonBgColor,
                       foregroundColor: buttonTextColor,

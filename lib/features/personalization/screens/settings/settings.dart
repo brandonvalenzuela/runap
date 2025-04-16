@@ -30,14 +30,14 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDarkMode ? TColors.black : TColors.lightGrey;
+    final bgColor = isDarkMode ? TColors.colorBlack : TColors.lightGrey;
     final tileColor = isDarkMode ? TColors.darkerGrey : Colors.white;
     final userController = Get.find<UserController>();
 
     return Scaffold(
       backgroundColor: bgColor,
       appBar: TAppBar(
-        leadingIcon: Icons.close,
+        showBackArrow: true,
         leadingOnPressed: () => Get.back(),
         title: Text('Settings', style: Theme.of(context).textTheme.headlineSmall),
       ),
