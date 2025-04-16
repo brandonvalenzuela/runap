@@ -13,6 +13,9 @@ import 'package:runap/features/dashboard/presentation/manager/training_view_mode
 import 'package:runap/features/dashboard/domain/entities/dashboard_model.dart';
 import 'package:runap/common/widgets/training/training_card.dart';
 import 'package:runap/utils/device/device_utility.dart';
+// --- Import para Skeletons ---
+import 'package:runap/common/widgets/loaders/skeleton_loader.dart'; // Ajusta la ruta si es necesario
+import 'package:shimmer/shimmer.dart'; // Importar shimmer
 
 
 class CalendarScreen extends StatefulWidget {
@@ -26,6 +29,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   // Estado para rastrear el progreso del scroll entre initial y first snap
   double _scrollProgress = 0.0; // Reemplaza _isSnapped
   DateTime _selectedDate = DateTime.now();
+  bool _isLoading = true; // Estado de carga inicial
 
   // --- ESTADO PARA DATOS DEPENDIENTES DE LA FECHA ---
   int _eatenCaloriesForSelectedDate = 223; // Valor inicial de ejemplo
@@ -75,8 +79,39 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   void initState() {
     super.initState();
-    // Cargar datos iniciales para la fecha actual
-    _loadDataForDate(_selectedDate);
+    // Basar el estado de carga inicial en si trainingData es nulo
+    _isLoading = _viewModel.trainingData == null;
+
+    // Listener para detectar cuando trainingData cambia
+    _viewModel.addListener(_handleViewModelChange);
+
+    // Cargar datos simulados iniciales si no estamos cargando
+    if (!_isLoading) {
+      _loadDataForDate(_selectedDate);
+    }
+  }
+
+  // Listener que se ejecuta cuando el ViewModel notifica cambios
+  void _handleViewModelChange() {
+    if (mounted) { // Siempre verificar si el widget está montado
+      final stillLoading = _viewModel.trainingData == null;
+      if (_isLoading != stillLoading) { // Actualizar solo si el estado cambia
+        setState(() {
+          _isLoading = stillLoading;
+          if (!stillLoading) {
+            // Cargar datos simulados DESPUÉS de que el ViewModel haya cargado
+            _loadDataForDate(_selectedDate);
+          }
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    // Es CRUCIAL remover el listener para evitar memory leaks
+    _viewModel.removeListener(_handleViewModelChange);
+    super.dispose();
   }
 
   // --- FUNCIÓN PARA CARGAR/SIMULAR DATOS PARA UNA FECHA ---
@@ -159,30 +194,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
                        padding: const EdgeInsets.only(top: TSizes.sm, bottom: TSizes.sm), 
                        child: Row(
                          children: [
-                           // Restaurar Expanded y quitar Center
+                           // Usar Skeleton si está cargando
                            Expanded(
-                             child: _buildCaloriesSummary(
-                               context,
-                               primaryOrange,
-                               textColorDark,
-                               textColorLight,
-                               calorieValueStyle,
-                               calorieLabelStyle,
-                               calLeftValueStyle,
-                               calLeftUnitStyle,
-                               calLeftLabelStyle,
-                             ),
+                             child: _isLoading
+                               ? _buildCaloriesSummarySkeleton(context)
+                               : _buildCaloriesSummary(
+                                   context, primaryOrange, textColorDark, textColorLight,
+                                   calorieValueStyle, calorieLabelStyle, calLeftValueStyle,
+                                   calLeftUnitStyle, calLeftLabelStyle,
+                                 ),
                            ),
-                           // Quitar el streakIcon Container de aquí
                          ],
                        ),
                      ),
-                     // 2. Align para posicionar el streakIcon
-                     Align(
+                     // 2. Align para posicionar el streakIcon (ocultar si está cargando)
+                     if (!_isLoading) Align(
                        alignment: Alignment.topRight,
                        child: Padding(
-                         padding: const EdgeInsets.only(top: TSizes.sm, right: TSizes.md), // Padding para el icono
-                         child: Container( 
+                         padding: const EdgeInsets.only(top: TSizes.sm, right: TSizes.md),
+                         child: Container(
                            padding: const EdgeInsets.symmetric(horizontal: TSizes.smx, vertical: TSizes.xs),
                            decoration: BoxDecoration(
                              border: Border.all(color: primaryOrange),
@@ -206,57 +236,57 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   ]
                 ),
                  const SizedBox(height: TSizes.defaultSpace),
-                // --- Contenedor para la transición entre Macros Circulares y Barras --- // PASO 3
+                // --- Contenedor para la transición entre Macros Circulares y Barras ---
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: TSizes.smx),
-                  // Usar Stack con Opacity y Transform.translate
                   child: Stack(
-        children: [
-                      // Sección Circular (cayendo hacia atrás y desvaneciéndose)
-                      Transform(
-                        // Usar Matrix4 para rotación 3D + traslación (SIN PERSPECTIVA)
-                        transform: Matrix4.identity()
-                          ..rotateX(-math.pi / 2 * _scrollProgress) // Rota hacia atrás
-                          ..translate(0.0, _scrollProgress * 30, 0.0), // Traslación vertical
-                        alignment: FractionalOffset.center,
-                        child: Opacity(
-                          opacity: (1.0 - _scrollProgress).clamp(0.0, 1.0),
-                          child: _buildMacronutrientsSection(
-                            context, cardBackgroundColor, textColorDark, textColorLight,
-                            proteinColor, fatColor, carbsColor, fiberColor,
-                            headerStyle, macroAmountStyle, macroGoalStyle, macroLabelStyle
+                    children: [
+                      // --- Sección Circular (O su Skeleton) ---
+                      // Mostrar Skeleton si isLoading es true, opacidad y transform sólo si no está cargando
+                      _isLoading
+                        ? _buildMacronutrientsSectionSkeleton(context)
+                        : Transform(
+                            transform: Matrix4.identity()
+                              ..rotateX(-math.pi / 2 * _scrollProgress)
+                              ..translate(0.0, _scrollProgress * 30, 0.0),
+                            alignment: FractionalOffset.center,
+                            child: Opacity(
+                              opacity: (1.0 - _scrollProgress).clamp(0.0, 1.0),
+                              child: _buildMacronutrientsSection(
+                                context, cardBackgroundColor, textColorDark, textColorLight,
+                                proteinColor, fatColor, carbsColor, fiberColor,
+                                headerStyle, macroAmountStyle, macroGoalStyle, macroLabelStyle
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                      // Sección Barras Horizontales (levantándose y apareciendo)
-                      Transform(
-                        // Usar Matrix4 solo para rotación 3D (SIN PERSPECTIVA NI TRASLACIÓN)
-                        transform: Matrix4.identity()
-                          ..rotateX(-math.pi / 2 * (1.0 - _scrollProgress)), // Solo rotación
-                        alignment: FractionalOffset.center,
-                        child: Opacity(
-                          opacity: _scrollProgress.clamp(0.0, 1.0),
-                          child: _buildMinimalHorizontalBars(
-                            context, proteinColor, fatColor, carbsColor, fiberColor,
-                            // Datos desde el estado (ya se pasan desde el build)
-                            _macroData['protein']!,
-                            _macroData['fat']!,
-                            _macroData['carbs']!,
-                            _macroData['fiber']!,
+
+                      // --- Sección Barras Horizontales (O su Skeleton) ---
+                      // Mostrar Skeleton si isLoading es true, opacidad y transform sólo si no está cargando
+                      _isLoading
+                        ? (_scrollProgress > 0.5 ? _buildMinimalHorizontalBarsSkeleton(context) : const SizedBox.shrink()) // Mostrar skeleton de barras solo si está casi visible
+                        : Transform(
+                            transform: Matrix4.identity()
+                              ..rotateX(-math.pi / 2 * (1.0 - _scrollProgress)),
+                            alignment: FractionalOffset.center,
+                            child: Opacity(
+                              opacity: _scrollProgress.clamp(0.0, 1.0),
+                              child: _buildMinimalHorizontalBars(
+                                context, proteinColor, fatColor, carbsColor, fiberColor,
+                                _macroData['protein']!, _macroData['fat']!, _macroData['carbs']!, _macroData['fiber']!,
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                      // --- Flecha hacia abajo (Aparece con las barras) ---
-                      Align(
+
+                      // --- Flecha hacia abajo (Sólo si no está cargando) ---
+                      if (!_isLoading) Align(
                         alignment: Alignment.bottomCenter,
                         child: Padding(
-                          // Añadir padding SUPERIOR para separarlo de las barras
-                          padding: EdgeInsets.only(top: TSizes.lg * _scrollProgress), // Padding above, scales with scroll
+                          padding: EdgeInsets.only(top: TSizes.lg * _scrollProgress),
                           child: Opacity(
-                            opacity: _scrollProgress.clamp(0.0, 1.0), // Misma opacidad que las barras
+                            opacity: _scrollProgress.clamp(0.0, 1.0),
                             child: Icon(
                               Icons.keyboard_arrow_down,
-                              color: textColorLight, // Usar un color sutil
+                              color: textColorLight,
                               size: 24.0,
                             ),
                           ),
@@ -283,7 +313,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
                 // Actualizar estado solo si el progreso cambió significativamente
                 // (Evita reconstrucciones innecesarias)
-                if ((clampedProgress - _scrollProgress).abs() > 0.01) { 
+                if ((clampedProgress - _scrollProgress).abs() > 0.01) {
                   setState(() {
                     _scrollProgress = clampedProgress;
                   });
@@ -298,8 +328,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   snap: true,
                   snapSizes: const [initialSheetSize, firstSnapSize],
                   builder: (BuildContext context, ScrollController scrollController) {
-                    // --- Obtener sesiones para la fecha seleccionada --- 
-                    final sessionsForSelectedDay = _getSessionsForDay(_selectedDate);
+                    // --- Obtener sesiones para la fecha seleccionada (sólo si no está cargando) ---
+                    final sessionsForSelectedDay = _isLoading ? [] : _getSessionsForDay(_selectedDate);
                     final today = DateTime.now();
                     final isPastDay = _selectedDate.isBefore(DateTime(today.year, today.month, today.day));
 
@@ -332,9 +362,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             _buildDateNavigation(context, textColorDark),
                             const SizedBox(height: TSizes.spaceBtwItems),
 
-                            // --- Sección Training Cards --- 
-                            if (sessionsForSelectedDay.isEmpty)
-                              Padding(
+                            // --- Sección Training Cards (con Skeleton) ---
+                            if (_isLoading)
+                              ...List.generate(2, (_) => _buildTrainingCardSkeleton(context)) // Mostrar 2 skeletons de cards
+                            else if (sessionsForSelectedDay.isEmpty)
+                              Padding( // Mostrar mensaje si no hay sesiones y no está cargando
                                 padding: const EdgeInsets.symmetric(vertical: TSizes.lg),
                                 child: Center(
                                   child: Text(
@@ -343,52 +375,59 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                   ),
                                 ),
                               )
-                            else
+                            else // Mostrar cards reales
                               ...sessionsForSelectedDay.map((session) => Padding(
                                 padding: const EdgeInsets.only(bottom: TSizes.spaceBtwItems),
                                 child: TrainingCard(
                                   session: session,
                                   showBorder: true,
-                                  isPast: isPastDay, // Usar el flag calculado
+                                  isPast: isPastDay,
                                 ),
                               )).toList(), 
                               
                             const SizedBox(height: TSizes.spaceBtwSections), // Espacio antes de las comidas
 
-                            // --- Secciones de Comida --- 
-                            _buildMealSection(
-                              context, icon: Iconsax.sun_1, iconColor: Colors.orangeAccent, title: 'Breakfast',
-                              eatenCal: _mealCaloriesEaten['Breakfast'] ?? 0, // Usar estado
-                              goalCal: _mealCaloriesGoal['Breakfast'] ?? 0,   // Usar estado
-                              items: _mealItems['Breakfast'],                 // Usar estado
-                              buttonColor: buttonBlue,
-                              cardBackgroundColor: cardBackgroundColor, titleStyle: titleStyle, subtitleStyle: subtitleStyle, itemTextStyle: itemTextStyle
-                            ),
-                            _buildMealSection(
-                              context, icon: Iconsax.candle_2, iconColor: Colors.redAccent, title: 'Lunch',
-                              eatenCal: _mealCaloriesEaten['Lunch'] ?? 0,   // Usar estado
-                              goalCal: _mealCaloriesGoal['Lunch'] ?? 0,     // Usar estado
-                              items: _mealItems['Lunch'],                   // Usar estado
-                              buttonColor: buttonBlue,
-                              cardBackgroundColor: cardBackgroundColor, titleStyle: titleStyle, subtitleStyle: subtitleStyle, itemTextStyle: itemTextStyle
-                            ),
-                            _buildMealSection(
-                              context, icon: Iconsax.coffee, iconColor: Colors.blueAccent, title: 'Dinner',
-                              eatenCal: _mealCaloriesEaten['Dinner'] ?? 0,  // Usar estado
-                              goalCal: _mealCaloriesGoal['Dinner'] ?? 0,    // Usar estado
-                              items: _mealItems['Dinner'],                  // Usar estado
-                              buttonColor: buttonBlue,
-                              cardBackgroundColor: cardBackgroundColor, titleStyle: titleStyle, subtitleStyle: subtitleStyle, itemTextStyle: itemTextStyle
-                            ),
-                            _buildMealSection(
-                              context, icon: Iconsax.cake, iconColor: Colors.lightGreen, title: 'Snacks',
-                              eatenCal: _mealCaloriesEaten['Snacks'] ?? 0,  // Usar estado
-                              goalCal: _mealCaloriesGoal['Snacks'] ?? 0,    // Usar estado
-                              items: _mealItems['Snacks'],                  // Usar estado
-                              buttonColor: buttonBlue,
-                              cardBackgroundColor: cardBackgroundColor, titleStyle: titleStyle, subtitleStyle: subtitleStyle, itemTextStyle: itemTextStyle
-          ),
-          const SizedBox(height: TSizes.spaceBtwSections),
+                            // --- Secciones de Comida (con Skeleton) ---
+                            if (_isLoading) ...[
+                              _buildMealSectionSkeleton(context),
+                              _buildMealSectionSkeleton(context),
+                              _buildMealSectionSkeleton(context),
+                              _buildMealSectionSkeleton(context),
+                            ] else ...[ // Mostrar secciones reales si no está cargando
+                              _buildMealSection(
+                                context, icon: Iconsax.sun_1, iconColor: Colors.orangeAccent, title: 'Breakfast',
+                                eatenCal: _mealCaloriesEaten['Breakfast'] ?? 0,
+                                goalCal: _mealCaloriesGoal['Breakfast'] ?? 0,
+                                items: _mealItems['Breakfast'],
+                                buttonColor: buttonBlue,
+                                cardBackgroundColor: cardBackgroundColor, titleStyle: titleStyle, subtitleStyle: subtitleStyle, itemTextStyle: itemTextStyle
+                              ),
+                              _buildMealSection(
+                                context, icon: Iconsax.candle_2, iconColor: Colors.redAccent, title: 'Lunch',
+                                eatenCal: _mealCaloriesEaten['Lunch'] ?? 0,
+                                goalCal: _mealCaloriesGoal['Lunch'] ?? 0,
+                                items: _mealItems['Lunch'],
+                                buttonColor: buttonBlue,
+                                cardBackgroundColor: cardBackgroundColor, titleStyle: titleStyle, subtitleStyle: subtitleStyle, itemTextStyle: itemTextStyle
+                              ),
+                              _buildMealSection(
+                                context, icon: Iconsax.coffee, iconColor: Colors.blueAccent, title: 'Dinner',
+                                eatenCal: _mealCaloriesEaten['Dinner'] ?? 0,
+                                goalCal: _mealCaloriesGoal['Dinner'] ?? 0,
+                                items: _mealItems['Dinner'],
+                                buttonColor: buttonBlue,
+                                cardBackgroundColor: cardBackgroundColor, titleStyle: titleStyle, subtitleStyle: subtitleStyle, itemTextStyle: itemTextStyle
+                              ),
+                              _buildMealSection(
+                                context, icon: Iconsax.cake, iconColor: Colors.lightGreen, title: 'Snacks',
+                                eatenCal: _mealCaloriesEaten['Snacks'] ?? 0,
+                                goalCal: _mealCaloriesGoal['Snacks'] ?? 0,
+                                items: _mealItems['Snacks'],
+                                buttonColor: buttonBlue,
+                                cardBackgroundColor: cardBackgroundColor, titleStyle: titleStyle, subtitleStyle: subtitleStyle, itemTextStyle: itemTextStyle
+                              ),
+                            ],
+                            const SizedBox(height: TSizes.spaceBtwSections),
                           ],
                         ),
                       ),
@@ -1079,4 +1118,185 @@ class _CalendarViewState extends State<_CalendarView> {
      );
    }
 
+}
+
+// --- WIDGETS SKELETON ---
+
+// Skeleton para el resumen de calorías
+Widget _buildCaloriesSummarySkeleton(BuildContext context) {
+  final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+  final baseColor = isDarkMode ? Colors.grey[800]! : Colors.grey[300]!;
+  final highlightColor = isDarkMode ? Colors.grey[700]! : Colors.grey[100]!;
+
+  return Shimmer.fromColors(
+    baseColor: baseColor,
+    highlightColor: highlightColor,
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        SizedBox(
+          width: 70.0,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 60, height: 24, color: baseColor),
+              const SizedBox(height: 4),
+              Container(width: 40, height: 12, color: baseColor),
+            ],
+          )
+        ),
+        const SkeletonCircle(radius: 45), // Para _buildCircularGoal
+        SizedBox(
+          width: 70.0,
+           child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 60, height: 24, color: baseColor),
+              const SizedBox(height: 4),
+              Container(width: 40, height: 12, color: baseColor),
+            ],
+          )
+        ),
+      ],
+    ),
+  );
+}
+
+// Skeleton para la sección de macronutrientes (circular)
+Widget _buildMacronutrientsSectionSkeleton(BuildContext context) {
+  final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+  final baseColor = isDarkMode ? Colors.grey[800]! : TColors.lightContainer;
+  final highlightColor = isDarkMode ? Colors.grey[700]! : Colors.grey[50]!;
+
+  return Shimmer.fromColors(
+    baseColor: baseColor,
+    highlightColor: highlightColor,
+    child: Card(
+      elevation: 1.5,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(TSizes.cardRadiusXxlg)),
+      color: baseColor, // Usar baseColor para el fondo de la tarjeta
+      child: Padding(
+        padding: const EdgeInsets.only(top: TSizes.md, bottom: TSizes.xl, left: TSizes.sm, right: TSizes.sm),
+        child: Column(
+          children: [
+            Container(width: 150, height: 20, color: highlightColor),
+            const SizedBox(height: TSizes.spaceBtwInputFields + TSizes.sm),
+             Row(
+               mainAxisAlignment: MainAxisAlignment.spaceAround,
+               children: List.generate(4, (_) => 
+                 Column(
+                   children: [
+                     const SkeletonCircle(radius: 27.5),
+                     const SizedBox(height: TSizes.xs),
+                     Container(width: 40, height: 12, color: highlightColor),
+                   ],
+                 )
+               ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+// Skeleton para la sección de macronutrientes (barras horizontales)
+Widget _buildMinimalHorizontalBarsSkeleton(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final baseColor = isDarkMode ? Colors.grey[800]! : Colors.grey[300]!;
+    final highlightColor = isDarkMode ? Colors.grey[700]! : Colors.grey[100]!;
+
+    return Shimmer.fromColors(
+      baseColor: baseColor,
+      highlightColor: highlightColor,
+      child: Row(
+        children: List.generate(4, (_) => 
+          Expanded(child: Container(
+            height: 8, 
+            margin: const EdgeInsets.symmetric(horizontal: TSizes.md / 2),
+            decoration: BoxDecoration(
+              color: baseColor,
+              borderRadius: BorderRadius.circular(TSizes.borderRadiusSm)
+            ),
+          ))
+        ).toList(),
+      ),
+    );
+}
+
+// Skeleton para una TrainingCard
+Widget _buildTrainingCardSkeleton(BuildContext context) {
+  final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+  final baseColor = isDarkMode ? TColors.darkerGrey : Colors.grey[300]!;
+  final highlightColor = isDarkMode ? Colors.grey[700]! : Colors.grey[100]!;
+
+  return Shimmer.fromColors(
+    baseColor: baseColor,
+    highlightColor: highlightColor,
+    child: Container(
+      padding: const EdgeInsets.all(TSizes.md),
+      margin: const EdgeInsets.only(bottom: TSizes.spaceBtwItems),
+      decoration: BoxDecoration(
+        color: baseColor,
+        borderRadius: BorderRadius.circular(TSizes.cardRadiusLg),
+        border: Border.all(color: highlightColor),
+      ),
+      height: 100, // Altura aproximada de una TrainingCard
+    ),
+  );
+}
+
+// Skeleton para una sección de comida
+Widget _buildMealSectionSkeleton(BuildContext context) {
+  final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+  final baseColor = isDarkMode ? TColors.darkGrey : Colors.white; // Usar blanco en light mode como la tarjeta real
+  final highlightColor = isDarkMode ? Colors.grey[700]! : Colors.grey[100]!;
+
+  return Shimmer.fromColors(
+    baseColor: baseColor,
+    highlightColor: highlightColor,
+    child: Card(
+      elevation: 0.0,
+      margin: const EdgeInsets.only(bottom: TSizes.sm),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(TSizes.cardRadiusMd)),
+      color: baseColor,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: TSizes.xs, vertical: TSizes.sm + 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const SkeletonCircle(radius: 20),
+                const SizedBox(width: TSizes.spaceBtwItems),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(width: 80, height: 16, color: highlightColor),
+                      const SizedBox(height: 4),
+                      Container(width: 120, height: 12, color: highlightColor),
+                    ],
+                  ),
+                ),
+                const SkeletonCircle(radius: 18),
+              ],
+            ),
+            // Podríamos añadir Skeletons para los items si quisiéramos ser más precisos
+            // const SizedBox(height: TSizes.sm),
+            // Padding(
+            //   padding: const EdgeInsets.only(left: 40.0 + TSizes.spaceBtwItems, right: TSizes.md),
+            //   child: const Divider(height: 1, thickness: 0.5, color: highlightColor), 
+            // ),
+            // const SizedBox(height: TSizes.xs),
+            // Container(width: 150, height: 13, margin: const EdgeInsets.only(left: 40.0 + TSizes.spaceBtwItems, top: TSizes.xs, bottom: TSizes.xs), color: highlightColor), 
+          ],
+        ),
+      ),
+    ),
+  );
 }

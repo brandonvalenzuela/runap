@@ -5,6 +5,9 @@ import 'package:runap/data/models/gamification/challenge.dart';
 import 'package:runap/data/models/gamification/user_achievement.dart';
 import 'package:runap/data/models/gamification/user_challenge.dart';
 import 'package:runap/features/gamification/presentation/manager/gamification_view_model.dart';
+// --- Importaciones para Skeletons ---
+import 'package:runap/common/widgets/loaders/skeleton_loader.dart'; // Ajusta la ruta si es necesario
+import 'package:shimmer/shimmer.dart';
 
 class GamificationProfileScreen extends StatelessWidget {
   const GamificationProfileScreen({super.key});
@@ -27,7 +30,19 @@ class GamificationProfileScreen extends StatelessWidget {
         final profileStatus = viewModel.profileStatus;
         
         if (profileStatus == LoadingStatus.loading) {
-          return const Center(child: CircularProgressIndicator());
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildLevelSectionSkeleton(context),
+                const SizedBox(height: 24),
+                _buildAchievementsSectionSkeleton(context),
+                const SizedBox(height: 24),
+                _buildChallengesSectionSkeleton(context),
+              ],
+            ),
+          );
         }
         
         if (profileStatus == LoadingStatus.error) {
@@ -480,5 +495,157 @@ class GamificationProfileScreen extends StatelessWidget {
   // Función helper para formatear fechas
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  // --- WIDGETS SKELETON ---
+
+  Widget _buildLevelSectionSkeleton(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final baseColor = isDarkMode ? Colors.grey[800]! : Colors.grey[300]!;
+    final highlightColor = isDarkMode ? Colors.grey[700]! : Colors.grey[100]!;
+
+    return Shimmer.fromColors(
+      baseColor: baseColor,
+      highlightColor: highlightColor,
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        color: baseColor, // Fondo de la tarjeta
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const SkeletonCircle(radius: 40),
+              const SizedBox(height: 16),
+              Container(width: 150, height: 22, color: highlightColor),
+              const SizedBox(height: 8),
+              Container(width: 100, height: 18, color: highlightColor),
+              const SizedBox(height: 16),
+              Container(width: double.infinity, height: 12, color: highlightColor),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(width: 50, height: 12, color: highlightColor),
+                  Container(width: 50, height: 12, color: highlightColor),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAchievementsSectionSkeleton(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final baseColor = isDarkMode ? Colors.grey[800]! : Colors.grey[300]!;
+    final highlightColor = isDarkMode ? Colors.grey[700]! : Colors.grey[100]!;
+
+    return Shimmer.fromColors(
+      baseColor: baseColor,
+      highlightColor: highlightColor,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(width: 180, height: 20, color: highlightColor),
+              Container(width: 80, height: 20, color: highlightColor),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Skeleton para 2 tarjetas de logros
+          ...List.generate(2, (_) => Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            color: baseColor,
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              leading: const SkeletonCircle(radius: 25),
+              title: Container(width: 150, height: 16, color: highlightColor),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 4),
+                  Container(width: 200, height: 12, color: highlightColor),
+                  const SizedBox(height: 4),
+                  Container(width: 100, height: 10, color: highlightColor),
+                ],
+              ),
+              trailing: Container(width: 40, height: 20, decoration: BoxDecoration(color: highlightColor, borderRadius: BorderRadius.circular(12))),
+            ),
+          )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChallengesSectionSkeleton(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final baseColor = isDarkMode ? Colors.grey[800]! : Colors.grey[300]!;
+    final highlightColor = isDarkMode ? Colors.grey[700]! : Colors.grey[100]!;
+
+    return Shimmer.fromColors(
+      baseColor: baseColor,
+      highlightColor: highlightColor,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(width: 150, height: 20, color: highlightColor),
+              Container(width: 100, height: 20, color: highlightColor),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Skeleton para 2 tarjetas de retos
+          ...List.generate(2, (_) => Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            color: baseColor,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      SkeletonWidget(height: 16, width: 16, borderRadius: 4), // Icon
+                      const SizedBox(width: 8),
+                      Expanded(child: Container(width: double.infinity, height: 16, color: highlightColor)), // Title
+                      const SizedBox(width: 8),
+                      Container(width: 40, height: 20, decoration: BoxDecoration(color: highlightColor, borderRadius: BorderRadius.circular(12))), // Points
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Container(width: double.infinity, height: 12, color: highlightColor), // Description line 1
+                  const SizedBox(height: 4),
+                  Container(width: 180, height: 12, color: highlightColor), // Description line 2
+                  const SizedBox(height: 12),
+                  Container(width: double.infinity, height: 10, color: highlightColor), // Progress bar
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(width: 80, height: 12, color: highlightColor),
+                      Container(width: 80, height: 12, color: highlightColor),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Container(width: 100, height: 12, color: highlightColor),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          )),
+        ],
+      ),
+    );
   }
 } 

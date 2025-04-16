@@ -3,18 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:runap/features/authentication/screens/login/login.dart';
-import 'package:runap/features/authentication/screens/onboarding/onboarding.dart';
 import 'package:runap/features/authentication/screens/signup/verify_email.dart';
 import 'package:runap/navigation_menu.dart';
 import 'package:runap/features/authentication/screens/welcome/welcome_screen.dart';
-import 'package:runap/utils/exceptions/exceptions.dart';
-import 'package:runap/utils/exceptions/firebase_auth_exceptions.dart';
-import 'package:runap/utils/exceptions/firebase_exceptions.dart';
-import 'package:runap/utils/exceptions/format_exceptions.dart';
 import 'package:runap/features/dashboard/presentation/manager/binding/home_binding.dart';
-import 'package:runap/features/survey/screens/survey_screen.dart';
-import 'package:runap/features/survey/bindings/survey_binding.dart';
 import 'package:runap/utils/popups/full_screen_loader.dart';
 // TODO: Importar UserRepository si se implementa la consulta al backend
 // import 'package:runap/data/repositories/user/user_repository.dart';

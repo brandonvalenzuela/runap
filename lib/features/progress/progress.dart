@@ -232,9 +232,15 @@ class ProgressScreen extends StatelessWidget {
 
             Text('Weights saved', style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: TSizes.spaceBtwItems),
-            Column(
-               children: history.map((entry) => _buildWeightHistoryItem(context, entry)).toList(),
-            ),
+            controller.isLoadingWeight.value
+              ? _buildWeightHistoryShimmerPlaceholder(context)
+              : controller.weightError.value.isNotEmpty
+                  ? Center(child: Text('Error loading weight history', style: TextStyle(color: Colors.red.shade300)))
+                  : history.isEmpty
+                      ? Center(child: Text('No weight entries yet.', style: TextStyle(color: textColor.withOpacity(0.7))))
+                      : Column(
+                          children: history.map((entry) => _buildWeightHistoryItem(context, entry)).toList(),
+                        ),
             const SizedBox(height: TSizes.spaceBtwSections),
           ],
         );
@@ -823,6 +829,30 @@ class ProgressScreen extends StatelessWidget {
           color: baseColor, // Es necesario un color de fondo para que el shimmer funcione
           borderRadius: BorderRadius.circular(TSizes.cardRadiusMd),
         ),
+      ),
+    );
+  }
+
+  // --- WIDGET PARA EL SHIMMER PLACEHOLDER DEL HISTORIAL DE PESO ---
+  Widget _buildWeightHistoryShimmerPlaceholder(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final baseColor = isDarkMode ? Colors.grey[800]! : Colors.grey[300]!;
+    final highlightColor = isDarkMode ? Colors.grey[700]! : Colors.grey[100]!;
+
+    return Shimmer.fromColors(
+      baseColor: baseColor,
+      highlightColor: highlightColor,
+      child: Column(
+        children: List.generate(3, (index) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: TSizes.md),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(width: 80, height: 20, color: baseColor),
+              Container(width: 100, height: 20, color: baseColor),
+            ],
+          ),
+        )),
       ),
     );
   }
