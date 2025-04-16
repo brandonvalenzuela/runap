@@ -44,14 +44,13 @@ class TLoginForm extends StatelessWidget {
                 () => TextFormField(
                   controller: controller.password,
                   validator: (value) => TValidator.validatePassword(value),
-                  obscureText: controller.hidePassword.value,
+                  obscureText: controller.hidePassword,
                   decoration: InputDecoration(
                     labelText: TTexts.password,
                     prefixIcon: const Icon(Iconsax.password_check),
                     suffixIcon: IconButton(
-                      onPressed: () => controller.hidePassword.value =
-                          !controller.hidePassword.value,
-                      icon: Icon(controller.hidePassword.value
+                      onPressed: () => controller.hidePassword = !controller.hidePassword,
+                      icon: Icon(controller.hidePassword
                           ? Iconsax.eye_slash
                           : Iconsax.eye),
                     ),
@@ -69,16 +68,9 @@ class TLoginForm extends StatelessWidget {
                     children: [
                       Obx(
                         () => Checkbox(
-                            value: controller.rememberMe.value,
+                            value: controller.rememberMe,
                             onChanged: (value) {
-                              controller.rememberMe.value = !controller.rememberMe.value;
-                              // Guardar el estado actual de Remember Me
-                              controller.localStorage.write('REMEMBER_ME_STATUS', controller.rememberMe.value);
-                              // Si se desactiva, eliminar datos guardados
-                              if (!controller.rememberMe.value) {
-                                controller.localStorage.remove('REMEMBER_ME_EMAIL');
-                                controller.localStorage.remove('REMEMBER_ME_PASSWORD');
-                              }
+                              controller.rememberMe = !controller.rememberMe;
                             }),
                       ),
                       const Text(TTexts.rememberMe),

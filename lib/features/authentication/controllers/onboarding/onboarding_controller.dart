@@ -8,27 +8,29 @@ import 'package:runap/features/survey/bindings/survey_binding.dart';
 class OnboardingController extends GetxController {
   static OnboardingController get instance => Get.find();
 
-  /// Variables
-  final pageController = PageController();
-  Rx<int> currentPageIndex = 0.obs;
+  /// Controlador de páginas para el onboarding
+  final PageController pageController = PageController();
+  final RxInt _currentPageIndex = 0.obs;
 
-  /// Update Current Index when Page Scroll
-  void updatePageIndicator(index) => currentPageIndex.value = index;
+  int get currentPageIndex => _currentPageIndex.value;
+  set currentPageIndex(int value) => _currentPageIndex.value = value;
 
-  /// Jump to the specific dot selected page
-  void dotNavigationClick(index) {
-    currentPageIndex.value = index;
-    pageController.jumpTo(index);
+  /// Actualiza el índice actual cuando se navega entre páginas
+  void updatePageIndicator(int index) => currentPageIndex = index;
+
+  /// Navega a la página seleccionada por el usuario
+  void dotNavigationClick(int index) {
+    currentPageIndex = index;
+    pageController.jumpToPage(index);
   }
 
-  /// Update Current Index & jump to next page
+  /// Avanza a la siguiente página o finaliza el onboarding
   void nextPage() {
-    if (currentPageIndex.value == 2) {
+    if (currentPageIndex == 2) {
       final storage = GetStorage();
 
       if (kDebugMode) {
-        print(
-            '=========================== GET STORAGE Next Button (Onboarding Complete) ===========================');
+        print('=========================== GET STORAGE Next Button (Onboarding Complete) ===========================');
         print('Setting IsFirstTime to false');
         print('Setting NeedsSurveyCompletion to true');
       }
@@ -38,21 +40,20 @@ class OnboardingController extends GetxController {
 
       Get.offAll(() => const SurveyScreen(), binding: SurveyBinding(), transition: Transition.upToDown);
     } else {
-      int page = currentPageIndex.value + 1;
+      int page = currentPageIndex + 1;
       pageController.jumpToPage(page);
     }
   }
 
-  /// Update Current Index & junmp to the last page
+  /// Salta directamente a la última página y finaliza el onboarding
   void skipPage() {
-    if (currentPageIndex.value != 2) {
-      currentPageIndex.value = 2;
+    if (currentPageIndex != 2) {
+      currentPageIndex = 2;
       pageController.jumpToPage(2);
 
       final storage = GetStorage();
       if (kDebugMode) {
-        print(
-            '=========================== GET STORAGE Skip Button (Onboarding Skipped) ===========================');
+        print('=========================== GET STORAGE Skip Button (Onboarding Skipped) ===========================');
         print('Setting IsFirstTime to false');
         print('Setting NeedsSurveyCompletion to true');
       }

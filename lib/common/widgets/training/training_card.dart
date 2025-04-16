@@ -14,6 +14,8 @@ import 'package:runap/utils/device/device_utility.dart';
 import 'package:runap/utils/helpers/page_transitions.dart';
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:runap/utils/helpers/app_snackbar.dart';
+import 'package:runap/utils/constants/text_strings.dart';
 
 class TrainingCard extends StatefulWidget {
   const TrainingCard({
@@ -222,12 +224,11 @@ class _TrainingCardState extends State<TrainingCard>
           now.day == widget.session.sessionDate.day;
 
       if (!isToday) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content:
-                Text('Solo puedes iniciar entrenamientos programados para hoy'),
-            backgroundColor: Colors.red,
-          ),
+        AppSnackBar.show(
+          context,
+          message: TTexts.onlyTodayTrainings,
+          type: AppSnackBarType.error,
+          title: TTexts.actionNotAllowed,
         );
         return;
       }
@@ -371,12 +372,11 @@ class _TrainingCardState extends State<TrainingCard>
                   : (isToday
                       ? null
                       : () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                  'Solo puedes iniciar entrenamientos programados para hoy'),
-                              backgroundColor: Colors.red,
-                            ),
+                          AppSnackBar.show(
+                            context,
+                            message: TTexts.onlyTodayTrainings,
+                            type: AppSnackBarType.error,
+                            title: TTexts.actionNotAllowed,
                           );
                         }),
               child: Transform.scale(

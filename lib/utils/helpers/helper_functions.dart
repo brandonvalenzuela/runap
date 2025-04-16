@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:runap/utils/helpers/app_snackbar.dart';
+import 'package:runap/utils/constants/text_strings.dart';
 
 class THelperFunctions {
   static Color? getColor(String value) {
@@ -35,14 +37,18 @@ class THelperFunctions {
     }
   }
 
-  static void showSnackBar(String message) {
-    ScaffoldMessenger.of(Get.context!)
-        .showSnackBar(SnackBar(content: Text(message)));
+  static void showSnackBar(String message, {BuildContext? context, String? title, AppSnackBarType type = AppSnackBarType.info}) {
+    final ctx = context ?? Get.context;
+    if (ctx != null) {
+      AppSnackBar.show(ctx, message: message, title: title, type: type);
+    }
   }
 
-  static void showAlerts(String title, String message) {
-    showDialog(
-        context: Get.context!,
+  static void showAlerts(String title, String message, {BuildContext? context}) {
+    final ctx = context ?? Get.context;
+    if (ctx != null) {
+      showDialog(
+        context: ctx,
         builder: (BuildContext context) {
           return AlertDialog(
             title: Text(title),
@@ -50,11 +56,13 @@ class THelperFunctions {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text('OK'),
+                child: const Text('OK'),
               ),
             ],
           );
-        });
+        },
+      );
+    }
   }
 
   static void navigateToScreen(BuildContext context, Widget screen) {

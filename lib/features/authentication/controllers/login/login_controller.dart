@@ -6,82 +6,100 @@ import 'package:runap/utils/constants/image_strings.dart';
 import 'package:runap/utils/helpers/network_manager.dart';
 import 'package:runap/utils/popups/full_screen_loader.dart';
 import 'package:runap/utils/popups/loaders.dart';
+import 'package:runap/utils/helpers/app_snackbar.dart';
+import 'package:runap/utils/constants/text_strings.dart';
 
 class LoginController extends GetxController {
-  // Variables
-  final localStorage = GetStorage();
+  final GetStorage _localStorage = GetStorage();
   final email = TextEditingController();
   final password = TextEditingController();
-  final hidePassword = true.obs;
-  final rememberMe = false.obs;
-  GlobalKey<FormState> loginFormKey = GlobalKey<FormState>();
+  final RxBool _hidePassword = true.obs;
+  final RxBool _rememberMe = false.obs;
+  final GlobalKey<FormState> loginFormKey = GlobalKey<FormState>();
+
+  // Getters y setters controlados
+  bool get hidePassword => _hidePassword.value;
+  set hidePassword(bool value) => _hidePassword.value = value;
+  bool get rememberMe => _rememberMe.value;
+  set rememberMe(bool value) => _rememberMe.value = value;
 
   @override
   void onInit() {
     super.onInit();
     // Recuperar el estado de rememberMe
-    rememberMe.value = localStorage.read('REMEMBER_ME_STATUS') ?? false;
-    
+    rememberMe = _localStorage.read('REMEMBER_ME_STATUS') ?? false;
     // Solo cargar credenciales si rememberMe está activado
-    if (rememberMe.value) {
-      email.text = localStorage.read('REMEMBER_ME_EMAIL') ?? '';
-      password.text = localStorage.read('REMEMBER_ME_PASSWORD') ?? '';
+    if (rememberMe) {
+      email.text = _localStorage.read('REMEMBER_ME_EMAIL') ?? '';
+      password.text = _localStorage.read('REMEMBER_ME_PASSWORD') ?? '';
     }
   }
 
   /// -- Email and Password SignIn
-  Future<void> emailAndPasswordSignIn() async {
+  Future<void> emailAndPasswordSignIn({BuildContext? context}) async {
     try {
-      // Start Loading
       TFullScreenLoader.openLoadingDialog(
           'Loggin you in...', TImages.docerAnimation);
 
-      // Check Internet Connectivity
       final isConnected = await NetworkManager.instance.isConnected();
       if (!isConnected) {
         TFullScreenLoader.stopLoading();
+        if (context != null) {
+          AppSnackBar.show(
+            context,
+            message: TTexts.noInternet,
+            type: AppSnackBarType.error,
+            title: TTexts.networkError,
+          );
+        } else {
+          TLoaders.errorSnackBar(title: TTexts.networkError, message: TTexts.noInternet);
+        }
         return;
       }
 
-      // Form Validation
       if (loginFormKey.currentState == null ||
           !loginFormKey.currentState!.validate()) {
         TFullScreenLoader.stopLoading();
-        TLoaders.errorSnackBar(
-          title: 'Error',
-          message: 'Please check your input and try again.',
-        );
+        if (context != null) {
+          AppSnackBar.show(
+            context,
+            message: TTexts.checkInput,
+            type: AppSnackBarType.error,
+            title: TTexts.error,
+          );
+        } else {
+          TLoaders.errorSnackBar(
+            title: TTexts.error,
+            message: TTexts.checkInput,
+          );
+        }
         return;
       }
 
-      // Guardar el estado de Remember Me
-      localStorage.write('REMEMBER_ME_STATUS', rememberMe.value);
-      
-      // Save Data if Remember Me is selected
-      if (rememberMe.value) {
-        localStorage.write('REMEMBER_ME_EMAIL', email.text.trim());
-        localStorage.write('REMEMBER_ME_PASSWORD', password.text.trim());
+      _localStorage.write('REMEMBER_ME_STATUS', rememberMe);
+      if (rememberMe) {
+        _localStorage.write('REMEMBER_ME_EMAIL', email.text.trim());
+        _localStorage.write('REMEMBER_ME_PASSWORD', password.text.trim());
       } else {
-        // Eliminar datos guardados si Remember Me no está seleccionado
-        localStorage.remove('REMEMBER_ME_EMAIL');
-        localStorage.remove('REMEMBER_ME_PASSWORD');
+        _localStorage.remove('REMEMBER_ME_EMAIL');
+        _localStorage.remove('REMEMBER_ME_PASSWORD');
       }
 
-      // Login user using EMail & Password Authentication
-      final userCredentials = await AuthenticationRepository.instance
+      await AuthenticationRepository.instance
           .loginWithEmailAndPassword(email.text.trim(), password.text.trim());
-
-      // No detener el loader aquí. La navegación de Get.offAll lo eliminará
-      // o será detenido por AuthenticationRepository antes de la navegación.
-      // TFullScreenLoader.stopLoading();
-
-      // El listener onReady en AuthenticationRepository se encargará de la navegación.
-      // No es necesario llamar a checkAuthStatusAndNavigate aquí.
-      // AuthenticationRepository.instance.checkAuthStatusAndNavigate();
+      // La navegación se maneja en AuthenticationRepository
     } catch (e) {
-      // Asegurarse de detener el loader SI hay un error
-      TFullScreenLoader.stopLoading(); 
-      TLoaders.errorSnackBar(title: 'Oh Snap', message: e.toString());
+      TFullScreenLoader.stopLoading();
+      if (context != null) {
+        AppSnackBar.show(
+          context,
+          message: e.toString(),
+          type: AppSnackBarType.error,
+          title: TTexts.ohSnap,
+        );
+      } else {
+        TLoaders.errorSnackBar(title: TTexts.ohSnap, message: e.toString());
+      }
     }
   }
 }

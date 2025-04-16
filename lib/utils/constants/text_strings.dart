@@ -67,4 +67,23 @@ class TTexts {
   static const String tContinue = "Continue";
   static const String submit = 'Submit';
   static const String done = 'Done';
+
+  static const String noInternet = "Sin conexión a internet.";
+  static const String networkError = "Error de red";
+  static const String checkInput = "Por favor revisa tus datos e inténtalo de nuevo.";
+  static const String error = "Error";
+  static const String ohSnap = "Oh Snap!";
+  static const String actionNotAllowed = "Acción no permitida";
+  static const String onlyTodayTrainings = "Solo puedes iniciar entrenamientos programados para hoy";
+  static const String emailSent = "Correo enviado";
+  static const String checkEmailToVerify = "Por favor revisa tu correo y verifica tu dirección de email";
+  static const String verificationPending = "Verificación pendiente";
+  static const String emailNotVerified = "Tu correo aún no ha sido verificado.";
+
+  static const String requiredField = "Este campo es obligatorio";
+  static const String invalidEmail = "Introduce un correo electrónico válido";
+  static const String invalidPassword = "La contraseña debe tener al menos 6 caracteres";
+  static const String invalidPhone = "Introduce un número de teléfono válido";
+  static const String phoneRequired = "El número de teléfono es obligatorio";
+  static const String searchCountry = "Buscar país";
 }

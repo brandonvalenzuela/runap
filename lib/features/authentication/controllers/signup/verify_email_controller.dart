@@ -1,16 +1,18 @@
 import 'dart:async';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import 'package:runap/data/repositories/authentication/authentication_repository.dart';
 import 'package:runap/features/authentication/screens/login/login.dart';
 import 'package:runap/navigation_menu.dart';
 import 'package:runap/utils/popups/loaders.dart';
+import 'package:flutter/material.dart';
+import 'package:runap/utils/helpers/app_snackbar.dart';
+import 'package:runap/utils/constants/text_strings.dart';
 
 class VerifyEmailController extends GetxController {
   static VerifyEmailController get instance => Get.find();
 
-  /// Send Email Whenever Verify Screen appears & Set Timer for auto redirect.
+  /// Envía el email de verificación y configura el temporizador para redirección automática.
   @override
   void onInit() {
     sendEmailVerification();
@@ -18,25 +20,42 @@ class VerifyEmailController extends GetxController {
     super.onInit();
   }
 
-  /// Send Email Verification Link
-  sendEmailVerification() async {
+  /// Envía el enlace de verificación de email
+  Future<void> sendEmailVerification({BuildContext? context}) async {
     try {
       await AuthenticationRepository.instance.sendEmailVerification();
-      TLoaders.successSnackBar(
-          title: 'Email Sent',
-          message: 'Please check your email and verify your email address');
+      if (context != null) {
+        AppSnackBar.show(
+          context,
+          message: TTexts.checkEmailToVerify,
+          type: AppSnackBarType.success,
+          title: TTexts.emailSent,
+        );
+      } else {
+        TLoaders.successSnackBar(
+            title: TTexts.emailSent,
+            message: TTexts.checkEmailToVerify);
+      }
     } catch (e) {
-      TLoaders.errorSnackBar(title: 'Oh Snap!', message: e.toString());
+      if (context != null) {
+        AppSnackBar.show(
+          context,
+          message: e.toString(),
+          type: AppSnackBarType.error,
+          title: TTexts.ohSnap,
+        );
+      } else {
+        TLoaders.errorSnackBar(title: TTexts.ohSnap, message: e.toString());
+      }
     }
   }
 
-  /// Timer to automatically redirect on Email Verification
-  setTimerForAutoRedirect() {
+  /// Temporizador para redirigir automáticamente tras la verificación
+  void setTimerForAutoRedirect() {
     Timer.periodic(
       const Duration(seconds: 1),
       (timer) async {
         final user = FirebaseAuth.instance.currentUser;
-        // Refresh user
         await user?.reload();
         if (user?.emailVerified ?? false) {
           timer.cancel();
@@ -46,14 +65,24 @@ class VerifyEmailController extends GetxController {
     );
   }
 
-  /// Manually Check if Email is verified
-  checkEmailVerificationStatus() async {
+  /// Verifica manualmente si el email está verificado
+  Future<void> checkEmailVerificationStatus({BuildContext? context}) async {
     final user = FirebaseAuth.instance.currentUser;
-    // Refresh user
     await user?.reload();
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser != null && currentUser.emailVerified) {
       Get.offAll(() => const NavigationMenu(), transition: Transition.upToDown);
+    } else {
+      if (context != null) {
+        AppSnackBar.show(
+          context,
+          message: TTexts.emailNotVerified,
+          type: AppSnackBarType.warning,
+          title: TTexts.verificationPending,
+        );
+      } else {
+        TLoaders.warningSnackBar(title: TTexts.verificationPending, message: TTexts.emailNotVerified);
+      }
     }
   }
 }

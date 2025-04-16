@@ -117,15 +117,14 @@ class TSIgnupForm extends StatelessWidget {
             () => TextFormField(
               controller: controller.password,
               validator: (value) => TValidator.validatePassword(value),
-              obscureText: controller.hidePassword.value,
+              obscureText: controller.hidePassword,
               decoration: InputDecoration(
                 labelText: TTexts.password,
                 prefixIcon: const Icon(Iconsax.password_check),
                 contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
                 suffixIcon: IconButton(
-                  onPressed: () => controller.hidePassword.value =
-                      !controller.hidePassword.value,
-                  icon: Icon(controller.hidePassword.value
+                  onPressed: () => controller.hidePassword = !controller.hidePassword,
+                  icon: Icon(controller.hidePassword
                       ? Iconsax.eye_slash
                       : Iconsax.eye),
                 ),
