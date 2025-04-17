@@ -32,7 +32,7 @@ class DashboardDateHeader extends StatelessWidget {
             width: 60, // Slightly smaller
             height: 60,
             decoration: BoxDecoration(
-              color: Colors.white,//.withAlpha(128),
+              color: TColors.backgroundButton,
               borderRadius: BorderRadius.circular(TSizes.borderRadiusLx),
                boxShadow: [
                  BoxShadow(

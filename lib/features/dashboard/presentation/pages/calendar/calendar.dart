@@ -380,7 +380,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                 padding: const EdgeInsets.only(bottom: TSizes.spaceBtwItems),
                                 child: TrainingCard(
                                   session: session,
-                                  showBorder: true,
+                                  showBorder: false,
                                   isPast: isPastDay,
                                 ),
                               )).toList(), 

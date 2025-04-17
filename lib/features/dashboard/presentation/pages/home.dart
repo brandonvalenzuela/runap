@@ -1379,7 +1379,7 @@ class _SessionsListView extends StatelessWidget {
       child: AnimationLimiter(
         child: ListView.builder(
           padding: const EdgeInsets.symmetric(horizontal: TSizes.spaceBtwItems)
-                   .copyWith(bottom: TSizes.defaultSpace), // Añadir padding
+                   .copyWith(bottom: TSizes.defaultSpace),
           itemCount: listItems.length,
           itemBuilder: (context, index) {
             return listItems[index];

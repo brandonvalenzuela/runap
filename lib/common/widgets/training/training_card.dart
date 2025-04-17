@@ -355,6 +355,8 @@ class _TrainingCardState extends State<TrainingCard>
       });
     }
 
+    final double cardHeight = 180.0; // Altura fija definida
+
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
@@ -383,149 +385,160 @@ class _TrainingCardState extends State<TrainingCard>
                 child: AnimatedOpacity(
                   duration: const Duration(milliseconds: 700),
                   opacity: 1.0,
-                  child: Container(
-                    padding: const EdgeInsets.all(TSizes.cardRadiusLg),
-                    decoration: BoxDecoration(
-                      color: _isTapped && canStartWorkout
-                          ? TColors.primaryColor.withAlpha(26)
-                          : Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: TColors.colorBlack
-                              // ignore: deprecated_member_use
-                              .withOpacity(0.05 * _controller.value + 0.05),
-                          blurRadius: 10 * _controller.value + 5,
-                          offset: Offset(0, 3 * _controller.value + 2),
-                          spreadRadius: 2 * _controller.value,
-                        ),
-                      ],
-                      border: widget.showBorder
-                          ? Border.all(
-                              color: isToday
-                                  ? TColors.primaryColor.withAlpha(78)
-                                  : (widget.session.completed
-                                      ? TColors.success.withAlpha(78)
-                                      : (widget.isPast &&
-                                              !widget.session.completed
-                                          ? Colors.grey
-                                          : Colors.transparent)),
-                              width: 1.5,
-                            )
-                          : null,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: iconBackgroundColor,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Icon(
-                                _getIconData(widget.session.workoutName),
-                                color: iconColor,
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.session.workoutName,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  formattedDate,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.black45,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const Spacer(),
-                            if (widget.session.completed)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: TColors.success.withAlpha(56),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  'Completado',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: TColors.success,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              )
-                            else if (isToday)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: TColors.primaryColor.withAlpha(56),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  'Hoy',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: TColors.primaryColor,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              )
-                            else if (widget.isPast && !widget.session.completed)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.withAlpha(56),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  'Perdido',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.red,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          widget.session.description,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.black87,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (widget.session.workoutName.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          Wrap(
-                            spacing: 8,
-                            children: _buildTags(widget.session.description),
+                  // Envolver con SizedBox para altura fija
+                  child: SizedBox(
+                    height: cardHeight, // Aplicar altura fija
+                    child: Container(
+                      padding: const EdgeInsets.all(TSizes.cardRadiusLg),
+                      decoration: BoxDecoration(
+                        color: _isTapped && canStartWorkout
+                            ? TColors.primaryColor.withAlpha(26)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: TColors.colorBlack
+                                // ignore: deprecated_member_use
+                                .withOpacity(0.05 * _controller.value + 0.05),
+                            blurRadius: 10 * _controller.value + 5,
+                            offset: Offset(0, 3 * _controller.value + 2),
+                            spreadRadius: 2 * _controller.value,
                           ),
                         ],
-                      ],
+                        border: widget.showBorder
+                            ? Border.all(
+                                color: isToday
+                                    ? TColors.primaryColor.withAlpha(78)
+                                    : (widget.session.completed
+                                        ? TColors.success.withAlpha(78)
+                                        : (widget.isPast &&
+                                                !widget.session.completed
+                                            ? Colors.grey
+                                            : Colors.transparent)),
+                                width: 1.5,
+                              )
+                            : null,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // --- Fila Superior (Icono, Título, Fecha, Estado) ---
+                          Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: iconBackgroundColor,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Icon(
+                                  _getIconData(widget.session.workoutName),
+                                  color: iconColor,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    widget.session.workoutName,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    formattedDate,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.black45,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const Spacer(),
+                              // --- Lógica de estado (Hoy, Completado, Perdido) ---
+                              if (widget.session.completed)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: TColors.success.withAlpha(56),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    'Completado',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: TColors.success,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                )
+                              else if (isToday)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: TColors.primaryColor.withAlpha(56),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    'Hoy',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: TColors.primaryColor,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                )
+                              else if (widget.isPast && !widget.session.completed)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withAlpha(56),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    'Perdido',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          // --- Descripción (Expandida para ocupar espacio disponible) ---
+                          Expanded(
+                            child: Text(
+                              widget.session.description,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.black87,
+                              ),
+                              maxLines: 2, // Puedes ajustar o quitar si quieres más líneas
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          // --- Tags (Aparecerán si hay espacio) ---
+                          if (widget.session.workoutName.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 4, // Espacio vertical si los tags van a nueva línea
+                              children: _buildTags(widget.session.description),
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
