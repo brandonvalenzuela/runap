@@ -32,8 +32,9 @@ class VerifyEmailController extends GetxController {
         );
       } else {
         TLoaders.successSnackBar(
-            title: TTexts.emailSent,
-            message: TTexts.checkEmailToVerify);
+          title: TTexts.emailSent,
+          message: TTexts.checkEmailToVerify,
+        );
       }
     } catch (e) {
       if (context != null) {
@@ -58,7 +59,10 @@ class VerifyEmailController extends GetxController {
         await user?.reload();
         if (user?.emailVerified ?? false) {
           timer.cancel();
-          Get.offAll(() => const NavigationMenu(), transition: Transition.upToDown);
+          Get.offAll(
+            () => const NavigationMenu(),
+            transition: Transition.upToDown,
+          );
         }
       },
     );
@@ -80,7 +84,10 @@ class VerifyEmailController extends GetxController {
           title: TTexts.verificationPending,
         );
       } else {
-        TLoaders.warningSnackBar(title: TTexts.verificationPending, message: TTexts.emailNotVerified);
+        TLoaders.warningSnackBar(
+          title: TTexts.verificationPending,
+          message: TTexts.emailNotVerified,
+        );
       }
     }
   }

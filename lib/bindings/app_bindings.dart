@@ -17,7 +17,7 @@ class AppBindings extends Bindings {
   void dependencies() {
     // Utilities & Services
     Get.put(NetworkManager(), permanent: true);
-    
+
     // Controladores de notificación
     Get.put(NotificationController(), permanent: true);
     Get.put(ConnectivityController(), permanent: true);

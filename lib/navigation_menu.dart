@@ -45,67 +45,101 @@ class NavigationMenu extends StatelessWidget {
           ],
         ),
         child: Obx(() {
-            final double dotLeftPosition = (navigationController.selectedIndex.value * slotWidth) + (slotWidth / 2) - (dotSize / 2);
+          final double dotLeftPosition =
+              (navigationController.selectedIndex.value * slotWidth) +
+                  (slotWidth / 2) -
+                  (dotSize / 2);
 
-            return Stack(
-              clipBehavior: Clip.none,
-              children: [
-                NavigationBar(
-                  height: 70,
-                  elevation: 0,
-                  selectedIndex: navigationController.selectedIndex.value,
-                  onDestinationSelected: (index) {
-                    navigationController.selectedIndex.value = index;
-                    TDiviceUtility.vibrateMedium();
-                  },
-                  backgroundColor: Colors.transparent,
-                  indicatorColor: Colors.transparent,
-                  destinations: [
-                    NavigationDestination(
-                      icon: Icon(Iconsax.home, color: unselectedIconColor, size: TSizes.iconLg),
-                      selectedIcon: Icon(Iconsax.home, color: selectedIconColor, size: TSizes.iconLg),
-                      label: 'Home'
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              NavigationBar(
+                height: 70,
+                elevation: 0,
+                selectedIndex: navigationController.selectedIndex.value,
+                onDestinationSelected: (index) {
+                  navigationController.selectedIndex.value = index;
+                  TDiviceUtility.vibrateMedium();
+                },
+                backgroundColor: Colors.transparent,
+                indicatorColor: Colors.transparent,
+                destinations: [
+                  NavigationDestination(
+                    icon: Icon(
+                      Iconsax.home,
+                      color: unselectedIconColor,
+                      size: TSizes.iconLg,
                     ),
-                    NavigationDestination(
-                      icon: Icon(Iconsax.calendar, color: unselectedIconColor, size: TSizes.iconLg),
-                      selectedIcon: Icon(Iconsax.calendar, color: selectedIconColor, size: TSizes.iconLg),
-                      label: 'Calendar'
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Iconsax.clipboard_text, color: unselectedIconColor, size: TSizes.iconLg),
-                      selectedIcon: Icon(Iconsax.clipboard_text, color: selectedIconColor, size: TSizes.iconLg),
-                      label: 'JOURNAL'
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Iconsax.medal, color: unselectedIconColor, size: TSizes.iconLg),
-                      selectedIcon: Icon(Iconsax.medal, color: selectedIconColor, size: TSizes.iconLg),
-                      label: 'Progreso'
-                    ),
-                  ],
-                ),
-                AnimatedPositioned(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                  left: dotLeftPosition,
-                  bottom: systemBottomPadding + bottomPadding,
-                  child: Container(
-                    width: dotSize,
-                    height: dotSize,
-                    decoration: BoxDecoration(
+                    selectedIcon: Icon(
+                      Iconsax.home,
                       color: selectedIconColor,
-                      shape: BoxShape.circle,
+                      size: TSizes.iconLg,
                     ),
+                    label: 'Home',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(
+                      Iconsax.calendar,
+                      color: unselectedIconColor,
+                      size: TSizes.iconLg,
+                    ),
+                    selectedIcon: Icon(
+                      Iconsax.calendar,
+                      color: selectedIconColor,
+                      size: TSizes.iconLg,
+                    ),
+                    label: 'Calendar',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(
+                      Iconsax.clipboard_text,
+                      color: unselectedIconColor,
+                      size: TSizes.iconLg,
+                    ),
+                    selectedIcon: Icon(
+                      Iconsax.clipboard_text,
+                      color: selectedIconColor,
+                      size: TSizes.iconLg,
+                    ),
+                    label: 'JOURNAL',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(
+                      Iconsax.medal,
+                      color: unselectedIconColor,
+                      size: TSizes.iconLg,
+                    ),
+                    selectedIcon: Icon(
+                      Iconsax.medal,
+                      color: selectedIconColor,
+                      size: TSizes.iconLg,
+                    ),
+                    label: 'Progreso',
+                  ),
+                ],
+              ),
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                left: dotLeftPosition,
+                bottom: systemBottomPadding + bottomPadding,
+                child: Container(
+                  width: dotSize,
+                  height: dotSize,
+                  decoration: BoxDecoration(
+                    color: selectedIconColor,
+                    shape: BoxShape.circle,
                   ),
                 ),
-              ],
-            );
-          }
-        ),
+              ),
+            ],
+          );
+        }),
       ),
       body: Stack(
         children: [
-          Obx(() => navigationController.screens[navigationController.selectedIndex.value]),
-
+          Obx(() => navigationController
+              .screens[navigationController.selectedIndex.value]),
           Obx(() {
             final isVisible = notificationController.isVisible.value;
             final message = notificationController.message.value;
@@ -123,7 +157,7 @@ class NavigationMenu extends StatelessWidget {
               child: Container(
                 color: type.color,
                 padding: EdgeInsets.symmetric(
-                  horizontal: TSizes.lg, 
+                  horizontal: TSizes.lg,
                   vertical: TSizes.sm,
                 ),
                 child: Row(
@@ -139,9 +173,9 @@ class NavigationMenu extends StatelessWidget {
                       child: Text(
                         displayMessage,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.white,
-                          fontSize: 13,
-                        ),
+                              color: Colors.white,
+                              fontSize: 13,
+                            ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
@@ -171,34 +205,56 @@ class NavigationMenu extends StatelessWidget {
     } else if (message.contains(TTexts.checkEmailToVerify)) {
       return TTexts.emailSent;
     }
-    
+
     // Si el mensaje es muy largo (más de 30 caracteres), acortarlo
     if (message.length > 30) {
       // Intentar usar versiones cortas de mensajes comunes
       final words = message.split(' ');
       String simplified = '';
-      
+
       // Mantener solo las palabras importantes del mensaje
       for (int i = 0; i < words.length; i++) {
         // Saltar palabras "a", "de", "en", "por", "y", "el", "la", etc.
-        if ((words[i].length <= 2 || _isCommonPreposition(words[i])) && i > 0) continue;
-        
+        if ((words[i].length <= 2 || _isCommonPreposition(words[i])) && i > 0)
+          continue;
+
         simplified += '${simplified.isEmpty ? '' : ' '}${words[i]}';
-        
+
         // Si ya tenemos suficientes palabras, parar
         if (simplified.length > 25) break;
       }
-      
+
       return simplified;
     }
-    
+
     return message;
   }
-  
+
   // Ayuda a identificar preposiciones y artículos comunes en español
   bool _isCommonPreposition(String word) {
-    const common = ['de', 'del', 'el', 'la', 'los', 'las', 'por', 'para', 'con', 'sin', 
-                    'en', 'entre', 'hacia', 'hasta', 'desde', 'sobre', 'tras', 'y', 'e', 'o', 'u'];
+    const common = [
+      'de',
+      'del',
+      'el',
+      'la',
+      'los',
+      'las',
+      'por',
+      'para',
+      'con',
+      'sin',
+      'en',
+      'entre',
+      'hacia',
+      'hasta',
+      'desde',
+      'sobre',
+      'tras',
+      'y',
+      'e',
+      'o',
+      'u'
+    ];
     return common.contains(word.toLowerCase());
   }
 

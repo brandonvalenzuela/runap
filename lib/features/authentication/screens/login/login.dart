@@ -25,10 +25,10 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
-    
+
     // Inicializar el controlador de inicio de sesión
     Get.put(LoginController());
-    
+
     _controller = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,

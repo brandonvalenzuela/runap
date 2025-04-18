@@ -103,13 +103,14 @@ class WorkoutData {
     }
     double pace = 60 / averageSpeed;
     // Limitar a un rango razonable
-    return pace.clamp(2.0, 20.0); 
+    return pace.clamp(2.0, 20.0);
   }
 
   // Getters para mantener compatibilidad
   double get distance => distanceMeters;
   int get calories => _calculateCalories();
-  int get heartRate => 0; // Valor ficticio, necesitaría un sensor para datos reales
+  int get heartRate =>
+      0; // Valor ficticio, necesitaría un sensor para datos reales
 
   void addPolylineCoordinate(LatLng coordinate) {
     polylineCoordinates.add(coordinate);
@@ -132,11 +133,11 @@ class WorkoutData {
 
   void updatePolyline({Color? primaryColor, Color? outlineColor}) {
     if (polylineCoordinates.length < 2) return;
-    
+
     // Usar colores pasados o por defecto
     final Color runningColor = primaryColor ?? TColors.primaryColor;
     final Color runningOutlineColor = outlineColor ?? TColors.colorBlack;
-    
+
     // Crear polilíneas con estilo deportivo
     final Polyline backgroundLine = Polyline(
       polylineId: PolylineId('workout_route_bg'),
@@ -148,7 +149,7 @@ class WorkoutData {
       startCap: Cap.roundCap,
       endCap: Cap.roundCap,
     );
-    
+
     final Polyline foregroundLine = Polyline(
       polylineId: PolylineId('workout_route_fg'),
       color: runningColor,
@@ -159,7 +160,7 @@ class WorkoutData {
       startCap: Cap.roundCap,
       endCap: Cap.roundCap,
     );
-    
+
     // Añadir ambas polilíneas
     polylines.clear();
     polylines.add(backgroundLine);

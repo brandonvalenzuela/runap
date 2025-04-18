@@ -39,7 +39,9 @@ class LoginController extends GetxController {
   Future<void> emailAndPasswordSignIn({BuildContext? context}) async {
     try {
       TFullScreenLoader.openLoadingDialog(
-          'Loggin you in...', TImages.docerAnimation);
+        'Loggin you in...',
+        TImages.docerAnimation,
+      );
 
       final isConnected = await NetworkManager.instance.isConnected();
       if (!isConnected) {
@@ -52,7 +54,10 @@ class LoginController extends GetxController {
             title: TTexts.networkError,
           );
         } else {
-          TLoaders.errorSnackBar(title: TTexts.networkError, message: TTexts.noInternet);
+          TLoaders.errorSnackBar(
+            title: TTexts.networkError,
+            message: TTexts.noInternet,
+          );
         }
         return;
       }
@@ -85,8 +90,10 @@ class LoginController extends GetxController {
         _localStorage.remove('REMEMBER_ME_PASSWORD');
       }
 
-      await AuthenticationRepository.instance
-          .loginWithEmailAndPassword(email.text.trim(), password.text.trim());
+      await AuthenticationRepository.instance.loginWithEmailAndPassword(
+        email.text.trim(),
+        password.text.trim(),
+      );
       // La navegación se maneja en AuthenticationRepository
     } catch (e) {
       TFullScreenLoader.stopLoading();

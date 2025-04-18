@@ -209,10 +209,11 @@ class _TrainingCardState extends State<TrainingCard>
     final formattedDate = formatearFecha(widget.session.sessionDate);
     String workoutIcon = _getWorkoutIcon(widget.session.workoutName);
     Color iconBackgroundColor = _getIconBackgroundColor(
-        widget.session.workoutName,
-        isToday,
-        widget.session.completed,
-        widget.isPast);
+      widget.session.workoutName,
+      isToday,
+      widget.session.completed,
+      widget.isPast,
+    );
     Color iconColor = _getIconColor(widget.session.workoutName, isToday);
 
     void navigateToMap() {
@@ -492,7 +493,8 @@ class _TrainingCardState extends State<TrainingCard>
                                     ),
                                   ),
                                 )
-                              else if (widget.isPast && !widget.session.completed)
+                              else if (widget.isPast &&
+                                  !widget.session.completed)
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 8, vertical: 4),
@@ -520,7 +522,8 @@ class _TrainingCardState extends State<TrainingCard>
                                 fontSize: 14,
                                 color: Colors.black87,
                               ),
-                              maxLines: 2, // Puedes ajustar o quitar si quieres más líneas
+                              maxLines:
+                                  2, // Puedes ajustar o quitar si quieres más líneas
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -529,7 +532,8 @@ class _TrainingCardState extends State<TrainingCard>
                             const SizedBox(height: 12),
                             Wrap(
                               spacing: 8,
-                              runSpacing: 4, // Espacio vertical si los tags van a nueva línea
+                              runSpacing:
+                                  4, // Espacio vertical si los tags van a nueva línea
                               children: _buildTags(widget.session.description),
                             ),
                           ],

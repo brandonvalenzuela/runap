@@ -11,9 +11,7 @@ import 'location_permission_controller.dart';
 import 'package:logger/logger.dart';
 import 'workout_controller.dart';
 import 'package:runap/utils/constants/colors.dart';
-import 'package:runap/features/dashboard/domain/entities/dashboard_model.dart';
 import 'package:runap/features/map/models/workout_data.dart';
-import 'package:runap/features/map/models/workout_goal.dart';
 
 class MapController extends GetxController {
   final Logger logger = Logger(
@@ -31,7 +29,8 @@ class MapController extends GetxController {
   final RxBool isLoading = true.obs;
 
   // Controllers Delegados
-  final LocationPermissionController permissionController = Get.find<LocationPermissionController>();
+  final LocationPermissionController permissionController =
+      Get.find<LocationPermissionController>();
   final WorkoutController workoutController = Get.find<WorkoutController>();
 
   // Servicios y helpers (Solo los que usa directamente MapController)
@@ -42,14 +41,16 @@ class MapController extends GetxController {
 
   // Variables de control (map view)
   Timer? _periodicMapUpdateTimer;
-  Position? lastKnownPosition; // Keep track of last position for initial simulation/centering
+  Position?
+      lastKnownPosition; // Keep track of last position for initial simulation/centering
 
   // Variables para la simulación
   Timer? _simulationTimer;
   double _currentSimulationSpeedMps = 1.4; // Default: walking speed m/s
-  double _currentSimulationBearing = 0.0;  // Current direction degrees
+  double _currentSimulationBearing = 0.0; // Current direction degrees
   bool _isFirstSimulationStep = true;
-  final Duration _simulationInterval = const Duration(seconds: 1); // How often to simulate
+  final Duration _simulationInterval =
+      const Duration(seconds: 1); // How often to simulate
 
   // Añadir un flag para controlar el logging
   final bool _isDebugMode = false; // Cambiar a false en producción
@@ -61,20 +62,23 @@ class MapController extends GetxController {
   void onInit() {
     super.onInit();
     locationService = LocationService(
-      onLocationUpdate: (_) {}, // Assuming these are handled by WorkoutController now
+      onLocationUpdate:
+          (_) {}, // Assuming these are handled by WorkoutController now
       onMetricsUpdate: (_) {},
     );
     Future.microtask(() => initialize());
 
     // --- ADDED REACTIVE LISTENER ---
     // Listen for changes in the permission status
-    ever<LocationPermissionStatus>(permissionController.permissionStatus, (status) {
+    ever<LocationPermissionStatus>(permissionController.permissionStatus,
+        (status) {
       logger.i("MapController: Permission status changed to: $status");
       if (status == LocationPermissionStatus.granted) {
-        logger.i("MapController: Permission granted! Attempting to get location and center map...");
+        logger.i(
+            "MapController: Permission granted! Attempting to get location and center map...");
         // Use a small delay to ensure map controller might be ready if this happens early
         Future.delayed(const Duration(milliseconds: 100), () {
-           getCurrentLocationAndAnimateCamera();
+          getCurrentLocationAndAnimateCamera();
         });
       }
       // Optionally handle other statuses if needed (e.g., show error if denied again)
@@ -93,48 +97,54 @@ class MapController extends GetxController {
   }
 
   // Renamed method to be more descriptive and receive previous state
-  void _updateMapCameraBasedOnWorkoutState(WorkoutData currentWorkoutData, bool wasActive) {
-     if (currentWorkoutData.isWorkoutActive) {
-         // Workout is active: follow user position
-         if (currentWorkoutData.currentPosition != null && mapController.value != null) {
-             mapController.value!.animateCamera(
-                  CameraUpdate.newLatLng(currentWorkoutData.currentPosition!),
-             );
-         }
-     } else if (wasActive && !currentWorkoutData.isWorkoutActive) {
-         // Workout JUST ended (was active, now is not): Zoom to route
-         logger.d("Workout ended. Zooming to route bounds...");
-         final routePoints = currentWorkoutData.polylineCoordinates;
-         if (routePoints.length > 1 && mapController.value != null) { // Need at least 2 points for bounds
-            final bounds = _calculateBounds(routePoints);
-            if (bounds != null) {
-               // Use a slight delay to ensure map is ready after state changes
-               Future.delayed(const Duration(milliseconds: 500), () {
-                 try {
-                    mapController.value?.animateCamera(CameraUpdate.newLatLngBounds(bounds, 60.0)); // Add padding
-                 } catch (e) { // Catch potential errors if map disposed etc.
-                    logger.e("Error animating camera to bounds: $e");
-                 }
-               });
-          } else {
-               logger.w("Could not calculate bounds for the route.");
+  void _updateMapCameraBasedOnWorkoutState(
+      WorkoutData currentWorkoutData, bool wasActive) {
+    if (currentWorkoutData.isWorkoutActive) {
+      // Workout is active: follow user position
+      if (currentWorkoutData.currentPosition != null &&
+          mapController.value != null) {
+        mapController.value!.animateCamera(
+          CameraUpdate.newLatLng(currentWorkoutData.currentPosition!),
+        );
+      }
+    } else if (wasActive && !currentWorkoutData.isWorkoutActive) {
+      // Workout JUST ended (was active, now is not): Zoom to route
+      logger.d("Workout ended. Zooming to route bounds...");
+      final routePoints = currentWorkoutData.polylineCoordinates;
+      if (routePoints.length > 1 && mapController.value != null) {
+        // Need at least 2 points for bounds
+        final bounds = _calculateBounds(routePoints);
+        if (bounds != null) {
+          // Use a slight delay to ensure map is ready after state changes
+          Future.delayed(const Duration(milliseconds: 500), () {
+            try {
+              mapController.value?.animateCamera(
+                  CameraUpdate.newLatLngBounds(bounds, 60.0)); // Add padding
+            } catch (e) {
+              // Catch potential errors if map disposed etc.
+              logger.e("Error animating camera to bounds: $e");
             }
+          });
         } else {
-            logger.d("Not zooming to bounds: No route or map controller not ready.");
-         }
-     } 
-     // If workout is not active and wasn't active before, do nothing with the camera automatically.
+          logger.w("Could not calculate bounds for the route.");
+        }
+      } else {
+        logger
+            .d("Not zooming to bounds: No route or map controller not ready.");
+      }
+    }
+    // If workout is not active and wasn't active before, do nothing with the camera automatically.
   }
 
   // --- ADDED HELPER TO CALCULATE BOUNDS ---
   LatLngBounds? _calculateBounds(List<LatLng> points) {
     if (points.isEmpty) return null;
     if (points.length == 1) {
-       // Handle single point case: maybe zoom slightly?
-       // For now, return null as bounds require two points.
-       return null; 
+      // Handle single point case: maybe zoom slightly?
+      // For now, return null as bounds require two points.
+      return null;
     }
-    
+
     double minLat = points.first.latitude;
     double maxLat = points.first.latitude;
     double minLng = points.first.longitude;
@@ -152,59 +162,63 @@ class MapController extends GetxController {
     maxLat += 0.0001;
     minLng -= 0.0001;
     maxLng += 0.0001;
-    
+
     // Ensure northeast lat is greater than southwest lat
-    if (minLat > maxLat) { 
-       final temp = minLat;
-       minLat = maxLat;
-       maxLat = temp;
+    if (minLat > maxLat) {
+      final temp = minLat;
+      minLat = maxLat;
+      maxLat = temp;
     }
     // Ensure northeast lon is greater than southwest lon
-     if (minLng > maxLng) { 
-       final temp = minLng;
-       minLng = maxLng;
-       maxLng = temp;
+    if (minLng > maxLng) {
+      final temp = minLng;
+      minLng = maxLng;
+      maxLng = temp;
     }
 
     // Check for invalid bounds (e.g., all points identical)
-    if (minLat == maxLat && minLng == maxLng && points.length > 1) { 
-       // All points are the same, create a small bound around the point
-        const delta = 0.001; // Adjust as needed
-        return LatLngBounds(
-          southwest: LatLng(minLat - delta, minLng - delta),
-          northeast: LatLng(maxLat + delta, maxLng + delta),
-        );
+    if (minLat == maxLat && minLng == maxLng && points.length > 1) {
+      // All points are the same, create a small bound around the point
+      const delta = 0.001; // Adjust as needed
+      return LatLngBounds(
+        southwest: LatLng(minLat - delta, minLng - delta),
+        northeast: LatLng(maxLat + delta, maxLng + delta),
+      );
     }
-    
+
     try {
-        return LatLngBounds(
-          southwest: LatLng(minLat, minLng),
-          northeast: LatLng(maxLat, maxLng),
-        );
+      return LatLngBounds(
+        southwest: LatLng(minLat, minLng),
+        northeast: LatLng(maxLat, maxLng),
+      );
     } catch (e) {
-       logger.e("Error creating LatLngBounds: $e - minLat:$minLat, maxLat:$maxLat, minLng:$minLng, maxLng:$maxLng");
-       return null;
+      logger.e(
+          "Error creating LatLngBounds: $e - minLat:$minLat, maxLat:$maxLat, minLng:$minLng, maxLng:$maxLng");
+      return null;
     }
   }
-  // --- END OF HELPER --- 
+  // --- END OF HELPER ---
 
   Future<void> initialize() async {
     isLoading.value = true;
     try {
       // Check initial status but don't request here, let the listener handle reaction
       await permissionController.checkPermissions(requestIfNeeded: false);
-      if (permissionController.permissionStatus.value != LocationPermissionStatus.granted) {
-         logger.i("MapController.initialize: Permission not granted initially. Waiting for status change or dialog interaction.");
-         // Don't show dialog here directly, permission controller handles that if needed
-         // permissionController.showPermissionDialogIfNeeded(); // Removed - Let permission controller manage dialogs
-         // ADDED BACK: Show dialog if permissions aren't granted on init
-         permissionController.showPermissionDialogIfNeeded();
-         isLoading.value = false; // Still need to stop loading indicator
-      return;
-    }
+      if (permissionController.permissionStatus.value !=
+          LocationPermissionStatus.granted) {
+        logger.i(
+            "MapController.initialize: Permission not granted initially. Waiting for status change or dialog interaction.");
+        // Don't show dialog here directly, permission controller handles that if needed
+        // permissionController.showPermissionDialogIfNeeded(); // Removed - Let permission controller manage dialogs
+        // ADDED BACK: Show dialog if permissions aren't granted on init
+        permissionController.showPermissionDialogIfNeeded();
+        isLoading.value = false; // Still need to stop loading indicator
+        return;
+      }
       // If granted initially, proceed to get location
-      logger.i("MapController.initialize: Permission granted initially. Getting location.");
-                  await getCurrentLocationAndAnimateCamera();
+      logger.i(
+          "MapController.initialize: Permission granted initially. Getting location.");
+      await getCurrentLocationAndAnimateCamera();
     } catch (e) {
       logger.e('Error en inicialización: $e');
     } finally {
@@ -215,24 +229,30 @@ class MapController extends GetxController {
   Future<void> getCurrentLocationAndAnimateCamera() async {
     // Add check if mapController is ready
     if (mapController.value == null) {
-       logger.w("getCurrentLocationAndAnimateCamera: Map controller not ready yet.");
-       return; // Don't proceed if map isn't ready
+      logger.w(
+          "getCurrentLocationAndAnimateCamera: Map controller not ready yet.");
+      return; // Don't proceed if map isn't ready
     }
 
-    if (permissionController.permissionStatus.value != LocationPermissionStatus.granted) {
-       logger.w("getCurrentLocationAndAnimateCamera: Permission not granted.");
-       // Don't show dialog here, listener or initial check should handle it.
-       // permissionController.showPermissionDialogIfNeeded(); // Removed
-       return;
+    if (permissionController.permissionStatus.value !=
+        LocationPermissionStatus.granted) {
+      logger.w("getCurrentLocationAndAnimateCamera: Permission not granted.");
+      // Don't show dialog here, listener or initial check should handle it.
+      // permissionController.showPermissionDialogIfNeeded(); // Removed
+      return;
     }
-    logger.i("getCurrentLocationAndAnimateCamera: Permission granted. Fetching location...");
+    logger.i(
+        "getCurrentLocationAndAnimateCamera: Permission granted. Fetching location...");
     try {
       Position position = await locationService.getCurrentPosition();
       lastKnownPosition = position; // Store the position
       LatLng latLng = LatLng(position.latitude, position.longitude);
-      logger.i("getCurrentLocationAndAnimateCamera: Location obtained: $latLng. Animating camera.");
-      if (mapController.value != null) { // Double check mapController is still valid
-        mapController.value!.animateCamera( // Use animate for smooth initial centering
+      logger.i(
+          "getCurrentLocationAndAnimateCamera: Location obtained: $latLng. Animating camera.");
+      if (mapController.value != null) {
+        // Double check mapController is still valid
+        mapController.value!.animateCamera(
+          // Use animate for smooth initial centering
           CameraUpdate.newLatLngZoom(latLng, 17.0),
         );
       }
@@ -256,11 +276,10 @@ class MapController extends GetxController {
     }
     try {
       Position position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 3),
-        )
-      );
+          locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        timeLimit: Duration(seconds: 3),
+      ));
       lastKnownPosition = position; // Update last known position
       if (position.accuracy > 50) {
         Get.snackbar(
@@ -280,12 +299,13 @@ class MapController extends GetxController {
   void setMapControllerInstance(GoogleMapController controller) {
     mapController.value = controller;
     logger.d("🗺️ MapController - Controlador de mapa inicializado");
-    setMapStyle("minimalist_streets"); 
+    setMapStyle("minimalist_streets");
     // Keep this call - ensures centering happens if permission was already granted
     // before listener fired, or as a final check once map is ready.
     Future.microtask(() {
-       logger.d("MapController.setMapControllerInstance: Calling getCurrentLocationAndAnimateCamera.");
-       getCurrentLocationAndAnimateCamera();
+      logger.d(
+          "MapController.setMapControllerInstance: Calling getCurrentLocationAndAnimateCamera.");
+      getCurrentLocationAndAnimateCamera();
     });
   }
 
@@ -293,13 +313,16 @@ class MapController extends GetxController {
     if (mapController.value == null) return;
     if (workoutController.workoutData.value.currentPosition != null) {
       mapController.value!.animateCamera(
-        CameraUpdate.newLatLngZoom(workoutController.workoutData.value.currentPosition!, 17.0),
+        CameraUpdate.newLatLngZoom(
+            workoutController.workoutData.value.currentPosition!, 17.0),
       );
-    } else if (lastKnownPosition != null) { 
-       mapController.value!.animateCamera(
-         CameraUpdate.newLatLngZoom(LatLng(lastKnownPosition!.latitude, lastKnownPosition!.longitude), 17.0),
-       );
-      } else {
+    } else if (lastKnownPosition != null) {
+      mapController.value!.animateCamera(
+        CameraUpdate.newLatLngZoom(
+            LatLng(lastKnownPosition!.latitude, lastKnownPosition!.longitude),
+            17.0),
+      );
+    } else {
       getCurrentLocationAndAnimateCamera();
     }
   }
@@ -307,9 +330,9 @@ class MapController extends GetxController {
   void setMapStyle(String styleName) {
     if (mapController.value == null) return;
     String styleJson = "";
-    
+
     switch (styleName) {
-      case "minimalist_streets": 
+      case "minimalist_streets":
         styleJson = '''
 [
   { "elementType": "geometry", "stylers": [{ "color": "#f5f5f5" }] },
@@ -535,7 +558,7 @@ class MapController extends GetxController {
 ]
         ''';
         break;
-        
+
       case "running_detailed":
         styleJson = '''
 [
@@ -798,7 +821,7 @@ class MapController extends GetxController {
 ]
         ''';
         break;
-        
+
       case "terrain":
         styleJson = '''
 [
@@ -981,7 +1004,7 @@ class MapController extends GetxController {
 ]
         ''';
         break;
-        
+
       case "night":
         styleJson = '''
 [
@@ -1148,23 +1171,29 @@ class MapController extends GetxController {
         ''';
         break;
     }
-    
+
     if (styleJson.isNotEmpty) {
       mapController.value!.setMapStyle(styleJson);
       if (styleName == "night") {
-          workoutController.workoutData.update((val) {
-          val?.updatePolyline(primaryColor: Colors.cyan, outlineColor: Colors.white);
+        workoutController.workoutData.update((val) {
+          val?.updatePolyline(
+              primaryColor: Colors.cyan, outlineColor: Colors.white);
         });
       } else {
-          Color polylinePrimary = styleName == "minimalist_streets" ? Colors.blue.shade700 : TColors.primaryColor; 
-          Color polylineOutline = styleName == "minimalist_streets" ? Colors.white : TColors.primaryColor.withAlpha(80);
-          workoutController.workoutData.update((val) {
-            val?.updatePolyline(primaryColor: polylinePrimary, outlineColor: polylineOutline); 
-          });
+        Color polylinePrimary = styleName == "minimalist_streets"
+            ? Colors.blue.shade700
+            : TColors.primaryColor;
+        Color polylineOutline = styleName == "minimalist_streets"
+            ? Colors.white
+            : TColors.primaryColor.withAlpha(80);
+        workoutController.workoutData.update((val) {
+          val?.updatePolyline(
+              primaryColor: polylinePrimary, outlineColor: polylineOutline);
+        });
       }
-      logger.d("🎨 Estilo de mapa '$styleName' aplicado."); 
+      logger.d("🎨 Estilo de mapa '$styleName' aplicado.");
     } else {
-      logger.w("⚠️ Estilo de mapa '$styleName' no encontrado."); 
+      logger.w("⚠️ Estilo de mapa '$styleName' no encontrado.");
     }
   }
 
@@ -1175,18 +1204,23 @@ class MapController extends GetxController {
       logger.w("Simulation already running.");
       return;
     }
-    
+
     logger.i("▶️ Iniciando simulación...");
     workoutController.pauseRealLocationUpdates(); // Pausar GPS real
 
     // Determinar velocidad basada en el objetivo actual
     final goal = workoutController.workoutData.value.goal;
-    if (goal?.targetPaceMinutesPerKm != null && goal!.targetPaceMinutesPerKm! > 0) {
-      _currentSimulationSpeedMps = 1000.0 / (goal.targetPaceMinutesPerKm! * 60.0);
-      logger.d("🎯 Velocidad de simulación basada en objetivo: ${_currentSimulationSpeedMps.toStringAsFixed(2)} m/s (Ritmo ${goal.targetPaceMinutesPerKm!.toStringAsFixed(2)} min/km)");
+    if (goal?.targetPaceMinutesPerKm != null &&
+        goal!.targetPaceMinutesPerKm! > 0) {
+      _currentSimulationSpeedMps =
+          1000.0 / (goal.targetPaceMinutesPerKm! * 60.0);
+      logger.d(
+          "🎯 Velocidad de simulación basada en objetivo: ${_currentSimulationSpeedMps.toStringAsFixed(2)} m/s (Ritmo ${goal.targetPaceMinutesPerKm!.toStringAsFixed(2)} min/km)");
     } else {
-      _currentSimulationSpeedMps = 1.4; // Usar velocidad de caminata por defecto
-      logger.d("🚶‍♀️ Usando velocidad de simulación por defecto (caminata): ${_currentSimulationSpeedMps} m/s");
+      _currentSimulationSpeedMps =
+          1.4; // Usar velocidad de caminata por defecto
+      logger.d(
+          "🚶‍♀️ Usando velocidad de simulación por defecto (caminata): ${_currentSimulationSpeedMps} m/s");
     }
 
     _isFirstSimulationStep = true; // Resetear para la nueva simulación
@@ -1197,13 +1231,14 @@ class MapController extends GetxController {
     // Iniciar nuevo timer
     _simulationTimer = Timer.periodic(_simulationInterval, _simulateMovement);
 
-    logger.d("⏱️ Timer de simulación iniciado (intervalo: ${_simulationInterval.inSeconds}s)");
+    logger.d(
+        "⏱️ Timer de simulación iniciado (intervalo: ${_simulationInterval.inSeconds}s)");
   }
 
   void stopSimulation() {
     if (_simulationTimer == null || !_simulationTimer!.isActive) {
-       logger.w("Simulation not running or already stopped.");
-       return;
+      logger.w("Simulation not running or already stopped.");
+      return;
     }
     logger.i("⏹️ Deteniendo simulación...");
     _simulationTimer?.cancel();
@@ -1216,14 +1251,16 @@ class MapController extends GetxController {
   void _simulateMovement(Timer timer) {
     // 1. Obtener la última posición conocida del WorkoutController
     LatLng? lastPos = workoutController.workoutData.value.currentPosition;
-    double lastAltitude = workoutController.workoutData.value.previousPosition?.altitude ?? 0.0;
+    double lastAltitude =
+        workoutController.workoutData.value.previousPosition?.altitude ?? 0.0;
 
     // Usar la posición conocida por MapController como fallback si WorkoutController no tiene una
     if (lastPos == null && lastKnownPosition != null) {
-       lastPos = LatLng(lastKnownPosition!.latitude, lastKnownPosition!.longitude);
-       lastAltitude = lastKnownPosition!.altitude;
-    } 
-    
+      lastPos =
+          LatLng(lastKnownPosition!.latitude, lastKnownPosition!.longitude);
+      lastAltitude = lastKnownPosition!.altitude;
+    }
+
     // Si aún no hay posición, no se puede simular
     if (lastPos == null) {
       logger.e("Error de simulación: No se puede obtener la posición inicial.");
@@ -1236,22 +1273,26 @@ class MapController extends GetxController {
       // Elegir una dirección aleatoria inicial
       _currentSimulationBearing = math.Random().nextDouble() * 360.0;
       _isFirstSimulationStep = false;
-      logger.d("(Simulate) Primera ejecución, Dirección inicial: ${_currentSimulationBearing.toStringAsFixed(1)}°");
+      logger.d(
+          "(Simulate) Primera ejecución, Dirección inicial: ${_currentSimulationBearing.toStringAsFixed(1)}°");
     } else {
       // Añadir una pequeña variación aleatoria a la dirección para simular cambios
       // Ajustar el multiplicador (e.g., 10) para más o menos variación por segundo
-      double bearingChange = (math.Random().nextDouble() - 0.5) * 10.0; 
+      double bearingChange = (math.Random().nextDouble() - 0.5) * 10.0;
       _currentSimulationBearing += bearingChange;
       // Normalizar bearing a [0, 360)
-      _currentSimulationBearing = (_currentSimulationBearing % 360.0 + 360.0) % 360.0;
+      _currentSimulationBearing =
+          (_currentSimulationBearing % 360.0 + 360.0) % 360.0;
       // logger.d("(Simulate) Cambio de dirección: ${bearingChange.toStringAsFixed(1)}°, Nueva: ${_currentSimulationBearing.toStringAsFixed(1)}°");
     }
 
     // 3. Calcular distancia a mover en este intervalo
-    double distanceMoved = _currentSimulationSpeedMps * _simulationInterval.inSeconds;
+    double distanceMoved =
+        _currentSimulationSpeedMps * _simulationInterval.inSeconds;
 
     // 4. Calcular el nuevo punto geográfico
-    LatLng nextPosition = _calculateDestinationPoint(lastPos, _currentSimulationBearing, distanceMoved);
+    LatLng nextPosition = _calculateDestinationPoint(
+        lastPos, _currentSimulationBearing, distanceMoved);
 
     // 5. Crear un objeto Position simulado completo
     final now = DateTime.now();
@@ -1271,16 +1312,17 @@ class MapController extends GetxController {
     // 6. Notificar al WorkoutController con los nuevos datos
     // Usar Future.microtask para evitar posibles problemas de estado durante el build/frame
     Future.microtask(() {
-        workoutController.handleLocationUpdate(nextPosition);
-        workoutController.handleMetricsUpdate(simulatedPosition);
-        // logger.d("(Simulate) Nueva Pos: ${nextPosition.latitude.toStringAsFixed(5)}, ${nextPosition.longitude.toStringAsFixed(5)}");
+      workoutController.handleLocationUpdate(nextPosition);
+      workoutController.handleMetricsUpdate(simulatedPosition);
+      // logger.d("(Simulate) Nueva Pos: ${nextPosition.latitude.toStringAsFixed(5)}, ${nextPosition.longitude.toStringAsFixed(5)}");
     });
   }
-  
-  // --- HELPER FUNCTION (IMPLEMENTED) --- 
-  LatLng _calculateDestinationPoint(LatLng start, double bearing, double distanceMeters) {
+
+  // --- HELPER FUNCTION (IMPLEMENTED) ---
+  LatLng _calculateDestinationPoint(
+      LatLng start, double bearing, double distanceMeters) {
     const double earthRadiusMeters = 6371000.0;
-    
+
     // Convertir lat/lon a radianes
     double lat1Rad = start.latitude * (math.pi / 180.0);
     double lon1Rad = start.longitude * (math.pi / 180.0);
@@ -1291,11 +1333,15 @@ class MapController extends GetxController {
 
     // Calcular nueva latitud
     double lat2Rad = math.asin(math.sin(lat1Rad) * math.cos(angularDistance) +
-                           math.cos(lat1Rad) * math.sin(angularDistance) * math.cos(bearingRad));
+        math.cos(lat1Rad) * math.sin(angularDistance) * math.cos(bearingRad));
 
     // Calcular nueva longitud
-    double lon2Rad = lon1Rad + math.atan2(math.sin(bearingRad) * math.sin(angularDistance) * math.cos(lat1Rad),
-                                     math.cos(angularDistance) - math.sin(lat1Rad) * math.sin(lat2Rad));
+    double lon2Rad = lon1Rad +
+        math.atan2(
+            math.sin(bearingRad) *
+                math.sin(angularDistance) *
+                math.cos(lat1Rad),
+            math.cos(angularDistance) - math.sin(lat1Rad) * math.sin(lat2Rad));
 
     // Convertir de nuevo a grados
     double lat2Deg = lat2Rad * (180.0 / math.pi);
@@ -1310,7 +1356,7 @@ class MapController extends GetxController {
   @override
   void onClose() {
     _periodicMapUpdateTimer?.cancel(); // Cancel timer when controller is closed
-    mapController.value?.dispose();    // Dispose GoogleMapController if exists
+    mapController.value?.dispose(); // Dispose GoogleMapController if exists
     super.onClose();
   }
 }

@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:runap/data/repositories/authentication/authentication_repository.dart';
@@ -25,7 +27,7 @@ class SignupController extends GetxController {
   final phoneNumber = TextEditingController();
   String completePhoneNumber = '';
   final GlobalKey<FormState> signupFormKey = GlobalKey<FormState>();
-  
+
   bool _firstNamePreFilled = false;
 
   Map<String, dynamic>? surveyData;
@@ -51,7 +53,8 @@ class SignupController extends GetxController {
     print("Datos encuesta leídos en SignUpController: $surveyData"); // Debug
     // Pre-rellenar controllers SI hay datos de encuesta
     if (surveyData != null) {
-      if (surveyData!.containsKey('firstName') && surveyData!['firstName'] != null) {
+      if (surveyData!.containsKey('firstName') &&
+          surveyData!['firstName'] != null) {
         firstName.text = surveyData!['firstName'];
         _firstNamePreFilled = true;
       }
@@ -86,7 +89,8 @@ class SignupController extends GetxController {
       }
 
       // Form Validation (Solo si hay campos visibles que validar)
-      if (signupFormKey.currentState != null && !signupFormKey.currentState!.validate()) {
+      if (signupFormKey.currentState != null &&
+          !signupFormKey.currentState!.validate()) {
         TFullScreenLoader.stopLoading();
         return;
       }
@@ -98,19 +102,22 @@ class SignupController extends GetxController {
       if (!privacyPolicy) {
         TLoaders.warningSnackBar(
           title: TTexts.error,
-          message: TTexts.iAgreeTo + ' ' + TTexts.privacyPolicy + ' & ' + TTexts.termsOfUse,
+          message:
+              '${TTexts.iAgreeTo} ${TTexts.privacyPolicy} & ${TTexts.termsOfUse}',
         );
-         TFullScreenLoader.stopLoading(); // Detener loader si falla la política
+        TFullScreenLoader.stopLoading(); // Detener loader si falla la política
         return;
       }
 
-      // --- Recolectar datos --- 
+      // --- Recolectar datos ---
       // Datos del formulario visible
       final emailFromForm = email.text.trim();
       final passwordFromForm = password.text.trim();
       final usernameFromForm = username.text.trim();
-      final phoneFromForm = completePhoneNumber.isNotEmpty ? completePhoneNumber : phoneNumber.text.trim();
-      
+      final phoneFromForm = completePhoneNumber.isNotEmpty
+          ? completePhoneNumber
+          : phoneNumber.text.trim();
+
       // Datos de la encuesta (obligatorios ahora)
       final firstNameFromSurvey = surveyData?['firstName'] as String? ?? '';
       final lastNameFromSurvey = surveyData?['lastName'] as String? ?? '';
@@ -122,29 +129,47 @@ class SignupController extends GetxController {
       final mainGoalFromSurvey = surveyData?['mainGoal'] as String?;
       final paceFromSurvey = surveyData?['pace'] as String?;
 
-      // --- Validaciones Adicionales --- 
-      final finalFirstName = firstNameFromSurvey.isNotEmpty ? firstNameFromSurvey : firstName.text.trim();
-      
-      if (finalFirstName.isEmpty) { 
-        TLoaders.errorSnackBar(title: TTexts.error, message: TTexts.firstName + ' ' + TTexts.checkInput);
-        TFullScreenLoader.stopLoading(); 
-        return; 
+      // --- Validaciones Adicionales ---
+      final finalFirstName = firstNameFromSurvey.isNotEmpty
+          ? firstNameFromSurvey
+          : firstName.text.trim();
+
+      if (finalFirstName.isEmpty) {
+        TLoaders.errorSnackBar(
+          title: TTexts.error,
+          message: '${TTexts.firstName} ${TTexts.checkInput}',
+        );
+        TFullScreenLoader.stopLoading();
+        return;
       }
-      if (lastNameFromSurvey.isEmpty) { 
-        TLoaders.errorSnackBar(title: TTexts.error, message: TTexts.lastName + ' ' + TTexts.checkInput);
-        TFullScreenLoader.stopLoading(); 
-        return; 
+      if (lastNameFromSurvey.isEmpty) {
+        TLoaders.errorSnackBar(
+          title: TTexts.error,
+          message: '${TTexts.lastName} ${TTexts.checkInput}',
+        );
+        TFullScreenLoader.stopLoading();
+        return;
       }
-      if (ageFromSurvey == null || ageFromSurvey.isEmpty) { 
-         TLoaders.errorSnackBar(title: TTexts.error, message: 'Edad ' + TTexts.checkInput);
-        TFullScreenLoader.stopLoading(); return; 
+      if (ageFromSurvey == null || ageFromSurvey.isEmpty) {
+        TLoaders.errorSnackBar(
+          title: TTexts.error,
+          message: 'Edad ${TTexts.checkInput}',
+        );
+        TFullScreenLoader.stopLoading();
+        return;
       }
 
-      // --- Registro y Guardado --- 
-      final userCredential = await AuthenticationRepository.instance
-          .registerWithEmailAndPassword(emailFromForm, passwordFromForm);
+      // --- Registro y Guardado ---
+      final userCredential =
+          await AuthenticationRepository.instance.registerWithEmailAndPassword(
+        emailFromForm,
+        passwordFromForm,
+      );
 
-      if (userCredential.user == null) { /* Error */ TFullScreenLoader.stopLoading(); return; }
+      if (userCredential.user == null) {
+        /* Error */ TFullScreenLoader.stopLoading();
+        return;
+      }
 
       final newUser = UserModel(
         id: userCredential.user!.uid,
@@ -166,25 +191,26 @@ class SignupController extends GetxController {
       final userRepository = Get.put(UserRepository());
       await userRepository.saveUserRecord(newUser);
 
-      // --- Marcar Encuesta como Completada --- 
+      // --- Marcar Encuesta como Completada ---
       // Guardamos esto después de que el usuario se haya guardado correctamente.
       await _surveyService.setSurveyCompleted(true);
       print("SurveyCompleted flag set to true in storage."); // Debug
 
-      // --- Limpieza --- 
+      // --- Limpieza ---
       // Eliminar los datos de la encuesta de storage después de usarlos exitosamente
       await _surveyService.removePendingSurvey();
       print("Pending survey answers removed from storage."); // Debug
-      
+
       TFullScreenLoader.stopLoading();
 
       TLoaders.successSnackBar(
-          title: TTexts.yourAccountCreatedTitle,
-          message: TTexts.yourAccountCreatedSubTitle);
+        title: TTexts.yourAccountCreatedTitle,
+        message: TTexts.yourAccountCreatedSubTitle,
+      );
 
       // Navegar a VerifyEmailScreen
       Get.to(() => VerifyEmailScreen(email: emailFromForm));
-    } catch (e, stackTrace) { 
+    } catch (e, stackTrace) {
       TFullScreenLoader.stopLoading();
       _errorHandler.logError(e, stackTrace);
       String errorMessage = _errorHandler.getFriendlyMessage(e);

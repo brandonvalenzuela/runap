@@ -12,7 +12,7 @@ import 'package:runap/utils/constants/sizes.dart';
 import 'package:runap/common/screens/placeholder/placeholder_screen.dart';
 import 'package:runap/utils/device/device_utility.dart'; // Para vibración
 // Importar Package Info Plus si se usa para la versión
-// import 'package:package_info_plus/package_info_plus.dart'; 
+// import 'package:package_info_plus/package_info_plus.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -39,15 +39,20 @@ class SettingsScreen extends StatelessWidget {
       appBar: TAppBar(
         showBackArrow: true,
         leadingOnPressed: () => Get.back(),
-        title: Text('Settings', style: Theme.of(context).textTheme.headlineSmall),
+        title:
+            Text('Settings', style: Theme.of(context).textTheme.headlineSmall),
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: TSizes.smxx), // Padding horizontal principal
+          padding: const EdgeInsets.symmetric(
+            horizontal: TSizes.smxx,
+          ), // Padding horizontal principal
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: TSizes.spaceBtwSections / 2), // Espacio inicial reducido
+              const SizedBox(
+                height: TSizes.spaceBtwSections / 2,
+              ), // Espacio inicial reducido
 
               // --- SECCIÓN MY PROFILE ---
               _buildSectionHeader(context, 'My profile'),
@@ -56,8 +61,11 @@ class SettingsScreen extends StatelessWidget {
                 title: 'My profile',
                 tileColor: tileColor,
                 onTap: () {
-                  TDiviceUtility.vibrateLight();
-                  Get.to(() => const ProfileScreen(), transition: Transition.rightToLeft);
+                  TDiviceUtility.vibrateMedium();
+                  Get.to(
+                    () => const ProfileScreen(),
+                    transition: Transition.rightToLeft,
+                  );
                 },
               ),
               const SizedBox(height: TSizes.sm),
@@ -65,8 +73,11 @@ class SettingsScreen extends StatelessWidget {
                 title: 'My goals',
                 tileColor: tileColor,
                 onTap: () {
-                  TDiviceUtility.vibrateLight();
-                  Get.to(() => const PlaceholderScreen(title: 'My Goals'));
+                  TDiviceUtility.vibrateMedium();
+                  Get.to(
+                    () => const PlaceholderScreen(title: 'My Goals'),
+                    transition: Transition.rightToLeft,
+                  );
                 },
               ),
               const SizedBox(height: TSizes.sm),
@@ -74,8 +85,11 @@ class SettingsScreen extends StatelessWidget {
                 title: 'Diary settings',
                 tileColor: tileColor,
                 onTap: () {
-                  TDiviceUtility.vibrateLight();
-                  Get.to(() => const PlaceholderScreen(title: 'Diary Settings'));
+                  TDiviceUtility.vibrateMedium();
+                  Get.to(
+                    () => const PlaceholderScreen(title: 'Diary Settings'),
+                    transition: Transition.rightToLeft,
+                  );
                 },
               ),
               const SizedBox(height: TSizes.spaceBtwSections * 1.5),
@@ -87,8 +101,11 @@ class SettingsScreen extends StatelessWidget {
                 title: 'My account',
                 tileColor: tileColor,
                 onTap: () {
-                  TDiviceUtility.vibrateLight();
-                  Get.to(() => const AccountScreen(), transition: Transition.rightToLeft);
+                  TDiviceUtility.vibrateMedium();
+                  Get.to(
+                    () => const AccountScreen(),
+                    transition: Transition.rightToLeft,
+                  );
                 },
               ),
               const SizedBox(height: TSizes.sm),
@@ -96,8 +113,11 @@ class SettingsScreen extends StatelessWidget {
                 title: 'Manage my notifications',
                 tileColor: tileColor,
                 onTap: () {
-                  TDiviceUtility.vibrateLight();
-                  Get.to(() => const PlaceholderScreen(title: 'Notifications'));
+                  TDiviceUtility.vibrateMedium();
+                  Get.to(
+                    () => const PlaceholderScreen(title: 'Notifications'),
+                    transition: Transition.rightToLeft,
+                  );
                 },
               ),
               const SizedBox(height: TSizes.sm),
@@ -105,8 +125,11 @@ class SettingsScreen extends StatelessWidget {
                 title: 'Automatic tracking apps',
                 tileColor: tileColor,
                 onTap: () {
-                  TDiviceUtility.vibrateLight();
-                  Get.to(() => const PlaceholderScreen(title: 'Tracking Apps'));
+                  TDiviceUtility.vibrateMedium();
+                  Get.to(
+                    () => const PlaceholderScreen(title: 'Tracking Apps'),
+                    transition: Transition.rightToLeft,
+                  );
                 },
               ),
               const SizedBox(height: TSizes.spaceBtwSections * 1.5),
@@ -118,8 +141,11 @@ class SettingsScreen extends StatelessWidget {
                 title: 'Local host',
                 tileColor: tileColor,
                 onTap: () {
-                  TDiviceUtility.vibrateLight();
-                  Get.to(const DebugScreen());
+                  TDiviceUtility.vibrateMedium();
+                  Get.to(
+                    const DebugScreen(),
+                    transition: Transition.rightToLeft,
+                  );
                 },
               ),
               const SizedBox(height: TSizes.spaceBtwSections * 1.5),
@@ -131,8 +157,11 @@ class SettingsScreen extends StatelessWidget {
                 title: 'Contact us',
                 tileColor: tileColor,
                 onTap: () {
-                  TDiviceUtility.vibrateLight();
-                  Get.to(() => const PlaceholderScreen(title: 'Contact Us'));
+                  TDiviceUtility.vibrateMedium();
+                  Get.to(
+                    () => const PlaceholderScreen(title: 'Contact Us'),
+                    transition: Transition.rightToLeft,
+                  );
                 },
               ),
               const SizedBox(height: TSizes.sm),
@@ -140,7 +169,7 @@ class SettingsScreen extends StatelessWidget {
                 title: 'Invite friends & get \$20',
                 tileColor: tileColor,
                 onTap: () {
-                  TDiviceUtility.vibrateLight();
+                  TDiviceUtility.vibrateMedium();
                   Get.snackbar(
                     'Coming Soon!',
                     'Invite friends feature will be available soon.',
@@ -164,8 +193,11 @@ class SettingsScreen extends StatelessWidget {
                 title: 'Terms of use',
                 tileColor: tileColor,
                 onTap: () {
-                  TDiviceUtility.vibrateLight();
-                  Get.to(() => const PlaceholderScreen(title: 'Terms of Use'));
+                  TDiviceUtility.vibrateMedium();
+                  Get.to(
+                    () => const PlaceholderScreen(title: 'Terms of Use'),
+                    transition: Transition.rightToLeft,
+                  );
                 },
               ),
               const SizedBox(height: TSizes.sm),
@@ -173,8 +205,11 @@ class SettingsScreen extends StatelessWidget {
                 title: 'Privacy policy',
                 tileColor: tileColor,
                 onTap: () {
-                  TDiviceUtility.vibrateLight();
-                  Get.to(() => const PlaceholderScreen(title: 'Privacy Policy'));
+                  TDiviceUtility.vibrateMedium();
+                  Get.to(
+                    () => const PlaceholderScreen(title: 'Privacy Policy'),
+                    transition: Transition.rightToLeft,
+                  );
                 },
               ),
               const SizedBox(height: TSizes.spaceBtwSections * 2),
@@ -190,18 +225,29 @@ class SettingsScreen extends StatelessWidget {
                     //     return Text(snapshot.data ?? 'Loading version...', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Colors.grey));
                     //   }
                     // ),
-                     Text('Version v1.0.0 - 4120', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Colors.grey)), // Placeholder por ahora
-                    Obx(() => Text(
-                      // No mostrar User ID si aún está cargando o es nulo/vacío
-                      userController.isLoading.value || userController.currentUser.value.id.isEmpty 
-                        ? 'User ID: Loading...'
-                        : 'User ID: ${userController.currentUser.value.id}', 
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Colors.grey))
+                    Text(
+                      'Version v1.0.0 - 4120',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: Colors.grey,
+                          ),
+                    ), // Placeholder por ahora
+                    Obx(
+                      () => Text(
+                        // No mostrar User ID si aún está cargando o es nulo/vacío
+                        userController.isLoading.value ||
+                                userController.currentUser.value.id.isEmpty
+                            ? 'User ID: Loading...'
+                            : 'User ID: ${userController.currentUser.value.id}',
+                        style:
+                            Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  color: Colors.grey,
+                                ),
+                      ),
                     ),
                   ],
                 ),
               ),
-               const SizedBox(height: TSizes.spaceBtwSections),
+              const SizedBox(height: TSizes.spaceBtwSections),
             ],
           ),
         ),
@@ -215,7 +261,10 @@ class SettingsScreen extends StatelessWidget {
   Widget _buildSectionHeader(BuildContext context, String title) {
     return Text(
       title,
-      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+      style: Theme.of(context)
+          .textTheme
+          .titleLarge
+          ?.copyWith(fontWeight: FontWeight.w600),
     );
   }
 }
@@ -237,10 +286,10 @@ class _SettingsListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final titleStyle = Theme.of(context).textTheme.titleMedium?.copyWith(
-      fontWeight: FontWeight.w500,
-      color: textColor
-    );
+    final titleStyle = Theme.of(context)
+        .textTheme
+        .titleMedium
+        ?.copyWith(fontWeight: FontWeight.w500, color: textColor);
 
     // Aplicar Material y borderRadius aquí
     return Material(
@@ -251,21 +300,29 @@ class _SettingsListItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(TSizes.borderRadiusLg),
         child: Container(
           padding: const EdgeInsets.symmetric(
-            horizontal: TSizes.md, 
-            vertical: TSizes.lg 
+            horizontal: TSizes.md,
+            vertical: TSizes.lg,
           ),
           // El Material padre ahora maneja color y borderRadius
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Text(title, style: titleStyle, overflow: TextOverflow.ellipsis)
+                child: Text(
+                  title,
+                  style: titleStyle,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              const Icon(Iconsax.arrow_right_1, size: TSizes.iconMx, color: TColors.colorBlack),
+              const Icon(
+                Iconsax.arrow_right_1,
+                size: TSizes.iconMx,
+                color: TColors.colorBlack,
+              ),
             ],
           ),
         ),
       ),
     );
   }
-} 
+}

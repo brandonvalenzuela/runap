@@ -26,7 +26,8 @@ class LocationService {
     const locationSettings = LocationSettings(
       accuracy: LocationAccuracy.high,
       distanceFilter: 8, // Aumentar a 8 metros para reducir eventos
-      timeLimit: Duration(seconds: 2), // Máximo una actualización cada 2 segundos
+      timeLimit:
+          Duration(seconds: 2), // Máximo una actualización cada 2 segundos
     );
 
     // Añadir log para confirmar inicio
@@ -43,8 +44,9 @@ class LocationService {
       }
 
       final latLng = LatLng(position.latitude, position.longitude);
-      print("📍 LocationService - Nueva posición: $latLng (precisión: ${position.accuracy}m)");
-      
+      print(
+          "📍 LocationService - Nueva posición: $latLng (precisión: ${position.accuracy}m)");
+
       onLocationUpdate(latLng);
       onMetricsUpdate(position);
     });
@@ -57,10 +59,11 @@ class LocationService {
 
   void updateMetrics(WorkoutData data, Position currentPosition) {
     // Imprimir datos para depuración
-    print("📊 Actualizando métricas. Velocidad GPS: ${currentPosition.speed} m/s");
-    
+    print(
+        "📊 Actualizando métricas. Velocidad GPS: ${currentPosition.speed} m/s");
+
     bool shouldAddDistance = true;
-    
+
     if (data.previousPosition != null && data.previousTime != null) {
       // Calcular distancia entre posiciones
       double distance = Geolocator.distanceBetween(
@@ -77,7 +80,7 @@ class LocationService {
 
       // Calcular velocidad instantánea en m/s
       double instantSpeed = distance / timeSeconds;
-      
+
       // MEJORADO: Filtrado más completo
       if (distance > 100) {
         // Filtro 1: Saltos demasiado grandes
@@ -85,7 +88,8 @@ class LocationService {
         shouldAddDistance = false;
       } else if (instantSpeed > 8.3) {
         // Filtro 2: Velocidad irreal (> 30 km/h)
-        print("⚠️ Velocidad irreal ignorada: ${(instantSpeed * 3.6).toStringAsFixed(1)} km/h");
+        print(
+            "⚠️ Velocidad irreal ignorada: ${(instantSpeed * 3.6).toStringAsFixed(1)} km/h");
         shouldAddDistance = false;
       } else if (distance < 1.0 && timeSeconds < 1.0) {
         // Filtro 3: Micromovimientos por imprecisión del GPS
@@ -97,7 +101,8 @@ class LocationService {
         // Considerar si añadir o no esta distancia según el contexto
         if (distance > currentPosition.accuracy * 0.5) {
           // Si la distancia es significativamente mayor que la imprecisión, añadirla
-          print("✅ Distancia considerada significativa a pesar de la baja precisión");
+          print(
+              "✅ Distancia considerada significativa a pesar de la baja precisión");
         } else {
           shouldAddDistance = false;
         }
@@ -111,23 +116,25 @@ class LocationService {
         // Calcular velocidad en m/s solo si hay distancia medible
         if (distance > 0 && timeSeconds > 0) {
           double instantSpeed = distance / timeSeconds;
-          
+
           // Aplicar filtro de suavizado para evitar fluctuaciones bruscas
           if (data.speedMetersPerSecond > 0) {
-            // 70% valor anterior + 30% nueva medición 
-            data.speedMetersPerSecond = data.speedMetersPerSecond * 0.7 + instantSpeed * 0.3;
+            // 70% valor anterior + 30% nueva medición
+            data.speedMetersPerSecond =
+                data.speedMetersPerSecond * 0.7 + instantSpeed * 0.3;
           } else {
             // Primera medición
             data.speedMetersPerSecond = instantSpeed;
           }
-          
+
           // Imprimir velocidad calculada
           print("🏃‍♂️ Velocidad actual: ${data.speedMetersPerSecond} m/s");
           print("🏃‍♂️ Ritmo actual: ${data.getPaceFormatted()} min/km");
         }
       }
     } else {
-      print("⚠️ Primera medición - no hay datos previos para calcular métricas");
+      print(
+          "⚠️ Primera medición - no hay datos previos para calcular métricas");
     }
 
     // Actualizar posición y tiempo previos para la siguiente medición
@@ -136,40 +143,44 @@ class LocationService {
 
     // Si hay un salto grande pero estamos en medio de un entrenamiento activo,
     // podríamos interpolar puntos para mantener la continuidad
-    if (!shouldAddDistance && data.isWorkoutActive && data.polylineCoordinates.length > 5) {
+    if (!shouldAddDistance &&
+        data.isWorkoutActive &&
+        data.polylineCoordinates.length > 5) {
       final distance = Geolocator.distanceBetween(
-        data.previousPosition!.latitude,
-        data.previousPosition!.longitude,
-        currentPosition.latitude,
-        currentPosition.longitude
-      );
+          data.previousPosition!.latitude,
+          data.previousPosition!.longitude,
+          currentPosition.latitude,
+          currentPosition.longitude);
 
-      if (distance > 100 && distance < 500) { // Salto grande pero aún plausible
+      if (distance > 100 && distance < 500) {
+        // Salto grande pero aún plausible
         // Interpolar puntos entre la última posición conocida y la actual
         final lastPoint = LatLng(
-          data.previousPosition!.latitude,
-          data.previousPosition!.longitude
-        );
-        final currentPoint = LatLng(currentPosition.latitude, currentPosition.longitude);
-        
+            data.previousPosition!.latitude, data.previousPosition!.longitude);
+        final currentPoint =
+            LatLng(currentPosition.latitude, currentPosition.longitude);
+
         // Número de puntos a interpolar basado en la distancia
         final pointsToAdd = (distance / 20).round(); // Un punto cada ~20m
-        
-        if (pointsToAdd > 1 && pointsToAdd < 20) { // Límite razonable
+
+        if (pointsToAdd > 1 && pointsToAdd < 20) {
+          // Límite razonable
           for (int i = 1; i < pointsToAdd; i++) {
             final fraction = i / pointsToAdd;
-            final interpolatedLat = lastPoint.latitude + 
+            final interpolatedLat = lastPoint.latitude +
                 (currentPoint.latitude - lastPoint.latitude) * fraction;
-            final interpolatedLng = lastPoint.longitude + 
+            final interpolatedLng = lastPoint.longitude +
                 (currentPoint.longitude - lastPoint.longitude) * fraction;
-            
-            data.polylineCoordinates.add(LatLng(interpolatedLat, interpolatedLng));
-            
+
+            data.polylineCoordinates
+                .add(LatLng(interpolatedLat, interpolatedLng));
+
             // Añadir distancia interpolada
             data.distanceMeters += distance / pointsToAdd;
           }
-          
-          print("🔄 Interpolados $pointsToAdd puntos para mantener continuidad de ruta");
+
+          print(
+              "🔄 Interpolados $pointsToAdd puntos para mantener continuidad de ruta");
           data.updatePolyline();
         }
       }

@@ -15,7 +15,7 @@ import 'package:runap/features/gamification/presentation/manager/binding/gamific
 
 // Punto de entrada de la aplicación
 Future<void> main() async {
-  // --- 1. Inicializar WidgetsBinding --- 
+  // --- 1. Inicializar WidgetsBinding ---
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
 
   // --- 2. Mantener SplashScreen hasta que estemos listos ---
@@ -24,7 +24,7 @@ Future<void> main() async {
   // --- 3. Inicializar GetStorage (persistencia local) ---
   await GetStorage.init();
   log("GetStorage Initialized"); // Mensaje opcional
-  
+
   // --- 4. Configurar orientación preferida (solo portrait) ---
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -48,13 +48,14 @@ Future<void> main() async {
   bool firebaseInitialized = false;
   try {
     await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform
-    ).then(
+            options: DefaultFirebaseOptions.currentPlatform)
+        .then(
       (FirebaseApp value) {
         // Configurar la persistencia de Firestore ANTES de usar Firestore por primera vez
         FirebaseFirestore.instance.settings = const Settings(
           persistenceEnabled: true,
-          cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED, // Maximizar caché para modo offline
+          cacheSizeBytes: Settings
+              .CACHE_SIZE_UNLIMITED, // Maximizar caché para modo offline
         );
         log("Firestore Persistence Enabled");
 
@@ -68,7 +69,7 @@ Future<void> main() async {
   } catch (e, stackTrace) {
     // Captura cualquier error durante la inicialización de Firebase
     log("Firebase Initialization Failed", error: e, stackTrace: stackTrace);
-    
+
     // Incluso con error, intentamos inicializar el AuthenticationRepository
     // para que maneje el estado offline/error por sí mismo
     if (!firebaseInitialized) {

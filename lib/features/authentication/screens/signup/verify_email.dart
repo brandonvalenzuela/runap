@@ -26,8 +26,9 @@ class VerifyEmailScreen extends StatelessWidget {
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
-              onPressed: () => AuthenticationRepository.instance.logout(),
-              icon: const Icon(CupertinoIcons.clear))
+            onPressed: () => AuthenticationRepository.instance.logout(),
+            icon: const Icon(CupertinoIcons.clear),
+          )
         ],
       ),
       body: SingleChildScrollView(
@@ -65,10 +66,12 @@ class VerifyEmailScreen extends StatelessWidget {
 
               /// Buttons
               SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                      onPressed: () => controller.checkEmailVerificationStatus(),
-                      child: const Text(TTexts.tContinue))),
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => controller.checkEmailVerificationStatus(),
+                  child: const Text(TTexts.tContinue),
+                ),
+              ),
               const SizedBox(height: TSizes.spaceBtwItems),
               SizedBox(
                 width: double.infinity,
