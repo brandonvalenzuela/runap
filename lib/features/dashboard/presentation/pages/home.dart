@@ -564,21 +564,13 @@ class _HomeScreenState extends State<HomeScreen>
           padding:
               const EdgeInsets.symmetric(horizontal: TSizes.spaceBtwItems, vertical: TSizes.sm),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 "Entrenamientos de la semana",
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
-              ),
-              const Spacer(),
-              IconButton(
-                icon: const Icon(Iconsax.map_1, size: 20),
-                tooltip: 'Abrir Mapa',
-                onPressed: () {
-                  TDiviceUtility.vibrateLight();
-                  Get.to(() => MapScreen(), transition: Transition.upToDown);
-                },
               ),
             ],
           ),
@@ -902,76 +894,236 @@ class _HomeContentWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _DashboardHeaderCard(
-          dashboard: viewModel.trainingData!.dashboard,
-          slideHeaderAnimation: slideHeaderAnimation,
-          fadeHeaderAnimation: fadeHeaderAnimation,
-          fadeProgressAnimation: fadeProgressAnimation,
-          headerAnimationDuration: headerAnimationDuration,
-          progressAnimationDuration: progressAnimationDuration,
-          cardBorderRadius: cardBorderRadius,
+    // Calcular la altura estimada del título + padding vertical
+    // Necesitamos esto para el delegate. Ajusta si es necesario.
+    final double titleHeaderHeight = 50.0;
+
+    // --- Reemplazar Column por CustomScrollView ---
+    return CustomScrollView(
+      slivers: [
+        // --- Encabezado del Dashboard como Sliver (se desplaza) ---
+        SliverToBoxAdapter(
+          child: _DashboardHeaderCard(
+            dashboard: viewModel.trainingData!.dashboard,
+            slideHeaderAnimation: slideHeaderAnimation,
+            fadeHeaderAnimation: fadeHeaderAnimation,
+            fadeProgressAnimation: fadeProgressAnimation,
+            headerAnimationDuration: headerAnimationDuration,
+            progressAnimationDuration: progressAnimationDuration,
+            cardBorderRadius: cardBorderRadius,
+          ),
         ),
-        _buildUpcomingSessionsTitle(context),
-        _SessionsListView(
-          sessions: sessions,
-          dayFormatter: dayFormatter,
-          monthFormatter: monthFormatter,
-          weekdayFormatter: weekdayFormatter,
-          listItemAnimationDuration: listItemAnimationDuration,
-          cardAnimationDuration: cardAnimationDuration,
-          cardBorderRadius: cardBorderRadius,
-          listItemShadowOpacity: listItemShadowOpacity,
-          listItemShadowBlur: listItemShadowBlur,
-          listItemShadowSpread: listItemShadowSpread,
-          listItemShadowOffset: listItemShadowOffset,
+        // --- Título "Entrenamientos de la semana" como Sliver PERSISTENTE ---
+        SliverPersistentHeader(
+          pinned: true, // <-- La clave para que se quede fijo
+          delegate: _StickyTitleDelegate(
+            height: titleHeaderHeight,
+            // Pasamos el widget que construye el título
+            child: Row( // Recreamos el Row aquí
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  "Entrenamientos de la semana",
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // --- Lista de Sesiones como SliverList (se desplaza debajo del título) ---
+        _buildSliverSessionsList( // Nuevo método para construir SliverList
+          context,
+          sessions,
+          dayFormatter,
+          monthFormatter,
+          weekdayFormatter,
+          listItemAnimationDuration,
+          cardAnimationDuration,
+          cardBorderRadius,
+          listItemShadowOpacity,
+          listItemShadowBlur,
+          listItemShadowSpread,
+          listItemShadowOffset,
         ),
       ],
     );
   }
 
-  Widget _buildUpcomingSessionsTitle(BuildContext context) {
-    return FadeTransition(
-      opacity: fadeTitleAnimation,
-      child: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(1.0, 0.0),
-          end: Offset.zero,
-        ).animate(
-          CurvedAnimation(
-            parent: controller,
-            curve: const Interval(0.3, 0.4, curve: Curves.easeOut),
+  // --- NUEVO MÉTODO para construir SliverList --- 
+  Widget _buildSliverSessionsList(
+    BuildContext context,
+    List<Session> sessions,
+    DateFormat dayFormatter,
+    DateFormat monthFormatter,
+    DateFormat weekdayFormatter,
+    Duration listItemAnimationDuration,
+    Duration cardAnimationDuration,
+    double cardBorderRadius,
+    double listItemShadowOpacity,
+    double listItemShadowBlur,
+    double listItemShadowSpread,
+    double listItemShadowOffset,
+  ) {
+    // Lógica existente de agrupación y creación de items
+    final sortedSessions = List<Session>.from(sessions)..sort((a, b) => a.sessionDate.compareTo(b.sessionDate));
+    final groupedSessions = groupBy<Session, DateTime>(
+      sortedSessions,
+      (session) => DateTime(session.sessionDate.year, session.sessionDate.month, session.sessionDate.day),
+    );
+
+    List<Widget> listItems = [];
+    int animationIndex = 0;
+    final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final tomorrow = DateTime(today.year, today.month, today.day + 1);
+
+    groupedSessions.forEach((date, sessionsOnDate) {
+      String label = '';
+      if (date == today) {
+        label = 'Hoy';
+      } else if (date == tomorrow) {
+        label = 'Mañana';
+      }
+
+      // Añadir Header
+      listItems.add(
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: TSizes.spaceBtwItems),
+          child: _buildAnimatedListItem(
+            index: animationIndex++,
+            duration: listItemAnimationDuration,
+            verticalOffset: 30.0,
+            child: DashboardDateHeader(
+              day: dayFormatter.format(date),
+              month: monthFormatter.format(date).replaceAll('.', '').capitalizeFirst ?? monthFormatter.format(date),
+              weekday: weekdayFormatter.format(date).capitalizeFirst ?? weekdayFormatter.format(date),
+              label: label,
+            ),
           ),
+        )
+      );
+      // Añadir SizedBox para espacio DESPUÉS del header, antes de las cards
+      listItems.add(const SizedBox(height: TSizes.spaceBtwItems)); // Espacio entre header y cards
+
+      // Añadir Cards
+      for (var session in sessionsOnDate) {
+        final isPast = session.sessionDate.isBefore(DateTime.now());
+        listItems.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: TSizes.spaceBtwItems),
+            child: _buildAnimatedListItem(
+              index: animationIndex++,
+              duration: cardAnimationDuration,
+              verticalOffset: 50.0,
+              child: _buildTrainingCardItem(session, isPast, cardBorderRadius, listItemShadowOpacity, listItemShadowBlur, listItemShadowSpread, listItemShadowOffset),
+            ),
+          )
+        );
+         // Añadir SizedBox para espacio DESPUÉS de cada card
+        listItems.add(const SizedBox(height: TSizes.spaceBtwSections * 0.8));
+      }
+      // Quitar el último SizedBox después del último grupo de cards (opcional, si se prefiere padding inferior en CustomScrollView)
+      // if (listItems.isNotEmpty && listItems.last is SizedBox) {
+      //   listItems.removeLast();
+      // }
+    });
+
+    // Devolver SliverList usando los items pre-construidos
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (BuildContext context, int index) {
+          return listItems[index];
+        },
+        childCount: listItems.length,
+      ),
+    );
+  }
+
+  // Helper para construir un item de lista animado (sin cambios)
+  Widget _buildAnimatedListItem({
+    required int index,
+    required Duration duration,
+    required double verticalOffset,
+    required Widget child,
+  }) {
+    return AnimationConfiguration.staggeredList(
+      position: index,
+      duration: duration,
+      child: SlideAnimation(
+        verticalOffset: verticalOffset,
+        child: FadeInAnimation(
+          child: child,
         ),
-        child: Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: TSizes.spaceBtwItems, vertical: TSizes.sm),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween, // Asegura espacio entre texto y botón
-            children: [
-              Text(
-                "Entrenamientos de la semana",
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              IconButton(
-                icon: const Icon(Iconsax.map_1, size: 20),
-                tooltip: 'Abrir Mapa', // Añadir tooltip para accesibilidad
-                onPressed: () {
-                  TDiviceUtility.vibrateLight();
-                  Get.to(() => MapScreen(), transition: Transition.upToDown);
-                },
-              ),
-            ],
+      ),
+    );
+  }
+
+  // Helper para construir el contenedor y la TrainingCard (adaptado para parámetros)
+  Widget _buildTrainingCardItem(Session session, bool isPast, double cardBorderRadius, double listItemShadowOpacity, double listItemShadowBlur, double listItemShadowSpread, double listItemShadowOffset) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(cardBorderRadius),
+        boxShadow: [
+          BoxShadow(
+            color: TColors.colorBlack.withAlpha((listItemShadowOpacity * 255).round()),
+            blurRadius: listItemShadowBlur,
+            offset: Offset(0, listItemShadowOffset),
+            spreadRadius: listItemShadowSpread,
           ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(cardBorderRadius),
+        child: TrainingCard(
+          session: session,
+          showBorder: false,
+          isPast: isPast,
         ),
       ),
     );
   }
 }
+
+// --- Delegado para el Header Persistente del Título ---
+class _StickyTitleDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+  final double height;
+
+  _StickyTitleDelegate({required this.child, required this.height});
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    // Simplemente construimos el widget hijo. Podríamos añadir un Container
+    // con color de fondo si quisiéramos que opaque el contenido al hacer scroll.
+    return Container(
+       color: Theme.of(context).scaffoldBackgroundColor, // Color de fondo del Scaffold
+       padding: const EdgeInsets.symmetric(horizontal: TSizes.spaceBtwItems, vertical: TSizes.sm), // Mismo padding que el original
+       alignment: Alignment.center, // Centrar el contenido (el Row interno ya centra el texto)
+      child: child,
+    );
+  }
+
+  @override
+  double get maxExtent => height; // Altura máxima cuando está expandido
+
+  @override
+  double get minExtent => height; // Altura mínima cuando está fijo (pinned)
+
+  @override
+  bool shouldRebuild(covariant _StickyTitleDelegate oldDelegate) {
+    // Reconstruir solo si el hijo o la altura cambian
+    return child != oldDelegate.child || height != oldDelegate.height;
+  }
+}
+
+// Eliminar la clase _SessionsListView ya que su lógica está ahora en _buildSliverSessionsList
+/*
+class _SessionsListView extends StatelessWidget {
+ // ... contenido anterior ...
+}
+*/
 
 // --- NUEVO WIDGET: Encabezado del Dashboard Expandible ---
 
@@ -1281,155 +1433,3 @@ class _DashboardHeaderCardState extends State<_DashboardHeaderCard> with SingleT
   }
 
 } // Fin de _DashboardHeaderCardState
-
-// --- NUEVO WIDGET: Lista de Sesiones con Animaciones ---
-class _SessionsListView extends StatelessWidget {
-  final List<Session> sessions;
-  final DateFormat dayFormatter;
-  final DateFormat monthFormatter;
-  final DateFormat weekdayFormatter;
-  final Duration listItemAnimationDuration;
-  final Duration cardAnimationDuration;
-  final double cardBorderRadius;
-  final double listItemShadowOpacity;
-  final double listItemShadowBlur;
-  final double listItemShadowSpread;
-  final double listItemShadowOffset;
-
-  const _SessionsListView({
-    required this.sessions,
-    required this.dayFormatter,
-    required this.monthFormatter,
-    required this.weekdayFormatter,
-    required this.listItemAnimationDuration,
-    required this.cardAnimationDuration,
-    required this.cardBorderRadius,
-    required this.listItemShadowOpacity,
-    required this.listItemShadowBlur,
-    required this.listItemShadowSpread,
-    required this.listItemShadowOffset,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    // Ordenar sesiones por fecha (asegurarse de que estén ordenadas)
-    final sortedSessions = List<Session>.from(sessions)..sort((a, b) => a.sessionDate.compareTo(b.sessionDate));
-
-    // Agrupar sesiones por día (ignorando la hora)
-    final groupedSessions = groupBy<Session, DateTime>(
-      sortedSessions,
-      (session) => DateTime(session.sessionDate.year, session.sessionDate.month, session.sessionDate.day),
-    );
-
-    // Crear la lista de widgets (headers y cards)
-    List<Widget> listItems = [];
-    int animationIndex = 0; // Índice para la animación escalonada
-
-    final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
-    final tomorrow = DateTime(today.year, today.month, today.day + 1);
-
-    groupedSessions.forEach((date, sessionsOnDate) {
-      // Determinar etiqueta: "Hoy", "Mañana" o vacía
-      String label = '';
-      if (date == today) {
-        label = 'Hoy';
-      } else if (date == tomorrow) {
-        label = 'Mañana';
-      }
-
-      // Añadir el Header para este día
-      listItems.add(
-        _buildAnimatedListItem(
-          index: animationIndex++,
-          duration: listItemAnimationDuration,
-          verticalOffset: 30.0,
-          child: DashboardDateHeader(
-            day: dayFormatter.format(date),
-            month: monthFormatter.format(date).replaceAll('.', '').capitalizeFirst ?? monthFormatter.format(date),
-            weekday: weekdayFormatter.format(date).capitalizeFirst ?? weekdayFormatter.format(date),
-            label: label,
-          ),
-        )
-      );
-
-      // Añadir las TrainingCards para este día
-      for (var session in sessionsOnDate) {
-        final isPast = session.sessionDate.isBefore(DateTime.now()); // Considerar hora aquí
-
-        listItems.add(
-          _buildAnimatedListItem(
-            index: animationIndex++,
-            duration: cardAnimationDuration,
-            verticalOffset: 50.0,
-            child: _buildTrainingCardItem(session, isPast),
-          )
-        );
-      }
-      // Añadir un SizedBox después de cada grupo de tarjetas del día para espaciado
-      listItems.add(SizedBox(height: TSizes.spaceBtwSections * 0.8));
-    });
-
-    // Remover el último SizedBox si existe y si la lista no está vacía
-    if (listItems.isNotEmpty && listItems.last is SizedBox) {
-      listItems.removeLast();
-    }
-
-    // Devolver el ListView animado
-    return Expanded(
-      child: AnimationLimiter(
-        child: ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: TSizes.spaceBtwItems)
-                   .copyWith(bottom: TSizes.defaultSpace),
-          itemCount: listItems.length,
-          itemBuilder: (context, index) {
-            return listItems[index];
-          },
-        ),
-      ),
-    );
-  }
-
-  // Helper para construir un item de lista animado
-  Widget _buildAnimatedListItem({
-    required int index,
-    required Duration duration,
-    required double verticalOffset,
-    required Widget child,
-  }) {
-    return AnimationConfiguration.staggeredList(
-      position: index,
-      duration: duration,
-      child: SlideAnimation(
-        verticalOffset: verticalOffset,
-        child: FadeInAnimation(
-          child: child,
-        ),
-      ),
-    );
-  }
-
-  // Helper para construir el contenedor y la TrainingCard
-  Widget _buildTrainingCardItem(Session session, bool isPast) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(cardBorderRadius),
-        boxShadow: [
-          BoxShadow(
-            color: TColors.colorBlack.withAlpha((listItemShadowOpacity * 255).round()),
-            blurRadius: listItemShadowBlur,
-            offset: Offset(0, listItemShadowOffset),
-            spreadRadius: listItemShadowSpread,
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(cardBorderRadius),
-        child: TrainingCard(
-          session: session,
-          showBorder: false,
-          isPast: isPast,
-        ),
-      ),
-    );
-  }
-}

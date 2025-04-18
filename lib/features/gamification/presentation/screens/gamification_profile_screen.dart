@@ -8,28 +8,101 @@ import 'package:runap/features/gamification/presentation/manager/gamification_vi
 // --- Importaciones para Skeletons ---
 import 'package:runap/common/widgets/loaders/skeleton_loader.dart'; // Ajusta la ruta si es necesario
 import 'package:shimmer/shimmer.dart';
+// --- Import para Animaciones ---
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
-class GamificationProfileScreen extends StatelessWidget {
+class GamificationProfileScreen extends StatefulWidget {
   const GamificationProfileScreen({super.key});
 
   @override
+  State<GamificationProfileScreen> createState() => _GamificationProfileScreenState();
+}
+
+class _GamificationProfileScreenState extends State<GamificationProfileScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimationLevel;
+  late Animation<Offset> _slideAnimationAchievements;
+  late Animation<Offset> _slideAnimationChallenges;
+
+  final GamificationViewModel viewModel = Get.find<GamificationViewModel>();
+  bool _animationStarted = false; // Flag para iniciar animación solo una vez
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOut,
+    );
+
+    _slideAnimationLevel = Tween<Offset>(begin: Offset(0.0, -0.3), end: Offset.zero).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Interval(0.0, 0.6, curve: Curves.easeOutCubic),
+      ),
+    );
+
+    _slideAnimationAchievements = Tween<Offset>(begin: Offset(-0.5, 0.0), end: Offset.zero).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Interval(0.2, 0.8, curve: Curves.easeOutCubic),
+      ),
+    );
+
+    _slideAnimationChallenges = Tween<Offset>(begin: Offset(0.5, 0.0), end: Offset.zero).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Interval(0.4, 1.0, curve: Curves.easeOutCubic),
+      ),
+    );
+
+    // Ya no iniciamos la animación aquí ni usamos 'ever'
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final GamificationViewModel viewModel = Get.find<GamificationViewModel>();
-    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mi Perfil de Progreso'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => viewModel.loadUserData(),
+            onPressed: () {
+               // Reiniciar flag de animación si refrescamos manualmente
+               _animationStarted = false; 
+               _animationController.reset();
+               viewModel.loadUserData();
+            },
           )
         ],
       ),
       body: Obx(() {
-        final profileStatus = viewModel.profileStatus;
-        
-        if (profileStatus == LoadingStatus.loading) {
+        final profileStatusValue = viewModel.profileStatus;
+
+        // Iniciar animación la primera vez que el estado sea 'loaded'
+        if (profileStatusValue == LoadingStatus.loaded && !_animationStarted) {
+          // Usar addPostFrameCallback para asegurar que se llame después del build inicial
+          WidgetsBinding.instance.addPostFrameCallback((_) { 
+            if (mounted) { // Comprobar si sigue montado
+              _animationController.forward();
+              _animationStarted = true;
+            }
+          });
+        }
+
+        if (profileStatusValue == LoadingStatus.loading) {
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -45,45 +118,71 @@ class GamificationProfileScreen extends StatelessWidget {
           );
         }
         
-        if (profileStatus == LoadingStatus.error) {
+        if (profileStatusValue == LoadingStatus.error) {
           return Center(
             child: Text('Error: ${viewModel.errorMessage}'),
           );
         }
         
         final profile = viewModel.profile;
-        if (profile == null) {
+        if (profile == null && profileStatusValue != LoadingStatus.loading) {
           return const Center(
             child: Text('No se encontró información de perfil'),
           );
         }
+
+        // Evitar mostrar contenido brevemente si profile es null mientras carga
+        if (profile == null) {
+            return const Center(child: CircularProgressIndicator()); // O mostrar Skeleton
+        }
         
+        // --- El contenido principal ahora se anima --- 
         return RefreshIndicator(
-          onRefresh: () => viewModel.loadUserData(),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Sección de nivel y puntos
-                _buildLevelSection(profile.totalPoints, profile.level),
-                
-                const SizedBox(height: 24),
-                
-                // Sección de logros recientes
-                _buildRecentAchievementsSection(
-                  profile.recentAchievements ?? [], 
-                  profile.achievementsCount
-                ),
-                
-                const SizedBox(height: 24),
-                
-                // Sección de retos activos
-                _buildActiveChallengesSection(
-                  profile.activeChallenges ?? [],
-                  profile.challengesCompletedCount
-                ),
-              ],
+          onRefresh: () async {
+            _animationStarted = false;
+            _animationController.reset();
+            await viewModel.loadUserData();
+          },
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Sección de nivel y puntos con animación
+                  SlideTransition(
+                    position: _slideAnimationLevel,
+                    child: _buildLevelSection(profile.totalPoints, profile.level),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Sección de logros recientes con animación escalonada
+                  SlideTransition(
+                    position: _slideAnimationAchievements,
+                    child: AnimationLimiter( // Envolver con AnimationLimiter
+                      child: _buildRecentAchievementsSection(
+                        profile.recentAchievements ?? [], 
+                        profile.achievementsCount
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Sección de retos activos con animación escalonada
+                  SlideTransition(
+                    position: _slideAnimationChallenges,
+                    child: AnimationLimiter( // Envolver con AnimationLimiter
+                      child: _buildActiveChallengesSection(
+                        profile.activeChallenges ?? [],
+                        profile.challengesCompletedCount
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -262,7 +361,17 @@ class GamificationProfileScreen extends StatelessWidget {
                 itemCount: achievements.length > 3 ? 3 : achievements.length,
                 itemBuilder: (context, index) {
                   final achievement = achievements[index];
-                  return _buildAchievementCard(achievement);
+                  // Añadir widget de animación escalonada
+                  return AnimationConfiguration.staggeredList(
+                    position: index,
+                    duration: const Duration(milliseconds: 375),
+                    child: SlideAnimation(
+                      verticalOffset: 50.0,
+                      child: FadeInAnimation(
+                        child: _buildAchievementCard(achievement),
+                      ),
+                    ),
+                  );
                 },
               ),
       ],
@@ -372,7 +481,17 @@ class GamificationProfileScreen extends StatelessWidget {
                 itemCount: challenges.length > 3 ? 3 : challenges.length,
                 itemBuilder: (context, index) {
                   final challenge = challenges[index];
-                  return _buildChallengeCard(challenge);
+                   // Añadir widget de animación escalonada
+                  return AnimationConfiguration.staggeredList(
+                    position: index,
+                    duration: const Duration(milliseconds: 375),
+                    child: SlideAnimation(
+                      verticalOffset: 50.0,
+                      child: FadeInAnimation(
+                        child: _buildChallengeCard(challenge),
+                      ),
+                    ),
+                  );
                 },
               ),
       ],

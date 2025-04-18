@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart'; // Importar Iconsax
@@ -56,8 +58,8 @@ class SurveyScreen extends GetView<SurveyController> {
                           Builder(
                             builder: (context) {
                               // --- Logs de depuración ---
-                              print("📊 [SURVEY_DEBUG] Index: ${currentIndex}");
-                              print("📊 [SURVEY_DEBUG] Total Preguntas: ${totalQuestions}");
+                              print("📊 [SURVEY_DEBUG] Index: $currentIndex");
+                              print("📊 [SURVEY_DEBUG] Total Preguntas: $totalQuestions");
                               print("📊 [SURVEY_DEBUG] ID Pregunta: ${currentQuestion.id}");
                               print("📊 [SURVEY_DEBUG] Texto Original: ${currentQuestion.text}");
                               final processedText = _getProcessedQuestionText(currentQuestion.text);
@@ -348,7 +350,7 @@ class SurveyScreen extends GetView<SurveyController> {
   // Widget para checkboxes de selección múltiple (Refinado)
   Widget _buildMultipleChoiceCheckboxWidget(BuildContext context, QuestionModel question, List<String> selectedOptions) {
      final Color primaryColor = Theme.of(context).primaryColor;
-     final Color selectedBgColor = primaryColor.withOpacity(0.1);
+     final Color selectedBgColor = primaryColor.withAlpha(26);
      final Color unselectedBgColor = Theme.of(context).scaffoldBackgroundColor;
 
      return Column(
@@ -463,13 +465,13 @@ class SurveyScreen extends GetView<SurveyController> {
               trackHeight: 6.0,
               thumbColor: primaryColor,
               thumbShape: RoundSliderThumbShape(enabledThumbRadius: 12.0),
-              overlayColor: primaryColor.withOpacity(0.2),
+              overlayColor: primaryColor.withAlpha(52),
               overlayShape: RoundSliderOverlayShape(overlayRadius: 24.0),
               tickMarkShape: RoundSliderTickMarkShape(tickMarkRadius: 4),
-              activeTickMarkColor: primaryColor.withOpacity(0.5),
+              activeTickMarkColor: primaryColor.withAlpha(127),
               inactiveTickMarkColor: Colors.grey[500],
               valueIndicatorShape: PaddleSliderValueIndicatorShape(),
-              valueIndicatorColor: primaryColor.withOpacity(0.8),
+              valueIndicatorColor: primaryColor.withAlpha(204),
               valueIndicatorTextStyle: TextStyle(
                 color: Colors.white,
               ),

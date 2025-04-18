@@ -14,15 +14,68 @@ import 'dart:math' as math;
 import 'package:runap/features/progress/controllers/progress_controller.dart';
 import 'package:runap/utils/device/device_utility.dart'; 
 import 'package:shimmer/shimmer.dart'; // Importar el paquete shimmer
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
-class ProgressScreen extends StatelessWidget {
+class ProgressScreen extends StatefulWidget {
   const ProgressScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final userController = Get.find<UserController>();
-    final progressController = Get.put(ProgressController());
+  State<ProgressScreen> createState() => _ProgressScreenState();
+}
 
+class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimationBody;
+  late Animation<double> _fadeAnimationHeader;
+  late Animation<Offset> _slideAnimationAvatar;
+  late Animation<Offset> _slideAnimationUserInfo;
+
+  // Controllers que se necesitan en build
+  final UserController userController = Get.find<UserController>();
+  final ProgressController progressController = Get.put(ProgressController());
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+
+    _fadeAnimationBody = CurvedAnimation(
+      parent: _animationController,
+      curve: Interval(0.3, 1.0, curve: Curves.easeOut),
+    );
+
+    _fadeAnimationHeader = CurvedAnimation(
+      parent: _animationController,
+      curve: Interval(0.0, 0.5, curve: Curves.easeOut),
+    );
+    _slideAnimationAvatar = Tween<Offset>(begin: Offset(-1.0, 0.0), end: Offset.zero).animate(
+       CurvedAnimation(
+        parent: _animationController,
+        curve: Interval(0.0, 0.6, curve: Curves.easeOutCirc),
+      ),
+    );
+     _slideAnimationUserInfo = Tween<Offset>(begin: Offset(1.0, 0.0), end: Offset.zero).animate(
+       CurvedAnimation(
+        parent: _animationController,
+        curve: Interval(0.1, 0.7, curve: Curves.easeOutCirc),
+      ),
+    );
+
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Mover la lógica que depende de context aquí
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final headerBgColor = isDarkMode ? TColors.darkerGrey : TColors.secondaryColor;
     final defaultBgColor = isDarkMode ? TColors.colorBlack : Colors.white;
@@ -32,6 +85,7 @@ class ProgressScreen extends StatelessWidget {
     final sectionBgColor = isDarkMode ? TColors.darkerGrey : TColors.lightGrey.withAlpha(100);
     final textColor = isDarkMode ? TColors.light : TColors.colorBlack;
 
+    // Constantes de texto que pueden permanecer aquí
     const userGoalText = 'Lose weight';
     const dailyCalories = '2055 Cal / d';
     const startWeight = '85.0 kg';
@@ -74,69 +128,78 @@ class ProgressScreen extends StatelessWidget {
                 ],
                 flexibleSpace: FlexibleSpaceBar(
                   collapseMode: CollapseMode.pin,
-                  background: Container(
-                    color: headerBgColor,
-                    padding: const EdgeInsets.only(
-                      right: TSizes.defaultSpace,
-                      left: TSizes.defaultSpace,
-                      bottom: TSizes.defaultSpace
-      ),
-      child: Obx(() => Row(
-        children: [
-          GestureDetector(
-            onTap: () {
-              TDiviceUtility.vibrateMedium();
-              Get.to(() => const ProfileScreen(), transition: Transition.rightToLeft);
-            },
-            child: TCircularImage(
-              image: userController.profilePicture.isNotEmpty
-                ? userController.profilePicture
-                : TImages.userIcon, 
-              width: 80,
-              height: 80,
-              isNetworkImage: userController.profilePicture.isNotEmpty,
-              backgroundColor: TColors.lightContainer,
-            ),
-          ),
-          const SizedBox(width: TSizes.spaceBtwItems),
-          Expanded(
-            child: GestureDetector(
-              onTap: () {
-                TDiviceUtility.vibrateMedium();
-                Get.to(() => const ProfileScreen(), transition: Transition.rightToLeft);
-              },
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    userController.fullName, 
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                                  userGoalText, 
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.black54),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: TSizes.xs),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: TSizes.sm, vertical: TSizes.xs / 2),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(TSizes.borderRadiusXl),
+                  background: FadeTransition(
+                    opacity: _fadeAnimationHeader,
+                    child: Container(
+                      color: headerBgColor,
+                      padding: const EdgeInsets.only(
+                        right: TSizes.defaultSpace,
+                        left: TSizes.defaultSpace,
+                        bottom: TSizes.defaultSpace
+                      ),
+                      child: Obx(() => Row(
+                        children: [
+                          SlideTransition(
+                            position: _slideAnimationAvatar,
+                            child: GestureDetector(
+                              onTap: () {
+                                TDiviceUtility.vibrateMedium();
+                                Get.to(() => const ProfileScreen(), transition: Transition.rightToLeft);
+                              },
+                              child: TCircularImage(
+                                image: userController.profilePicture.isNotEmpty
+                                  ? userController.profilePicture
+                                  : TImages.userIcon,
+                                width: 80,
+                                height: 80,
+                                isNetworkImage: userController.profilePicture.isNotEmpty,
+                                backgroundColor: TColors.lightContainer,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: TSizes.spaceBtwItems),
+                          Expanded(
+                            child: SlideTransition(
+                              position: _slideAnimationUserInfo,
+                              child: GestureDetector(
+                                onTap: () {
+                                   TDiviceUtility.vibrateMedium();
+                                   Get.to(() => const ProfileScreen(), transition: Transition.rightToLeft);
+                                },
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      userController.fullName,
+                                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      userGoalText,
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.black54),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: TSizes.xs),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: TSizes.sm, vertical: TSizes.xs / 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(TSizes.borderRadiusXl),
+                                      ),
+                                      child: Text(
+                                        dailyCalories,
+                                        style: Theme.of(context).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )),
                     ),
-                    child: Text(
-                                    dailyCalories,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-                      ],
-                    )),
                   ),
                 ),
                 bottom: TabBar(
@@ -157,11 +220,14 @@ class ProgressScreen extends StatelessWidget {
               ),
             ];
           },
-          body: TabBarView(
-            children: [
-              _buildWeightTabContent(context, progressController, chartGridColor, chartLineColor, chartBackgroundColor, textColor),
-              _buildNutritionTabContent(context, progressController, sectionBgColor, textColor),
-            ],
+          body: FadeTransition(
+            opacity: _fadeAnimationBody,
+            child: TabBarView(
+              children: [
+                _buildWeightTabContent(context, progressController, chartGridColor, chartLineColor, chartBackgroundColor, textColor),
+                _buildNutritionTabContent(context, progressController, sectionBgColor, textColor),
+              ],
+            ),
           ),
         ),
       ),
@@ -178,71 +244,83 @@ class ProgressScreen extends StatelessWidget {
         final history = controller.currentWeightHistory;
         final spots = controller.getWeightChartSpots();
 
-        return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-                _buildWeightMetric(context, '${controller.startWeight.value.toStringAsFixed(1)} kg', 'Start weight'),
-                _buildWeightMetric(context, '${controller.currentWeight.value.toStringAsFixed(1)} kg', 'Current weight'),
-                _buildWeightMetric(context, '${controller.goalWeight.value.toStringAsFixed(1)} kg', 'Goal weight'),
-            ],
-          ),
-          const SizedBox(height: TSizes.spaceBtwSections),
-
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-                onPressed: () {
-                  TDiviceUtility.vibrateMedium();
-                  _showAddWeightDialog(context, controller, null);
-                },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: buttonColor,
-                  foregroundColor: isDarkMode ? TColors.colorBlack : TColors.light,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(TSizes.borderRadiusXl)),
-                  padding: const EdgeInsets.symmetric(vertical: TSizes.smx),
-                  side: BorderSide.none,
+        return AnimationLimiter(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: AnimationConfiguration.toStaggeredList(
+              duration: const Duration(milliseconds: 375),
+              childAnimationBuilder: (widget) => SlideAnimation(
+                verticalOffset: 50.0,
+                child: FadeInAnimation(
+                  child: widget,
+                ),
               ),
-              child: Text('Add a weight entry', style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: isDarkMode ? TColors.colorBlack : TColors.light, fontWeight: FontWeight.bold)),
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                      _buildWeightMetric(context, '${controller.startWeight.value.toStringAsFixed(1)} kg', 'Start weight'),
+                      _buildWeightMetric(context, '${controller.currentWeight.value.toStringAsFixed(1)} kg', 'Current weight'),
+                      _buildWeightMetric(context, '${controller.goalWeight.value.toStringAsFixed(1)} kg', 'Goal weight'),
+                  ],
+                ),
+                const SizedBox(height: TSizes.spaceBtwSections),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                      onPressed: () {
+                        TDiviceUtility.vibrateMedium();
+                        _showAddWeightDialog(context, controller, null);
+                      },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: buttonColor,
+                        foregroundColor: isDarkMode ? TColors.colorBlack : TColors.light,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(TSizes.borderRadiusXl)),
+                        padding: const EdgeInsets.symmetric(vertical: TSizes.smx),
+                        side: BorderSide.none,
+                    ),
+                    child: Text('Add a weight entry', style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: isDarkMode ? TColors.colorBlack : TColors.light, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                const SizedBox(height: TSizes.spaceBtwSections * 1.5),
+
+                Text('Weight', style: Theme.of(context).textTheme.headlineSmall),
+                const SizedBox(height: TSizes.spaceBtwItems),
+                  SizedBox(
+                  height: 200,
+                    child: controller.isLoadingWeight.value
+                       ? _buildChartShimmerPlaceholder(context, 200)
+                       : controller.weightError.value.isNotEmpty 
+                          ? Center(child: Text('Error loading chart', style: TextStyle(color: Colors.red.shade300))) 
+                          : Container(
+                      padding: const EdgeInsets.only(right: TSizes.md, top: TSizes.md, bottom: TSizes.xs),
+                      decoration: BoxDecoration(
+                        color: bgColor,
+                        borderRadius: BorderRadius.circular(TSizes.cardRadiusMd),
+                      ),
+                                  child: _buildWeightLineChartWidget(context, spots, history, controller, gridColor, lineColor, textColor, bgColor)
+                                ),
+                  ),
+                  const SizedBox(height: TSizes.spaceBtwSections * 1.5),
+
+                  Text('Weights saved', style: Theme.of(context).textTheme.headlineSmall),
+                  const SizedBox(height: TSizes.spaceBtwItems),
+
+                  controller.isLoadingWeight.value
+                    ? _buildWeightHistoryShimmerPlaceholder(context)
+                    : controller.weightError.value.isNotEmpty
+                        ? Center(child: Text('Error loading weight history', style: TextStyle(color: Colors.red.shade300)))
+                        : history.isEmpty
+                            ? Center(child: Text('No weight entries yet.', style: TextStyle(color: textColor.withOpacity(0.7))))
+                            : Column(
+                                children: history.map((entry) => _buildWeightHistoryItem(context, entry)).toList(),
+                              ),
+                  const SizedBox(height: TSizes.spaceBtwSections),
+              ],
             ),
           ),
-          const SizedBox(height: TSizes.spaceBtwSections * 1.5),
-
-          Text('Weight', style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: TSizes.spaceBtwItems),
-            SizedBox(
-            height: 200,
-              child: controller.isLoadingWeight.value
-                 ? _buildChartShimmerPlaceholder(context, 200)
-                 : controller.weightError.value.isNotEmpty 
-                    ? Center(child: Text('Error loading chart', style: TextStyle(color: Colors.red.shade300))) 
-                    : Container(
-            padding: const EdgeInsets.only(right: TSizes.md, top: TSizes.md, bottom: TSizes.xs),
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(TSizes.cardRadiusMd),
-            ),
-                        child: _buildWeightLineChartWidget(context, spots, history, controller, gridColor, lineColor, textColor, bgColor)
-                      ),
-            ),
-            const SizedBox(height: TSizes.spaceBtwSections * 1.5),
-
-            Text('Weights saved', style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: TSizes.spaceBtwItems),
-            controller.isLoadingWeight.value
-              ? _buildWeightHistoryShimmerPlaceholder(context)
-              : controller.weightError.value.isNotEmpty
-                  ? Center(child: Text('Error loading weight history', style: TextStyle(color: Colors.red.shade300)))
-                  : history.isEmpty
-                      ? Center(child: Text('No weight entries yet.', style: TextStyle(color: textColor.withOpacity(0.7))))
-                      : Column(
-                          children: history.map((entry) => _buildWeightHistoryItem(context, entry)).toList(),
-                        ),
-            const SizedBox(height: TSizes.spaceBtwSections),
-          ],
         );
       }),
     );
@@ -308,89 +386,100 @@ class ProgressScreen extends StatelessWidget {
         final goalMacros = controller.goalMacroData.value;
         final goalCalories = controller.goalCalories.value;
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(TSizes.md),
-              decoration: BoxDecoration(
-                color: sectionBgColor,
-                borderRadius: BorderRadius.circular(TSizes.cardRadiusMd),
+        return AnimationLimiter(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: AnimationConfiguration.toStaggeredList(
+              duration: const Duration(milliseconds: 375),
+              childAnimationBuilder: (widget) => SlideAnimation(
+                verticalOffset: 50.0,
+                child: FadeInAnimation(
+                  child: widget,
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Reach your goals faster with Premium',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: textColor),
-                    textAlign: TextAlign.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(TSizes.md),
+                  decoration: BoxDecoration(
+                    color: sectionBgColor,
+                    borderRadius: BorderRadius.circular(TSizes.cardRadiusMd),
                   ),
-                  const SizedBox(height: TSizes.spaceBtwItems / 2),
-                  ElevatedButton(
-                    onPressed: () {
-                      TDiviceUtility.vibrateMedium();
-                      Get.to(() => const PlaceholderScreen(title: 'Get More Info'));
-                    },
-                    style: ElevatedButton.styleFrom(backgroundColor: buttonBgColor,
-                      foregroundColor: buttonTextColor,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(TSizes.borderRadiusXl)),
-                      padding: const EdgeInsets.symmetric(vertical: TSizes.smx),
-                      side: BorderSide.none,
-                    ),
-                    child: const Text('Get more info', style: TextStyle(fontWeight: FontWeight.bold)),
-                    
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Reach your goals faster with Premium',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: textColor),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: TSizes.spaceBtwItems / 2),
+                      ElevatedButton(
+                        onPressed: () {
+                          TDiviceUtility.vibrateMedium();
+                          Get.to(() => const PlaceholderScreen(title: 'Get More Info'));
+                        },
+                        style: ElevatedButton.styleFrom(backgroundColor: buttonBgColor,
+                          foregroundColor: buttonTextColor,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(TSizes.borderRadiusXl)),
+                          padding: const EdgeInsets.symmetric(vertical: TSizes.smx),
+                          side: BorderSide.none,
+                        ),
+                        child: const Text('Get more info', style: TextStyle(fontWeight: FontWeight.bold)),
+                        
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: TSizes.spaceBtwSections),
+                ),
+                const SizedBox(height: TSizes.spaceBtwSections),
 
-            Text('Goal (Cal)', style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: textColor)),
-            const SizedBox(height: TSizes.spaceBtwItems),
-            Center(child: _buildTimeToggleButtons(context, controller.selectedCaloriePeriod, controller.changeCaloriePeriod)),
-            const SizedBox(height: TSizes.spaceBtwItems),
-            SizedBox(
-              height: 200,
-              child: controller.isLoadingCalories.value
-                ? _buildChartShimmerPlaceholder(context, 200)
-                : controller.nutritionError.value.isNotEmpty
-                  ? Center(child: Text('Error loading chart', style: TextStyle(color: Colors.red.shade300)))
-                  : _buildCalorieLineChart(context, calorieSpots, sectionBgColor, textColor, goalCalories),
-            ),
-            const SizedBox(height: TSizes.spaceBtwSections),
+                Text('Goal (Cal)', style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: textColor)),
+                const SizedBox(height: TSizes.spaceBtwItems),
+                Center(child: _buildTimeToggleButtons(context, controller.selectedCaloriePeriod, controller.changeCaloriePeriod)),
+                const SizedBox(height: TSizes.spaceBtwItems),
+                SizedBox(
+                  height: 200,
+                  child: controller.isLoadingCalories.value
+                    ? _buildChartShimmerPlaceholder(context, 200)
+                    : controller.nutritionError.value.isNotEmpty
+                      ? Center(child: Text('Error loading chart', style: TextStyle(color: Colors.red.shade300)))
+                      : _buildCalorieLineChart(context, calorieSpots, sectionBgColor, textColor, goalCalories),
+                ),
+                const SizedBox(height: TSizes.spaceBtwSections),
 
-            Text('Macronutrient breakdown (%)', style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: textColor)),
-            const SizedBox(height: TSizes.spaceBtwItems),
-            Center(child: _buildTimeToggleButtons(context, controller.selectedMacroBreakdownPeriod, controller.changeMacroBreakdownPeriod)),
-            const SizedBox(height: TSizes.spaceBtwItems),
-            SizedBox(
-              height: 250,
-              child: controller.isLoadingMacroBreakdown.value
-                ? _buildChartShimmerPlaceholder(context, 250)
-                : controller.nutritionError.value.isNotEmpty
-                  ? Center(child: Text('Error loading chart', style: TextStyle(color: Colors.red.shade300)))
-                  : _buildMacroPieChart(context, currentBreakdownMacros, goalMacros, controller),
-            ),
-            const SizedBox(height: TSizes.sm),
-            _buildMacroLegend(context, controller),
-            const SizedBox(height: TSizes.spaceBtwSections),
+                Text('Macronutrient breakdown (%)', style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: textColor)),
+                const SizedBox(height: TSizes.spaceBtwItems),
+                Center(child: _buildTimeToggleButtons(context, controller.selectedMacroBreakdownPeriod, controller.changeMacroBreakdownPeriod)),
+                const SizedBox(height: TSizes.spaceBtwItems),
+                SizedBox(
+                  height: 250,
+                  child: controller.isLoadingMacroBreakdown.value
+                    ? _buildChartShimmerPlaceholder(context, 250)
+                    : controller.nutritionError.value.isNotEmpty
+                      ? Center(child: Text('Error loading chart', style: TextStyle(color: Colors.red.shade300)))
+                      : _buildMacroPieChart(context, currentBreakdownMacros, goalMacros, controller),
+                ),
+                const SizedBox(height: TSizes.sm),
+                _buildMacroLegend(context, controller),
+                const SizedBox(height: TSizes.spaceBtwSections),
 
-            Text('Macronutrient average (g)', style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: textColor)),
-            const SizedBox(height: TSizes.spaceBtwItems),
-            Center(child: _buildTimeToggleButtons(context, controller.selectedMacroAveragePeriod, controller.changeMacroAveragePeriod)),
-            const SizedBox(height: TSizes.spaceBtwItems),
-            SizedBox(
-              height: 200,
-              child: controller.isLoadingMacroAverage.value
-                ? _buildChartShimmerPlaceholder(context, 200)
-                : controller.nutritionError.value.isNotEmpty
-                  ? Center(child: Text('Error loading chart', style: TextStyle(color: Colors.red.shade300)))
-                  : _buildMacroBarChart(context, currentAverageMacros, goalMacros, controller, textColor),
+                Text('Macronutrient average (g)', style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: textColor)),
+                const SizedBox(height: TSizes.spaceBtwItems),
+                Center(child: _buildTimeToggleButtons(context, controller.selectedMacroAveragePeriod, controller.changeMacroAveragePeriod)),
+                const SizedBox(height: TSizes.spaceBtwItems),
+                SizedBox(
+                  height: 200,
+                  child: controller.isLoadingMacroAverage.value
+                    ? _buildChartShimmerPlaceholder(context, 200)
+                    : controller.nutritionError.value.isNotEmpty
+                      ? Center(child: Text('Error loading chart', style: TextStyle(color: Colors.red.shade300)))
+                      : _buildMacroBarChart(context, currentAverageMacros, goalMacros, controller, textColor),
+                ),
+                const SizedBox(height: TSizes.sm),
+                _buildMacroLegend(context, controller),
+                const SizedBox(height: TSizes.spaceBtwSections),
+              ],
             ),
-            const SizedBox(height: TSizes.sm),
-            _buildMacroLegend(context, controller),
-            const SizedBox(height: TSizes.spaceBtwSections),
-          ],
+          ),
         );
       }),
     );

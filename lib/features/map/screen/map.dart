@@ -15,7 +15,6 @@ import 'package:runap/features/map/models/workout_goal.dart';
 import 'package:runap/utils/constants/colors.dart';
 import 'package:runap/utils/constants/sizes.dart';
 import 'package:runap/utils/helpers/helper_functions.dart';
-import 'package:runap/utils/validators/validation.dart';
 import 'package:runap/features/map/controller/location_permission_controller.dart';
 
 class MapScreen extends StatefulWidget {

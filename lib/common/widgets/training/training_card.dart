@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:runap/common/widgets/notification/notification_controller.dart';
 import 'package:runap/features/map/models/workout_goal.dart';
 import 'package:runap/features/map/screen/map.dart';
 import 'package:runap/features/map/controller/map_controller.dart';
@@ -13,7 +14,6 @@ import 'package:runap/utils/device/device_utility.dart';
 import 'package:runap/utils/helpers/page_transitions.dart';
 import 'dart:async';
 import 'dart:math' as math;
-import 'package:runap/utils/helpers/app_snackbar.dart';
 import 'package:runap/utils/constants/text_strings.dart';
 
 class TrainingCard extends StatefulWidget {
@@ -223,11 +223,9 @@ class _TrainingCardState extends State<TrainingCard>
           now.day == widget.session.sessionDate.day;
 
       if (!isToday) {
-        AppSnackBar.show(
-          context,
-          message: TTexts.onlyTodayTrainings,
-          type: AppSnackBarType.error,
-          title: TTexts.actionNotAllowed,
+        Get.find<NotificationController>().show(
+          TTexts.onlyTodayTrainings,
+          type: NotificationType.error,
         );
         return;
       }
@@ -373,11 +371,9 @@ class _TrainingCardState extends State<TrainingCard>
                   : (isToday
                       ? null
                       : () {
-                          AppSnackBar.show(
-                            context,
-                            message: TTexts.onlyTodayTrainings,
-                            type: AppSnackBarType.error,
-                            title: TTexts.actionNotAllowed,
+                          Get.find<NotificationController>().show(
+                            TTexts.onlyTodayTrainings,
+                            type: NotificationType.error,
                           );
                         }),
               child: Transform.scale(

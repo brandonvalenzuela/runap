@@ -9,12 +9,18 @@ import 'package:runap/features/map/controller/location_permission_controller.dar
 import 'package:runap/features/map/controller/workout_controller.dart';
 import 'package:runap/features/map/controller/map_controller.dart';
 import 'package:runap/features/map/controller/goal_controller.dart';
+import 'package:runap/common/widgets/notification/connectivity_controller.dart';
+import 'package:runap/common/widgets/notification/notification_controller.dart';
 
 class AppBindings extends Bindings {
   @override
   void dependencies() {
     // Utilities & Services
     Get.put(NetworkManager(), permanent: true);
+    
+    // Controladores de notificación
+    Get.put(NotificationController(), permanent: true);
+    Get.put(ConnectivityController(), permanent: true);
 
     // ViewModels & Controllers
     Get.put(LocationPermissionController(), permanent: true);

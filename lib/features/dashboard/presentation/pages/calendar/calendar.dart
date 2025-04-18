@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:runap/navigation_menu.dart';
@@ -16,6 +15,8 @@ import 'package:runap/utils/device/device_utility.dart';
 // --- Import para Skeletons ---
 import 'package:runap/common/widgets/loaders/skeleton_loader.dart'; // Ajusta la ruta si es necesario
 import 'package:shimmer/shimmer.dart'; // Importar shimmer
+// --- Import para Animaciones ---
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 
 class CalendarScreen extends StatefulWidget {
@@ -25,7 +26,13 @@ class CalendarScreen extends StatefulWidget {
   State<CalendarScreen> createState() => _CalendarScreenState();
 }
 
-class _CalendarScreenState extends State<CalendarScreen> {
+class _CalendarScreenState extends State<CalendarScreen> with SingleTickerProviderStateMixin {
+  // --- Controlador de Animación ---
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimationTop;
+  late Animation<Offset> _slideAnimationMacros;
+
   // Estado para rastrear el progreso del scroll entre initial y first snap
   double _scrollProgress = 0.0; // Reemplaza _isSnapped
   DateTime _selectedDate = DateTime.now();
@@ -85,9 +92,36 @@ class _CalendarScreenState extends State<CalendarScreen> {
     // Listener para detectar cuando trainingData cambia
     _viewModel.addListener(_handleViewModelChange);
 
+    // --- Controlador de Animación ---
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800), // Duración aumentada
+    );
+    // Animación de desvanecimiento general
+    _fadeAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOutCubic,
+    );
+    // Animación de deslizamiento para la sección superior (calorías)
+    _slideAnimationTop = Tween<Offset>(begin: Offset(0.0, -0.3), end: Offset.zero).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Interval(0.0, 0.6, curve: Curves.easeOutCubic),
+      ),
+    );
+    // Animación de deslizamiento para la sección de macros
+    _slideAnimationMacros = Tween<Offset>(begin: Offset(0.0, 0.3), end: Offset.zero).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Interval(0.2, 0.8, curve: Curves.easeOutCubic),
+      ),
+    );
+
     // Cargar datos simulados iniciales si no estamos cargando
     if (!_isLoading) {
       _loadDataForDate(_selectedDate);
+      // Iniciar animación si los datos ya están disponibles
+      _animationController.forward();
     }
   }
 
@@ -101,6 +135,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
           if (!stillLoading) {
             // Cargar datos simulados DESPUÉS de que el ViewModel haya cargado
             _loadDataForDate(_selectedDate);
+            // Iniciar la animación una vez que los datos reales (o simulados) estén listos
+            _animationController.forward();
           }
         });
       }
@@ -111,6 +147,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
   void dispose() {
     // Es CRUCIAL remover el listener para evitar memory leaks
     _viewModel.removeListener(_handleViewModelChange);
+    // Liberar el controlador de animación
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -184,119 +222,126 @@ class _CalendarScreenState extends State<CalendarScreen> {
         child: Stack(
           children: [
             // --- Contenido Fijo (detrás de la hoja) ---
-            Column(
-              children: [
-                // Envolver Padding con Stack
-                Stack(
-                  children: [
-                     // 1. Padding con la Row SOLO para _buildCaloriesSummary
-                     Padding(
-                       padding: const EdgeInsets.only(top: TSizes.sm, bottom: TSizes.sm), 
-                       child: Row(
-                         children: [
-                           // Usar Skeleton si está cargando
-                           Expanded(
-                             child: _isLoading
-                               ? _buildCaloriesSummarySkeleton(context)
-                               : _buildCaloriesSummary(
-                                   context, primaryOrange, textColorDark, textColorLight,
-                                   calorieValueStyle, calorieLabelStyle, calLeftValueStyle,
-                                   calLeftUnitStyle, calLeftLabelStyle,
-                                 ),
-                           ),
-                         ],
-                       ),
-                     ),
-                     // 2. Align para posicionar el streakIcon (ocultar si está cargando)
-                     if (!_isLoading) Align(
-                       alignment: Alignment.topRight,
-                       child: Padding(
-                         padding: const EdgeInsets.only(top: TSizes.sm, right: TSizes.md),
-                         child: Container(
-                           padding: const EdgeInsets.symmetric(horizontal: TSizes.smx, vertical: TSizes.xs),
-                           decoration: BoxDecoration(
-                             border: Border.all(color: primaryOrange),
-                             color: cardBackgroundColor,
-                             borderRadius: BorderRadius.circular(TSizes.borderRadiusLg),
-                           ),
+            FadeTransition( // <-- Animación de desvanecimiento para todo el contenido fijo
+              opacity: _fadeAnimation,
+              child: Column(
+                children: [
+                  // Envolver Padding con Stack
+                  SlideTransition( // <-- Animación de deslizamiento para sección superior
+                    position: _slideAnimationTop,
+                    child: Stack(
+                      children: [
+                         // 1. Padding con la Row SOLO para _buildCaloriesSummary
+                         Padding(
+                           padding: const EdgeInsets.only(top: TSizes.sm, bottom: TSizes.sm),
                            child: Row(
-                             mainAxisSize: MainAxisSize.min,
                              children: [
-                               Icon(Iconsax.flash_11, color: primaryOrange, size: 16),
-                               const SizedBox(width: TSizes.xs),
-                               Text(
-                                 '$_streakCount',
-                                 style: Theme.of(context).textTheme.labelLarge?.copyWith(color: primaryOrange, fontWeight: FontWeight.bold)
+                               // Usar Skeleton si está cargando
+                               Expanded(
+                                 child: _isLoading
+                                   ? _buildCaloriesSummarySkeleton(context)
+                                   : _buildCaloriesSummary(
+                                       context, primaryOrange, textColorDark, textColorLight,
+                                       calorieValueStyle, calorieLabelStyle, calLeftValueStyle,
+                                       calLeftUnitStyle, calLeftLabelStyle,
+                                     ),
                                ),
                              ],
                            ),
                          ),
-                       ),
-                     ),
-                  ]
-                ),
-                 const SizedBox(height: TSizes.defaultSpace),
-                // --- Contenedor para la transición entre Macros Circulares y Barras ---
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: TSizes.smx),
-                  child: Stack(
-                    children: [
-                      // --- Sección Circular (O su Skeleton) ---
-                      // Mostrar Skeleton si isLoading es true, opacidad y transform sólo si no está cargando
-                      _isLoading
-                        ? _buildMacronutrientsSectionSkeleton(context)
-                        : Transform(
-                            transform: Matrix4.identity()
-                              ..rotateX(-math.pi / 2 * _scrollProgress)
-                              ..translate(0.0, _scrollProgress * 30, 0.0),
-                            alignment: FractionalOffset.center,
-                            child: Opacity(
-                              opacity: (1.0 - _scrollProgress).clamp(0.0, 1.0),
-                              child: _buildMacronutrientsSection(
-                                context, cardBackgroundColor, textColorDark, textColorLight,
-                                proteinColor, fatColor, carbsColor, fiberColor,
-                                headerStyle, macroAmountStyle, macroGoalStyle, macroLabelStyle
-                              ),
-                            ),
-                          ),
-
-                      // --- Sección Barras Horizontales (O su Skeleton) ---
-                      // Mostrar Skeleton si isLoading es true, opacidad y transform sólo si no está cargando
-                      _isLoading
-                        ? (_scrollProgress > 0.5 ? _buildMinimalHorizontalBarsSkeleton(context) : const SizedBox.shrink()) // Mostrar skeleton de barras solo si está casi visible
-                        : Transform(
-                            transform: Matrix4.identity()
-                              ..rotateX(-math.pi / 2 * (1.0 - _scrollProgress)),
-                            alignment: FractionalOffset.center,
-                            child: Opacity(
-                              opacity: _scrollProgress.clamp(0.0, 1.0),
-                              child: _buildMinimalHorizontalBars(
-                                context, proteinColor, fatColor, carbsColor, fiberColor,
-                                _macroData['protein']!, _macroData['fat']!, _macroData['carbs']!, _macroData['fiber']!,
-                              ),
-                            ),
-                          ),
-
-                      // --- Flecha hacia abajo (Sólo si no está cargando) ---
-                      if (!_isLoading) Align(
-                        alignment: Alignment.bottomCenter,
-                        child: Padding(
-                          padding: EdgeInsets.only(top: TSizes.lg * _scrollProgress),
-                          child: Opacity(
-                            opacity: _scrollProgress.clamp(0.0, 1.0),
-                            child: Icon(
-                              Icons.keyboard_arrow_down,
-                              color: textColorLight,
-                              size: 24.0,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                         // 2. Align para posicionar el streakIcon (ocultar si está cargando)
+                         if (!_isLoading) Align(
+                           alignment: Alignment.topRight,
+                           child: Padding(
+                             padding: const EdgeInsets.only(top: TSizes.sm, right: TSizes.md),
+                             child: Container(
+                               padding: const EdgeInsets.symmetric(horizontal: TSizes.smx, vertical: TSizes.xs),
+                               decoration: BoxDecoration(
+                                 border: Border.all(color: primaryOrange),
+                                 color: cardBackgroundColor,
+                                 borderRadius: BorderRadius.circular(TSizes.borderRadiusLg),
+                               ),
+                               child: Row(
+                                 mainAxisSize: MainAxisSize.min,
+                                 children: [
+                                   Icon(Iconsax.flash_11, color: primaryOrange, size: 16),
+                                   const SizedBox(width: TSizes.xs),
+                                   Text(
+                                     '$_streakCount',
+                                     style: Theme.of(context).textTheme.labelLarge?.copyWith(color: primaryOrange, fontWeight: FontWeight.bold)
+                                   ),
+                                 ],
+                               ),
+                             ),
+                           ),
+                         ),
+                      ]
+                    ),
                   ),
-                ),
-                 const SizedBox(height: TSizes.xl + TSizes.sm), 
-              ],
+                   const SizedBox(height: TSizes.defaultSpace),
+                  // --- Contenedor para la transición entre Macros Circulares y Barras ---
+                  SlideTransition( // <-- Animación de deslizamiento para macros
+                    position: _slideAnimationMacros,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: TSizes.smx),
+                      child: Stack(
+                        children: [
+                          // --- Sección Circular (O su Skeleton) ---
+                          // Mostrar Skeleton si isLoading es true, opacidad y transform sólo si no está cargando
+                          _isLoading
+                            ? _buildMacronutrientsSectionSkeleton(context)
+                            : Transform(
+                                transform: Matrix4.identity()
+                                  ..rotateX(-math.pi / 2 * _scrollProgress)
+                                  ..translate(0.0, _scrollProgress * 30, 0.0),
+                                alignment: FractionalOffset.center,
+                                child: Opacity(
+                                  opacity: (1.0 - _scrollProgress).clamp(0.0, 1.0),
+                                  child: _buildMacronutrientsSection(
+                                    context, cardBackgroundColor, textColorDark, textColorLight,
+                                    proteinColor, fatColor, carbsColor, fiberColor,
+                                    headerStyle, macroAmountStyle, macroGoalStyle, macroLabelStyle
+                                  ),
+                                ),
+                              ),
+                          // --- Sección Barras Horizontales (O su Skeleton) ---
+                          // Mostrar Skeleton si isLoading es true, opacidad y transform sólo si no está cargando
+                          _isLoading
+                            ? (_scrollProgress > 0.5 ? _buildMinimalHorizontalBarsSkeleton(context) : const SizedBox.shrink()) // Mostrar skeleton de barras solo si está casi visible
+                            : Transform(
+                                transform: Matrix4.identity()
+                                  ..rotateX(-math.pi / 2 * (1.0 - _scrollProgress)),
+                                alignment: FractionalOffset.center,
+                                child: Opacity(
+                                  opacity: _scrollProgress.clamp(0.0, 1.0),
+                                  child: _buildMinimalHorizontalBars(
+                                    context, proteinColor, fatColor, carbsColor, fiberColor,
+                                    _macroData['protein']!, _macroData['fat']!, _macroData['carbs']!, _macroData['fiber']!,
+                                  ),
+                                ),
+                              ),
+                          // --- Flecha hacia abajo (Sólo si no está cargando) ---
+                          if (!_isLoading) Align(
+                            alignment: Alignment.bottomCenter,
+                            child: Padding(
+                              padding: EdgeInsets.only(top: TSizes.lg * _scrollProgress),
+                              child: Opacity(
+                                opacity: _scrollProgress.clamp(0.0, 1.0),
+                                child: Icon(
+                                  Icons.keyboard_arrow_down,
+                                  color: textColorLight,
+                                  size: 24.0,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                   const SizedBox(height: TSizes.xl + TSizes.sm),
+                ],
+              ),
             ),
 
             // --- Hoja Deslizable (encima del contenido fijo) ---
@@ -354,81 +399,136 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           topLeft: Radius.circular(TSizes.cardRadiusLg),
                           topRight: Radius.circular(TSizes.cardRadiusLg),
                         ),
-                        child: ListView(
-                          controller: scrollController,
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.only(top: TSizes.sm, left: TSizes.smx, right: TSizes.smx, bottom: TSizes.defaultSpace), // Añadir padding inferior
-                          children: [
-                            _buildDateNavigation(context, textColorDark),
-                            const SizedBox(height: TSizes.spaceBtwItems),
+                        // --- Envolver ListView con AnimationLimiter ---
+                        child: AnimationLimiter(
+                          child: ListView(
+                            controller: scrollController,
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.only(top: TSizes.sm, left: TSizes.smx, right: TSizes.smx, bottom: TSizes.defaultSpace), // Añadir padding inferior
+                            children: [
+                              // --- Navegación de Fecha (Generalmente no se anima en listas) ---
+                              _buildDateNavigation(context, textColorDark),
+                              const SizedBox(height: TSizes.spaceBtwItems),
 
-                            // --- Sección Training Cards (con Skeleton) ---
-                            if (_isLoading)
-                              ...List.generate(2, (_) => _buildTrainingCardSkeleton(context)) // Mostrar 2 skeletons de cards
-                            else if (sessionsForSelectedDay.isEmpty)
-                              Padding( // Mostrar mensaje si no hay sesiones y no está cargando
-                                padding: const EdgeInsets.symmetric(vertical: TSizes.lg),
-                                child: Center(
-                                  child: Text(
-                                    'No hay entrenamientos programados.',
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: TColors.darkGrey),
+                              // --- Sección Training Cards (Animada si no está cargando) ---
+                              if (_isLoading)
+                                ...List.generate(2, (_) => _buildTrainingCardSkeleton(context)) // Mostrar 2 skeletons de cards
+                              else if (sessionsForSelectedDay.isEmpty)
+                                Padding( // Mostrar mensaje si no hay sesiones y no está cargando
+                                  padding: const EdgeInsets.symmetric(vertical: TSizes.lg),
+                                  child: Center(
+                                    child: Text(
+                                      'No hay entrenamientos programados.',
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: TColors.darkGrey),
+                                    ),
+                                  ),
+                                )
+                              else // Mostrar cards reales
+                                // --- Animar las Training Cards ---
+                                ...sessionsForSelectedDay.asMap().entries.map((entry) {
+                                  int index = entry.key;
+                                  Session session = entry.value;
+                                  return AnimationConfiguration.staggeredList(
+                                    position: index,
+                                    duration: const Duration(milliseconds: 375),
+                                    child: SlideAnimation(
+                                      verticalOffset: 50.0,
+                                      child: FadeInAnimation(
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(bottom: TSizes.spaceBtwItems),
+                                          child: TrainingCard(
+                                            session: session,
+                                            showBorder: false,
+                                            isPast: isPastDay,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(), 
+                                
+                              const SizedBox(height: TSizes.spaceBtwSections), // Espacio antes de las comidas
+
+                              // --- Secciones de Comida (Animadas si no está cargando) ---
+                              if (_isLoading) ...[
+                                _buildMealSectionSkeleton(context),
+                                _buildMealSectionSkeleton(context),
+                                _buildMealSectionSkeleton(context),
+                                _buildMealSectionSkeleton(context),
+                              ] else ...[ // Mostrar secciones reales si no está cargando
+                                // --- Animar las secciones de comida ---
+                                AnimationConfiguration.staggeredList(
+                                  position: 0, // Posición relativa dentro de este grupo
+                                  duration: const Duration(milliseconds: 375),
+                                  child: SlideAnimation(
+                                    verticalOffset: 50.0,
+                                    child: FadeInAnimation(
+                                      child: _buildMealSection(
+                                        context, icon: Iconsax.sun_1, iconColor: Colors.orangeAccent, title: 'Breakfast',
+                                        eatenCal: _mealCaloriesEaten['Breakfast'] ?? 0,
+                                        goalCal: _mealCaloriesGoal['Breakfast'] ?? 0,
+                                        items: _mealItems['Breakfast'],
+                                        buttonColor: buttonBlue,
+                                        cardBackgroundColor: cardBackgroundColor, titleStyle: titleStyle, subtitleStyle: subtitleStyle, itemTextStyle: itemTextStyle
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              )
-                            else // Mostrar cards reales
-                              ...sessionsForSelectedDay.map((session) => Padding(
-                                padding: const EdgeInsets.only(bottom: TSizes.spaceBtwItems),
-                                child: TrainingCard(
-                                  session: session,
-                                  showBorder: false,
-                                  isPast: isPastDay,
+                                AnimationConfiguration.staggeredList(
+                                  position: 1,
+                                  duration: const Duration(milliseconds: 375),
+                                  child: SlideAnimation(
+                                    verticalOffset: 50.0,
+                                    child: FadeInAnimation(
+                                      child: _buildMealSection(
+                                        context, icon: Iconsax.candle_2, iconColor: Colors.redAccent, title: 'Lunch',
+                                        eatenCal: _mealCaloriesEaten['Lunch'] ?? 0,
+                                        goalCal: _mealCaloriesGoal['Lunch'] ?? 0,
+                                        items: _mealItems['Lunch'],
+                                        buttonColor: buttonBlue,
+                                        cardBackgroundColor: cardBackgroundColor, titleStyle: titleStyle, subtitleStyle: subtitleStyle, itemTextStyle: itemTextStyle
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                              )).toList(), 
-                              
-                            const SizedBox(height: TSizes.spaceBtwSections), // Espacio antes de las comidas
-
-                            // --- Secciones de Comida (con Skeleton) ---
-                            if (_isLoading) ...[
-                              _buildMealSectionSkeleton(context),
-                              _buildMealSectionSkeleton(context),
-                              _buildMealSectionSkeleton(context),
-                              _buildMealSectionSkeleton(context),
-                            ] else ...[ // Mostrar secciones reales si no está cargando
-                              _buildMealSection(
-                                context, icon: Iconsax.sun_1, iconColor: Colors.orangeAccent, title: 'Breakfast',
-                                eatenCal: _mealCaloriesEaten['Breakfast'] ?? 0,
-                                goalCal: _mealCaloriesGoal['Breakfast'] ?? 0,
-                                items: _mealItems['Breakfast'],
-                                buttonColor: buttonBlue,
-                                cardBackgroundColor: cardBackgroundColor, titleStyle: titleStyle, subtitleStyle: subtitleStyle, itemTextStyle: itemTextStyle
-                              ),
-                              _buildMealSection(
-                                context, icon: Iconsax.candle_2, iconColor: Colors.redAccent, title: 'Lunch',
-                                eatenCal: _mealCaloriesEaten['Lunch'] ?? 0,
-                                goalCal: _mealCaloriesGoal['Lunch'] ?? 0,
-                                items: _mealItems['Lunch'],
-                                buttonColor: buttonBlue,
-                                cardBackgroundColor: cardBackgroundColor, titleStyle: titleStyle, subtitleStyle: subtitleStyle, itemTextStyle: itemTextStyle
-                              ),
-                              _buildMealSection(
-                                context, icon: Iconsax.coffee, iconColor: Colors.blueAccent, title: 'Dinner',
-                                eatenCal: _mealCaloriesEaten['Dinner'] ?? 0,
-                                goalCal: _mealCaloriesGoal['Dinner'] ?? 0,
-                                items: _mealItems['Dinner'],
-                                buttonColor: buttonBlue,
-                                cardBackgroundColor: cardBackgroundColor, titleStyle: titleStyle, subtitleStyle: subtitleStyle, itemTextStyle: itemTextStyle
-                              ),
-                              _buildMealSection(
-                                context, icon: Iconsax.cake, iconColor: Colors.lightGreen, title: 'Snacks',
-                                eatenCal: _mealCaloriesEaten['Snacks'] ?? 0,
-                                goalCal: _mealCaloriesGoal['Snacks'] ?? 0,
-                                items: _mealItems['Snacks'],
-                                buttonColor: buttonBlue,
-                                cardBackgroundColor: cardBackgroundColor, titleStyle: titleStyle, subtitleStyle: subtitleStyle, itemTextStyle: itemTextStyle
-                              ),
+                                 AnimationConfiguration.staggeredList(
+                                  position: 2,
+                                  duration: const Duration(milliseconds: 375),
+                                  child: SlideAnimation(
+                                    verticalOffset: 50.0,
+                                    child: FadeInAnimation(
+                                      child: _buildMealSection(
+                                        context, icon: Iconsax.coffee, iconColor: Colors.blueAccent, title: 'Dinner',
+                                        eatenCal: _mealCaloriesEaten['Dinner'] ?? 0,
+                                        goalCal: _mealCaloriesGoal['Dinner'] ?? 0,
+                                        items: _mealItems['Dinner'],
+                                        buttonColor: buttonBlue,
+                                        cardBackgroundColor: cardBackgroundColor, titleStyle: titleStyle, subtitleStyle: subtitleStyle, itemTextStyle: itemTextStyle
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                 AnimationConfiguration.staggeredList(
+                                  position: 3,
+                                  duration: const Duration(milliseconds: 375),
+                                  child: SlideAnimation(
+                                    verticalOffset: 50.0,
+                                    child: FadeInAnimation(
+                                      child: _buildMealSection(
+                                        context, icon: Iconsax.cake, iconColor: Colors.lightGreen, title: 'Snacks',
+                                        eatenCal: _mealCaloriesEaten['Snacks'] ?? 0,
+                                        goalCal: _mealCaloriesGoal['Snacks'] ?? 0,
+                                        items: _mealItems['Snacks'],
+                                        buttonColor: buttonBlue,
+                                        cardBackgroundColor: cardBackgroundColor, titleStyle: titleStyle, subtitleStyle: subtitleStyle, itemTextStyle: itemTextStyle
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: TSizes.spaceBtwSections),
                             ],
-                            const SizedBox(height: TSizes.spaceBtwSections),
-                          ],
+                          ),
                         ),
                       ),
                     );

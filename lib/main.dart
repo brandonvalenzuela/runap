@@ -15,67 +15,70 @@ import 'package:runap/features/gamification/presentation/manager/binding/gamific
 
 // Punto de entrada de la aplicación
 Future<void> main() async {
-  // --- 1. Asegurar Inicialización de Widgets ---
-  // Es lo primero que se debe hacer si se necesita interactuar con el engine antes de runApp
-  final WidgetsBinding widgetsBinding =
-      WidgetsFlutterBinding.ensureInitialized();
+  // --- 1. Inicializar WidgetsBinding --- 
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
 
-  // --- 2. Inicializar Almacenamiento Local ---
-  // Util para guardar configuraciones, tokens, etc. de forma persistente
-  await GetStorage.init();
-
-  // --- 3. Preservar la Pantalla de Splash Nativa ---
-  // Mantiene el splash visible mientras se cargan las configuraciones iniciales
+  // --- 2. Mantener SplashScreen hasta que estemos listos ---
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
-  // --- 4. Configurar Estilo de la Barra de Estado por Defecto ---
-  // Establece un estilo global inicial. Puede ser sobrescrito por pantallas individuales
-  // usando AnnotatedRegion.
-  // Ejemplo: Fondo transparente (para diseños edge-to-edge en Android) e iconos oscuros.
+  // --- 3. Inicializar GetStorage (persistencia local) ---
+  await GetStorage.init();
+  log("GetStorage Initialized"); // Mensaje opcional
+  
+  // --- 4. Configurar orientación preferida (solo portrait) ---
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+  log("Device Orientation Set"); // Mensaje opcional
+
+  // --- 5. Setear color/estilo de barra de estado ---
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent, // Transparente en Android
-      statusBarIconBrightness:
-          Brightness.dark, // Iconos oscuros (para fondos claros) - Android
-      statusBarBrightness:
-          Brightness.light, // Íconos oscuros (para fondos claros) - iOS
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarDividerColor: Colors.transparent,
+      systemNavigationBarColor: Colors.white,
+      systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
+  log("System UI Style Set"); // Mensaje opcional
 
-  // --- 5. Configurar la Transición Personalizada ---
-  // Ya no usamos este método, ahora utilizamos nuestro sistema de navegación personalizado
-  // TNavigationHelper.setupCustomBackTransition();
-  log("Custom Page Transitions Configured");
-
-  // --- 6. Inicializar Firebase y Repositorio de Autenticación ---
-  // Es crucial manejar posibles errores durante la inicialización de Firebase.
+  // --- 6. Inicializar Firebase (con mejor manejo de errores) ---
+  bool firebaseInitialized = false;
   try {
     await Firebase.initializeApp(
-            options: DefaultFirebaseOptions.currentPlatform)
-        .then(
+      options: DefaultFirebaseOptions.currentPlatform
+    ).then(
       (FirebaseApp value) {
         // Configurar la persistencia de Firestore ANTES de usar Firestore por primera vez
         FirebaseFirestore.instance.settings = const Settings(
           persistenceEnabled: true,
-          // Opcional: Ajustar el tamaño de la caché si es necesario
-          // cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED, // O un valor específico en bytes
+          cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED, // Maximizar caché para modo offline
         );
         log("Firestore Persistence Enabled");
 
         // Una vez Firebase está listo, inicializamos y registramos el repositorio
         // usando GetX. Esto asegura que el repo solo esté disponible si Firebase funciona.
         Get.put(AuthenticationRepository());
-        log("Firebase Initialized Successfully"); // Mensaje de éxito (opcional)
+        log("Firebase Initialized Successfully"); // Mensaje de éxito
+        firebaseInitialized = true;
       },
     );
   } catch (e, stackTrace) {
     // Captura cualquier error durante la inicialización de Firebase
     log("Firebase Initialization Failed", error: e, stackTrace: stackTrace);
-    // Aquí podrías decidir qué hacer:
-    // - Mostrar un mensaje de error específico antes de runApp (más complejo).
-    // - Simplemente registrar el error y continuar (la app podría no funcionar correctamente).
-    // - Lanzar una excepción para detener la ejecución si Firebase es absolutamente crítico.
-    //   throw Exception("Firebase could not be initialized.");
+    
+    // Incluso con error, intentamos inicializar el AuthenticationRepository
+    // para que maneje el estado offline/error por sí mismo
+    if (!firebaseInitialized) {
+      try {
+        Get.put(AuthenticationRepository());
+        log("AuthenticationRepository initialized despite Firebase error");
+      } catch (authError) {
+        log("Failed to initialize AuthenticationRepository", error: authError);
+      }
+    }
   }
 
   // --- Inicializar Bindings ---
@@ -94,5 +97,6 @@ Future<void> main() async {
   // ¡Importante! Recuerda llamar a FlutterNativeSplash.remove() dentro de tu app
   // (ej. en initState de tu primera pantalla después del login/loading)
   // para ocultar la pantalla de splash.
+
   runApp(const App());
 }

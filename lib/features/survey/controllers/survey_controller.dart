@@ -1,9 +1,9 @@
+// ignore_for_file: avoid_print
+
 import 'package:flutter/material.dart'; // Importar flutter para TextEditingController
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart'; // Importar GetStorage
 import '../models/question_model.dart'; // Importar el modelo
-import 'package:runap/features/authentication/screens/login/login.dart'; // Importar LoginScreen
-import 'package:runap/features/authentication/screens/signup/signup_options_screen.dart'; 
 import 'package:runap/features/authentication/screens/signup/signup.dart'; // Importar SignupScreen
 import 'package:runap/features/authentication/bindings/signup_binding.dart'; // Importar el nuevo Binding
 
@@ -171,7 +171,7 @@ class SurveyController extends GetxController {
       ),
       QuestionModel(
         id: 'infoScreen2',
-        text: '''No worries. We have all been there!\n\nWe know that stopping snacking is easier said than done. But by identifying why you snack you already took the first step. Next time you're reaching for a snack, don\'t stop yourself, just take a moment to acknowledge why you're craving that snack.''',
+        text: '''No worries. We have all been there!\n\nWe know that stopping snacking is easier said than done. But by identifying why you snack you already took the first step. Next time you're reaching for a snack, don't stop yourself, just take a moment to acknowledge why you're craving that snack.''',
         type: 'info',
         imagePath: 'assets/images/survey/avocado_snack.png', 
         sectionTitle: 'Your habits & behaviour', 

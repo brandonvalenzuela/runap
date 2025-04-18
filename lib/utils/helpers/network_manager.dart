@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:runap/utils/popups/loaders.dart';
+import 'package:runap/common/widgets/notification/connectivity_controller.dart';
 
 /// Manages the network connectivity status and provides methods to check and handle connectivity changes.
 class NetworkManager extends GetxController {
@@ -20,12 +20,11 @@ class NetworkManager extends GetxController {
         _connectivity.onConnectivityChanged.listen(_updateConnectionStatus);
   }
 
-  /// Update the connection status based on changes in connectivity and show a relevant popup for no internet connection.
+  /// Update the connection status based on changes in connectivity.
+  /// The ConnectivityController will handle showing the relevant notifications.
   Future<void> _updateConnectionStatus(ConnectivityResult result) async {
     _connectionStatus.value = result;
-    if (_connectionStatus.value == ConnectivityResult.none) {
-      TLoaders.warningSnackBar(title: 'No Internet Connection');
-    }
+    // No mostrar notificación aquí, ya que ConnectivityController se encargará de ello
   }
 
   /// Check the internet connection status.

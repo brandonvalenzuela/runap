@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:runap/features/authentication/controllers/login/login_controller.dart';
 import 'package:runap/features/authentication/screens/password_configuration/forget_password.dart';
-import 'package:runap/features/authentication/screens/signup/signup.dart';
 import 'package:runap/features/authentication/screens/onboarding/onboarding.dart';
 import 'package:runap/utils/constants/sizes.dart';
 import 'package:runap/utils/constants/text_strings.dart';

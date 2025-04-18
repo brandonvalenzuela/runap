@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import 'package:runap/data/repositories/authentication/authentication_repository.dart';
-import 'package:runap/features/authentication/screens/login/login.dart';
 import 'package:runap/navigation_menu.dart';
 import 'package:runap/utils/popups/loaders.dart';
 import 'package:flutter/material.dart';
